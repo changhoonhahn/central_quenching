@@ -8,6 +8,7 @@ Author(s): ChangHoon Hahn
 
 import numpy as np
 import pyfits as fits
+import matplotlib.pyplot as plt
 import os 
 
 # quiescent fraction ------------------------------------------------------------
@@ -35,10 +36,66 @@ def get_fq(Mstar, z_in, lit='cosmosinterp'):
     
             fq_z.append( np.interp(Mstar, mass, fq) )   # interpolate to get fq(Mstar)
         
-        return np.interp(z_in, zbins,  fq_z) 
+        return np.interp(z_in, zbins, fq_z) 
+
+    elif lit == 'cosmosfit': 
+        zbins = [0.36, 0.66, 0.88] 
+        exp_sigma = [1.1972271, 1.05830526, 0.9182575] 
+        exp_sig = np.interp(z_in, zbins, exp_sigma) 
+        output = np.exp( ( Mstar - 12.0 )/exp_sig)
+        if Mstar > 12.0: 
+            output = 1.0
+
+        return output
+    elif lit == 'wetzel': 
+        qf_z0 = -6.04 + 0.63*Mstar
+
+        if Mstar < 9.5: 
+            alpha = -2.3
+        elif (Mstar >= 9.5) & (Mstar < 10.0): 
+            alpha = -2.1
+        elif (Mstar >= 10.0) & (Mstar < 10.5): 
+            alpha = -2.2
+        elif (Mstar >= 10.5) & (Mstar < 11.0): 
+            alpha = -2.0
+        elif (Mstar >= 11.0) & (Mstar < 11.5): 
+            alpha = -1.3
+        else: 
+            raise NameError('Mstar is out of range')
+
+        output = qf_z0 * ( 1.0 + z_in )**alpha 
+        if output < 0.0: 
+            output = 0.0
+
+        return output 
     else: 
         raise NameError('Not yet coded') 
-        
+
+# SSFR distribution ----------------------------------------------------------------
+
+class CQssfr: 
+    ''' SSFR distribution for CenQue class
+    '''
+    def __init__(self): 
+        self.ssfr = None 
+        self.bin_low = None     # SSFR bin low 
+        self.bin_high = None    # SSFR bin high 
+        self.bin_mid = None     # SSFR bin mid 
+        self.ssfr_hist = None   # histogram 
+
+    def histogram(self): 
+        ''' Calculate SSFR histogram 
+        '''
+        if self.ssfr == None: 
+            raise NameError('Not SSFR specified') 
+
+    def readin(self, **kwargs): 
+        ''' Read in ssfr histogram 
+        '''
+
+    def writeout(self, **kwargs): 
+        ''' Writes out ssfr histogram 
+        '''
 
 # mass bins ------------------------------------------------------------------------ 
 class mass_bin:         
@@ -58,9 +115,11 @@ class mass_bin:
 def simple_mass_bin(): 
     ''' Simple mass bins 
     '''
+    simple_mass_binsize = 0.1
     simple_mass_bin = mass_bin()
-    simple_mass_bin.mass_low = [ 9.0, 9.5, 10.0, 10.5, 11.0, 11.5]
-    simple_mass_bin.mass_high = [ 9.5, 10.0, 10.5, 11.0, 11.5, 12.0]
+    simple_mass_bin.mass_low = [ 9.0 + np.float(i)*simple_mass_binsize for i in range(25) ]
+    simple_mass_bin.mass_high = [ simple_mass_bin.mass_low[i] + simple_mass_binsize
+            for i in range(len(simple_mass_bin.mass_low)) ]
     simple_mass_bin.mass_mid = [
             0.5 * (simple_mass_bin.mass_low[i] + simple_mass_bin.mass_high[i]) 
             for i in range(len(simple_mass_bin.mass_low))]
@@ -72,7 +131,7 @@ def simple_mass_bin():
 
     return simple_mass_bin 
 
-# SFR-Mstar ---------------------------------------------------------------------------
+# SF property functions ------------------------------------------------------------------------
 def get_sfr_mstar_z(mstar, z_in, deltamass=0.2, deltaz=0.2, lit='primusfit', machine='harmattan'): 
     ''' Get SFR using SF main sequence as a function of mass and redshift
     outputs [average SFR, standard deviation SFR] for mass and redshift bin  
@@ -126,6 +185,30 @@ def get_sfr_mstar_z(mstar, z_in, deltamass=0.2, deltaz=0.2, lit='primusfit', mac
         return [avg_sfr, std_sfr]
     else: 
         raise NameError("Not yet coded") 
+
+def get_quenching_efold(mstar, type='constant'): 
+    ''' get quenching efold based on stellar mass of galaxy 
+    '''
+
+    if type == 'constant':      # constant tau 
+
+        n_arr = len(mstar) 
+        tau = np.array([0.5 for i in range(n_arr)]) 
+
+    elif type == 'linear':      # lienar tau(mass) 
+
+        tau = -(0.9 / 1.5) * ( mstar - 9.5) + 1.0
+        if np.min(tau) < 0.1:
+            tau[ tau < 0.1 ] = 0.1
+         
+    elif type == 'instant':     # instant quenching 
+
+        n_arr = len(mstar) 
+        tau = np.array([0.001 for i in range(n_arr)]) 
+    else: 
+        raise NotImplementedError('asdf')
+
+    return tau 
 
 # fits file treatment -----------------------------------------------------------------------
 class FitsTable:
@@ -183,3 +266,46 @@ def mwrfits(fitstable, filename, columns=[], clobber=1):
     table_arrays_combined = fits.ColDefs(table_arrays)
     real_fitstable = fits.new_table(table_arrays_combined)
     real_fitstable.writeto(filename, clobber=clobber) 
+
+# CenQue file treatment ----------------------------------------------------------------------- 
+def cenque_file( **kwargs ): 
+    ''' Given kwargs get CenQue file name
+
+    MORE FILE TYPES WILL BE SPECIFIED
+    '''
+
+    if 'input_file' in kwargs.keys(): 
+        cenque_filename = kwargs['input_file']
+    else: 
+        try: 
+            kwargs['nsnap'] 
+        except KeyError:
+            raise KeyError("Specify input file or nsnap + file_type") 
+
+        try: 
+            kwargs['file_type']
+        except KeyError:
+            file_type_str = '' 
+        else: 
+            if min( (kwargs['file_type']).find('sf'), (kwargs['file_type']).find('ass') ) > -1: 
+                # star-formation assign 
+                file_type_str = '_sfpropassign'
+            
+                file_type_str = ''.join(['_', kwargs['fq'], 'fq', file_type_str])
+                
+            elif min( (kwargs['file_type']).find('evo'), (kwargs['file_type']).find('from') ) > -1: 
+                # evolved from nsnap
+                original_nsnap = int(((kwargs['file_type']).split('from'))[-1]) 
+
+                file_type_str = '_evol_from'+str(original_nsnap) 
+                
+                file_type_str = ''.join(['_', kwargs['tau'], 'tau_', 
+                    kwargs['fq'], 'fq', file_type_str])
+            else: 
+                raise NameError("File not specified") 
+
+        cenque_filename = ''.join(['/data1/hahn/central_quenching/', 
+            'cenque_centrals_snapshot', str(kwargs['nsnap']), file_type_str, 
+            '.dat']) 
+
+    return cenque_filename
