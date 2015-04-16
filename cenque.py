@@ -129,7 +129,10 @@ class CenQue:
             #### Quiescent ####
             if mass_bin_n_q > 0: 
                 # randomly sample mass_bin_n_q galaxies from the mass bin 
-                mass_bin_q_index = random.sample(mass_bin_index, mass_bin_n_q) 
+                try: 
+                    mass_bin_q_index = random.sample(mass_bin_index, mass_bin_n_q) 
+                except ValueError: 
+                    mass_bin_q_index = mass_bin_index 
 
                 self.gal_type[mass_bin_q_index] = 'quiescent'   # label galaxy type 
                 '''
@@ -142,11 +145,9 @@ class CenQue:
             #### Star-Forming ####
             if mass_bin_n_sf > 0: 
                 try: 
-                    mass_bin_q_index         
+                    mass_bin_sf_index = [x for x in mass_bin_index if x not in mass_bin_q_index]
                 except NameError:       # if there aren't any quiescent galaxies
                     mass_bin_sf_index = mass_bin_index
-                else: 
-                    mass_bin_sf_index = [x for x in mass_bin_index if x not in mass_bin_q_index]
                 
                 self.gal_type[mass_bin_sf_index] = 'star-forming'   # label galaxy type 
                 '''
@@ -159,6 +160,11 @@ class CenQue:
                 self.sfr[mass_bin_sf_index] = sf_sig_sfr * np.random.randn(mass_bin_n_sf) + sf_avg_sfr 
                 self.ssfr[mass_bin_sf_index] = \
                         self.sfr[mass_bin_sf_index] - self.mass[mass_bin_sf_index]
+
+        # check for SFR/SSFR assign fails
+        assign_fail = (self.sfr == -999.0) | (self.ssfr == -999.0)
+        if len(self.sfr[assign_fail]) > 0: 
+            raise NameError('asdfasdfasdfasdf')
 
     def readin(self, **kwargs): 
         ''' Read in cenque data written by CenQue
@@ -456,7 +462,6 @@ def EvolveCenQue(origin_nsnap, final_nsnap, mass_bin=None, **kwargs):
             print 'z = ', child_cq.zsnap, ' M* = ', mass_bins.mass_mid[i_m], ' fq = ', mbin_qf
 
             mbin_exp_n_q = int( np.rint(mbin_qf * np.float(mbin_ngal)) )    # Ngal,Q_expected
-            mbin_exp_n_sf = mbin_ngal - mbin_exp_n_q                    # Ngal,SF_expected
             
             # number of SF galaxies that need to be quenched 
             child_gal_type = child_cq.gal_type[mass_bin_bool] 
@@ -471,7 +476,11 @@ def EvolveCenQue(origin_nsnap, final_nsnap, mass_bin=None, **kwargs):
             mbin_sf_index = child_cq.get_index( 
                     [ mass_bin_bool & (child_cq.gal_type == 'star-forming')] 
                     ) 
-            quench_index = random.sample(mbin_sf_index, ngal_2quench) 
+
+            if len(child_gal_type[child_gal_type == 'star-forming']) < ngal_2quench: 
+                quench_index = mbin_sf_index
+            else: 
+                quench_index = random.sample(mbin_sf_index, ngal_2quench) 
             
             child_cq.gal_type[quench_index] = 'quiescent'  # boom quenched 
 
@@ -519,10 +528,11 @@ def build_cenque_importsnap(**kwargs):
 
 if __name__=='__main__': 
     #build_cenque_importsnap(fq='cosmosinterp') 
+    #EvolveCenQue(13, 1, fq='cosmosinterp', tau='instant') 
     #EvolveCenQue(13, 1, fq='cosmosinterp', tau='constant') 
     #EvolveCenQue(13, 1, fq='cosmosinterp', tau='linear') 
 
-    build_cenque_importsnap(fq='wetzel') 
-    #EvolveCenQue(13, 1, fq='wetzel', tau='instant') 
-    #EvolveCenQue(13, 1, fq='wetzel', tau='constant') 
-    #EvolveCenQue(13, 1, fq='wetzel', tau='linear') 
+    #build_cenque_importsnap(fq='wetzel') 
+    EvolveCenQue(13, 1, fq='wetzel', tau='instant') 
+    EvolveCenQue(13, 1, fq='wetzel', tau='constant') 
+    EvolveCenQue(13, 1, fq='wetzel', tau='linear') 
