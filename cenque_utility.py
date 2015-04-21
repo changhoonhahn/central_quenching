@@ -47,7 +47,8 @@ def get_fq(Mstar, z_in, lit='cosmosinterp'):
             output = 1.0
 
         return output
-    elif lit == 'wetzel': 
+
+    elif lit == 'wetzel':       # Wetzel et al. 2013
         qf_z0 = -6.04 + 0.63*Mstar
 
         if Mstar < 9.5: 
@@ -66,10 +67,33 @@ def get_fq(Mstar, z_in, lit='cosmosinterp'):
         output = qf_z0 * ( 1.0 + z_in )**alpha 
         if output < 0.0: 
             output = 0.0
+        elif output > 1.0: 
+            output = 1.0 
 
         return output 
     else: 
         raise NameError('Not yet coded') 
+
+def get_fq_alpha(Mstar, z_in, alpha): 
+    ''' Quiescent fraction evolved from z = 0.88 by (1+z)^alpha where alpha is a free parameter
+    '''
+
+    fq_file = ''.join([ '/data1/hahn/wetzel_tree/', 
+        'qf_z0.88cen.dat' ]) 
+           
+    # read in mass and quiescent fraction at z = 0.88 
+    mass, fq = np.loadtxt(fq_file, unpack=True, usecols=[0,1])  
+     
+    fq_mstar_highz = np.interp(Mstar, mass, fq)  # interpolate to get fq(Mstar)
+        
+    output = fq_mstar_highz * np.abs(z_in + 0.16)**alpha 
+
+    if output < 0.0: 
+        output = 0.0
+    elif output > 1.0: 
+        output = 1.0 
+
+    return output 
 
 # SSFR distribution ----------------------------------------------------------------
 
@@ -117,7 +141,7 @@ def simple_mass_bin():
     '''
     simple_mass_binsize = 0.1
     simple_mass_bin = mass_bin()
-    simple_mass_bin.mass_low = [ 9.0 + np.float(i)*simple_mass_binsize for i in range(25) ]
+    simple_mass_bin.mass_low = [ 9.0 + np.float(i)*simple_mass_binsize for i in range(20) ]
     simple_mass_bin.mass_high = [ simple_mass_bin.mass_low[i] + simple_mass_binsize
             for i in range(len(simple_mass_bin.mass_low)) ]
     simple_mass_bin.mass_mid = [

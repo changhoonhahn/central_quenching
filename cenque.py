@@ -113,7 +113,7 @@ class CenQue:
                 continue 
     
             # get quiescent fraction for mass bin at z_snapshot 
-            mass_bin_qf = util.get_fq(mass_bins.mass_mid[i_m], self.zsnap, 
+            mass_bin_qf = util.get_fq_alpha(mass_bins.mass_mid[i_m], self.zsnap, 
                     lit=kwargs['fq']) 
 
             # Ngal,quiescent in mass bin
@@ -176,6 +176,7 @@ class CenQue:
         '''
         # kwargs specifies the input file 
         input_file = util.cenque_file( **kwargs ) 
+        print input_file 
 
         with open(input_file, 'r') as f:
             for i, line in enumerate(f): 
@@ -195,51 +196,42 @@ class CenQue:
                     data_columns = map(str.strip, (line.strip()).split(','))
                 else: 
                     break 
-    
-        flt_cols = [] 
-        int_cols = []
-        str_cols = [] 
+
+        col_name = [] 
         col_fmt = [] 
         for i_col, column in enumerate(data_columns): 
             if column in ('mass', 'sfr', 'ssfr', 'tau', 
                     'parent_sfr', 'parent_mass', 'q_ssfr'):                       # floats 
-                flt_cols.append(i_col)
+                col_name.append('flt'+str(i_col))
                 col_fmt.append('float64')
             elif column in ('parent', 'child', 'ilk', 'snap_index'):    # ints
-                int_cols.append(i_col)
+                col_name.append('int'+str(i_col))
                 col_fmt.append('int64')
             elif column in ('gal_type'):                                # strings
-                str_cols.append(i_col) 
+                col_name.append('str'+str(i_col))
                 col_fmt.append('|S16')
             else: 
                 raise NameError('Something went wrong here') 
-    
-        data_float = np.loadtxt(input_file, skiprows=2, delimiter=',', 
-                unpack=True, usecols=flt_cols) 
-        data_string = np.loadtxt(input_file, skiprows=2, delimiter=',', 
-                unpack=True, usecols=str_cols, dtype='|S16') 
-        data_int = np.loadtxt(input_file, skiprows=2, delimiter=',', 
-                unpack=True, usecols=int_cols, dtype='int64') 
+
+        dtypes = [(col_name[i], col_fmt[i]) for i in range(len(col_name))]
+        
+        data = np.genfromtxt(input_file, skiprows=2, delimiter=',', 
+                unpack=True, usecols=range(len(data_columns)), dtype=dtypes)
+
+        #data_float = np.genfromtxt(input_file, skiprows=2, delimiter=',', 
+        #        unpack=True, usecols=flt_cols) 
+        #data_string = np.genfromtxt(input_file, skiprows=2, delimiter=',', 
+        #        unpack=True, usecols=str_cols, dtype='|S16') 
+        #data_int = np.genfromtxt(input_file, skiprows=2, delimiter=',', 
+        #        unpack=True, usecols=int_cols, dtype='int64') 
 
         # care taken to keep order
-        i_flt = 0
-        i_int = 0
         for i_col, column in enumerate(data_columns): 
-            if column in ('mass', 'sfr', 'ssfr', 'tau',
-                    'parent_sfr', 'parent_mass'):                       # floats 
-                if len(flt_cols) == 1:  
-                    setattr(self, column, data_float) 
-                else:
-                    setattr(self, column, data_float[i_flt]) 
-                    i_flt += 1
-            elif column in ('parent', 'child', 'ilk', 'snap_index'):    # ints
-                if len(int_cols) == 1: 
-                    setattr(self, column, data_int) 
-                else: 
-                    setattr(self, column, data_int[i_int]) 
-                    i_int += 1
-            elif column in ('gal_type'):                                # strings
-                setattr(self, column, map(str.strip, data_string))       # strip string
+            
+            if column in ('gal_type'): 
+                setattr(self, column, map(str.strip, data[col_name[i_col]])) 
+            else: 
+                setattr(self, column, data[col_name[i_col]]) 
 
     def writeout(self, **kwargs): 
         ''' simply outputs specified columns to file
@@ -327,7 +319,7 @@ class CenQue:
         '''
         return np.array(range(len(self.mass)))[bool]
 
-def EvolveCenQue(origin_nsnap, final_nsnap, mass_bin=None, **kwargs): 
+def EvolveCenQue(origin_nsnap, final_nsnap, mass_bin=None, alpha=-1.5, **kwargs): 
     ''' Evolve SF properties from origin_nsnap to final_nsnap 
     '''
 
@@ -453,15 +445,15 @@ def EvolveCenQue(origin_nsnap, final_nsnap, mass_bin=None, **kwargs):
             if mbin_ngal == 0:                  # if there are no galaxies within mass bin
                 continue 
             
-            if 'fq' in kwargs.keys():           
-                mbin_qf = util.get_fq(mass_bins.mass_mid[i_m], child_cq.zsnap, 
-                    lit=kwargs['fq']) 
-            else:                       # make sure qf is specified
-                raise TypeError("Specify quiescent fraction type") 
+            mbin_qf = util.get_fq_alpha(mass_bins.mass_mid[i_m], child_cq.zsnap, 
+                lit=kwargs['fq']) 
 
             print 'z = ', child_cq.zsnap, ' M* = ', mass_bins.mass_mid[i_m], ' fq = ', mbin_qf
-
+            
             mbin_exp_n_q = int( np.rint(mbin_qf * np.float(mbin_ngal)) )    # Ngal,Q_expected
+
+            if mbin_ngal < mbin_exp_n_q: 
+                mbin_exp_n_q = mbin_ngal 
             
             # number of SF galaxies that need to be quenched 
             child_gal_type = child_cq.gal_type[mass_bin_bool] 
@@ -469,7 +461,7 @@ def EvolveCenQue(origin_nsnap, final_nsnap, mass_bin=None, **kwargs):
             ngal_2quench = mbin_exp_n_q - len(child_gal_type[child_gal_type == 'quiescent'])  
             print ngal_2quench, ' SF galaxies will be quenched'
             if ngal_2quench <= 0: 
-                print ngal_2quench, ' is negative'
+                print ngal_2quench
                 continue 
             
             # randomly sample mass_bin_n_q galaxies from the mass bin 
@@ -477,8 +469,16 @@ def EvolveCenQue(origin_nsnap, final_nsnap, mass_bin=None, **kwargs):
                     [ mass_bin_bool & (child_cq.gal_type == 'star-forming')] 
                     ) 
 
+            print ngal_2quench, ' galaxies to quench'
+            print len(child_gal_type[child_gal_type == 'star-forming']), len(child_gal_type[child_gal_type == 'quiescent'])
+            print len(child_gal_type[child_gal_type == 'star-forming']) + len(child_gal_type[child_gal_type == 'quiescent']), mbin_ngal
+            print mbin_exp_n_q, ' expected quiescent galaxies' 
             if len(child_gal_type[child_gal_type == 'star-forming']) < ngal_2quench: 
-                quench_index = mbin_sf_index
+                print ngal_2quench, ' galaxies to quench'
+                print len(child_gal_type[child_gal_type == 'star-forming']), len(child_gal_type[child_gal_type == 'quiescent'])
+                print len(child_gal_type[child_gal_type == 'star-forming']) + len(child_gal_type[child_gal_type == 'quiescent']), mbin_ngal
+                print mbin_exp_n_q, ' expected quiescent galaxies' 
+                raise NameError("asdfadfasdf") 
             else: 
                 quench_index = random.sample(mbin_sf_index, ngal_2quench) 
             
@@ -500,9 +500,12 @@ def EvolveCenQue(origin_nsnap, final_nsnap, mass_bin=None, **kwargs):
         
         # deal with orphans
         print len(child_cq.gal_type[child_cq.gal_type == '']), ' child galaxies are orphans' 
+
         child_cq.AssignSFR(child_cq.nsnap, **kwargs) 
-        print len(child_cq.gal_type[child_cq.gal_type == '']), ' child galaxies are orphans' 
-        print child_cq.mass[child_cq.gal_type == '']
+
+        if len(child_cq.gal_type[child_cq.gal_type == '']) != 0:
+            print len(child_cq.gal_type[child_cq.gal_type == '']), ' child galaxies are orphans' 
+            print child_cq.mass[child_cq.gal_type == '']
         
         # deal with galaxies that are being quenched beyond the designated final quenching  
         over_quenched = child_cq.ssfr < child_cq.q_ssfr 
@@ -534,5 +537,5 @@ if __name__=='__main__':
 
     #build_cenque_importsnap(fq='wetzel') 
     EvolveCenQue(13, 1, fq='wetzel', tau='instant') 
-    EvolveCenQue(13, 1, fq='wetzel', tau='constant') 
-    EvolveCenQue(13, 1, fq='wetzel', tau='linear') 
+    #EvolveCenQue(13, 1, fq='wetzel', tau='constant') 
+    #EvolveCenQue(13, 1, fq='wetzel', tau='linear') 
