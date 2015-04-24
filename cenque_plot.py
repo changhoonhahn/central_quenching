@@ -31,7 +31,7 @@ def plot_cenque_ssfr_dist(cenque, fig=None, **kwargs):
 
     # mass bins of the panel        ( hardcoded ) 
     panel_mass_bins = [
-            [9.5, 10.0], [10.0, 10.5], [10.5, 11.0]
+            [10.0, 10.5], [10.5, 11.0], [11.0, 11.5]
             ]
     
     for i_mass, panel_mass in enumerate(panel_mass_bins):       # loop through each panel 
@@ -117,11 +117,31 @@ def plot_cenque_ssfr_dist_evolution(Mrcut=18, **kwargs):
         
         ssfr_fig = plot_cenque_ssfr_dist(next_snap, fig=ssfr_fig) 
 
-    central_ssfr = cq_group.central_catalog(Mrcut=Mrcut) 
-    ssfr_fig = plot_cenque_ssfr_dist(central_ssfr, fig=ssfr_fig, label= 'Mrcut = 19') 
+    central_ssfr = cq_group.central_catalog(Mrcut=Mrcut, clobber=True) 
+    ssfr_fig = plot_cenque_ssfr_dist(central_ssfr, fig=ssfr_fig, label= 'Mrcut = '+str(Mrcut)) 
     
     fig_file = ''.join(['/home/users/hahn/research/figures/tinker/', 
         'cenque_ssfr_evol_', kwargs['tau'], 'tau_', kwargs['fq'], 'fq_Mrcut', str(Mrcut),'.png']) 
+    ssfr_fig.savefig(fig_file, bbox_inches='tight') 
+    ssfr_fig.clear() 
+
+def plot_cenque_ssfr_dist_evolution_match2isedfit(Mrcut=18, **kwargs): 
+    snap = cq.CenQue() 
+    snap.readin(nsnap=13, file_type='sf assign', **kwargs) 
+    ssfr_fig = plot_cenque_ssfr_dist(snap)
+
+    for i_nsnap in reversed(range(1,13)):
+        next_snap = cq.CenQue() 
+        next_snap.readin(nsnap=i_nsnap, file_type='evol from 13', **kwargs) 
+        
+        ssfr_fig = plot_cenque_ssfr_dist(next_snap, fig=ssfr_fig) 
+
+    central_ssfr = cq_group.central_catalog_match2isedfit(Mrcut=Mrcut, clobber=True) 
+    ssfr_fig = plot_cenque_ssfr_dist(central_ssfr, fig=ssfr_fig, label= 'Mrcut = '+str(Mrcut)) 
+    
+    fig_file = ''.join(['/home/users/hahn/research/figures/tinker/', 
+        'cenque_ssfr_evol_', kwargs['tau'], 'tau_', kwargs['fq'], 'fq_Mrcut', str(Mrcut),
+        '_match2isedfit.png']) 
     ssfr_fig.savefig(fig_file, bbox_inches='tight') 
     ssfr_fig.clear() 
 
@@ -167,13 +187,12 @@ def plot_sdss_group_cat_bestfit(Mrcut=19):
     output = cq_group.double_gaussian_fit(central_ssfr) 
     
     panel_mass_bins = [
-            [9.5, 10.0], [10.0, 10.5], 
-            [10.5, 11.0], [11.0, 11.5]
+            [10.0, 10.5], [10.5, 11.0], [11.0, 11.5]
             ]
 
     for i_mass, panel_mass in enumerate(panel_mass_bins):       # loop through each panel 
 
-        sub = ssfr_fig.add_subplot(2, 2, i_mass+1)       # panel subplot 
+        sub = ssfr_fig.add_subplot(1, 3, i_mass+1)       # panel subplot 
 
         sub.plot(ssfr_bin_mid, cq_group.double_gaussian(ssfr_bin_mid, (output[i_mass])[2]), 
                 color='blue', lw=4, ls='-', label='Best Fit') 
@@ -317,10 +336,11 @@ def plot_group_cat_bigauss_bestfit():
     plot_sdss_group_cat_bestfit(Mrcut=20)
 
 if __name__=='__main__': 
+    #plot_group_cat_bigauss_bestfit()
     #plot_sdss_group_cat() 
     plot_cenque_ssfr_dist_evolution(fq='wetzel', tau='instant') 
-    #plot_cenque_ssfr_dist_evolution(fq='wetzel', tau='linear') 
-    #plot_cenque_ssfr_dist_evolution(fq='wetzel', tau='constant') 
+    plot_cenque_ssfr_dist_evolution(fq='wetzel', tau='linear') 
+    plot_cenque_ssfr_dist_evolution(fq='wetzel', tau='constant') 
 
     #fq_fig = plot_fq_evol_w_geha() 
     #fq_fig = plot_fq_evol()

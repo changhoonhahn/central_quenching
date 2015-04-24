@@ -9,6 +9,7 @@ Author(s): ChangHoon Hahn
 
 import numpy as np
 import random
+import h5py
 
 #---- Local ----
 import cenque_utility as util
@@ -68,14 +69,14 @@ class CenQue:
         assign SSFR & SFR to the stellar masses
         '''
         # if AssignSFR is called 
-        if self.mass == None:                   # snapshot not yet imported
+        if self.mass is None:                   # snapshot not yet imported
             # import snapshot 
             self.ImportSnap(origin_nsnap) 
         else: 
             pass 
 
         # get mass bins
-        if mass_bin == None:     # if mass bin isn't specified 
+        if mass_bin is None:     # if mass bin isn't specified 
             mass_bins = util.simple_mass_bin()  # use simplest mass bins
         else: 
             raise NameError("not yet coded") 
@@ -91,7 +92,7 @@ class CenQue:
             self.sample_select(mass_child_limit, 
                     columns = ['mass', 'parent', 'child', 'ilk', 'snap_index'])          
 
-        if self.gal_type == None:         
+        if self.gal_type is None:         
             self.gal_type = np.array(['' for i in range(len(self.mass))], dtype='|S16') 
             self.sfr = np.array([-999. for i in range(len(self.mass))]) 
             self.ssfr = np.array([-999. for i in range(len(self.mass))]) 
@@ -113,7 +114,7 @@ class CenQue:
                 continue 
     
             # get quiescent fraction for mass bin at z_snapshot 
-            mass_bin_qf = util.get_fq_alpha(mass_bins.mass_mid[i_m], self.zsnap, 
+            mass_bin_qf = util.get_fq(mass_bins.mass_mid[i_m], self.zsnap, 
                     lit=kwargs['fq']) 
 
             # Ngal,quiescent in mass bin
@@ -135,10 +136,13 @@ class CenQue:
                     mass_bin_q_index = mass_bin_index 
 
                 self.gal_type[mass_bin_q_index] = 'quiescent'   # label galaxy type 
+
                 '''
-                sample SSFR from log-normal distribution with 0.2dex scatter centered at -12.0 
+                sample SSFR from log-normal distribution with 0.2dex scatter 
+                centered about some determined mean
                 '''
-                self.ssfr[mass_bin_q_index] = 0.2 * np.random.randn(mass_bin_n_q) - 12.0
+                q_ssfr_mean = util.get_q_ssfr_mean(self.mass[mass_bin_q_index]) 
+                self.ssfr[mass_bin_q_index] = 0.2 * np.random.randn(mass_bin_n_q) + q_ssfr_mean
                 # calculate SFR by SSFR+Mass
                 self.sfr[mass_bin_q_index] = self.ssfr[mass_bin_q_index] + self.mass[mass_bin_q_index]
 
@@ -173,11 +177,23 @@ class CenQue:
         into CenQue data 
 
         overly convoluted way to read in data -.-
+        **UPDATED TO hdf5 FILE FORMAT**
         '''
         # kwargs specifies the input file 
         input_file = util.cenque_file( **kwargs ) 
+        f = h5py.File(input_file, 'r') 
         print input_file 
 
+        grp = f['cenque_data']
+
+        # save meta data first
+        for i_meta, metadatum in enumerate(grp.attrs.keys()): 
+            setattr(self, metadatum, (grp.attrs.values())[i_meta]) 
+    
+        for i_col, column in enumerate(grp.keys()): 
+            setattr(self, column, grp[column][:])
+        f.close() 
+        '''
         with open(input_file, 'r') as f:
             for i, line in enumerate(f): 
                 if i == 0: 
@@ -232,11 +248,17 @@ class CenQue:
                 setattr(self, column, map(str.strip, data[col_name[i_col]])) 
             else: 
                 setattr(self, column, data[col_name[i_col]]) 
+        '''
 
     def writeout(self, **kwargs): 
         ''' simply outputs specified columns to file
         '''
-        if self.sfr == None:
+
+        output_file = util.cenque_file( **kwargs )  # output file 
+        f = h5py.File(output_file, 'w')         # hdf5 file format (open file) 
+        grp = f.create_group('cenque_data')     # create group 
+    
+        if self.sfr is None: 
             # output columns 
             columns = ['mass', 'parent', 'child', 'ilk', 'snap_index']
         elif 'columns' in kwargs.keys(): 
@@ -248,9 +270,22 @@ class CenQue:
             
         n_cols = len(columns)       # number of columns 
         col_fmt = []                # column format 
-
-        for column in columns:      # combine data into list for output  
+    
+        # save each column to dataset within 'cenque_data' group 
+        for column in columns:      
             column_attr = getattr(self, column)
+
+            # write out file
+            grp.create_dataset( column, data=column_attr ) 
+        
+        # save metadata 
+        metadata = [ 'nsnap', 'zsnap', 't_cosmic', 't_step' ]
+        for metadatum in metadata: 
+            if self.nsnap is not None: 
+                grp.attrs[metadatum] = getattr(self, metadatum) 
+
+        f.close()  
+        '''
             try:                # save column data 
                 column_data
             except NameError: 
@@ -265,7 +300,7 @@ class CenQue:
                 col_fmt.append('%d')        # integer
             elif column in ('gal_type'): 
                 col_fmt.append('%s')        # string
-            else: 
+            else: /
                 raise NameError("column doesn't exist") 
         
         # header information 
@@ -273,14 +308,13 @@ class CenQue:
             ', t_cosmic = ', str(self.t_cosmic), ', t_step = ', str(self.t_step), ' \n'])
         output_header = snap_info+', '.join(columns)+'\n'    # list the columns
         
-        output_file = util.cenque_file( **kwargs ) 
         
-        # write out file
         f = open( output_file, 'w' )
         f.write( output_header )
         for i in range(len(column_data[0])): 
             f.write(', \t'.join( [ str(column_data[j][i]) for j in range(n_cols) ] )+'\n' ) 
         f.close() 
+        '''
 
     def sample_select(self, bool, columns=None, silent=False): 
         ''' Given boolean list remove False items from data
@@ -290,7 +324,7 @@ class CenQue:
             n_remove = len(bool) - len(bool[bool == True])
             print 'Removing ', n_remove, ' elements from ', len(bool)  
     
-        if columns == None:         # if data columns aren't specified
+        if columns is None:         # if data columns aren't specified
             data_columns = ['mass', 'sfr', 'ssfr', 'gal_type', 
                     'parent', 'child', 'ilk', 'snap_index', 'pos']
         else: 
@@ -323,7 +357,7 @@ def EvolveCenQue(origin_nsnap, final_nsnap, mass_bin=None, alpha=-1.5, **kwargs)
     ''' Evolve SF properties from origin_nsnap to final_nsnap 
     '''
 
-    if mass_bin == None: 
+    if mass_bin is None: 
         mass_bins = util.simple_mass_bin()  # use simplest mass bins
     else: 
         raise NotImplementedError("not yet coded") 
@@ -445,7 +479,7 @@ def EvolveCenQue(origin_nsnap, final_nsnap, mass_bin=None, alpha=-1.5, **kwargs)
             if mbin_ngal == 0:                  # if there are no galaxies within mass bin
                 continue 
             
-            mbin_qf = util.get_fq_alpha(mass_bins.mass_mid[i_m], child_cq.zsnap, 
+            mbin_qf = util.get_fq(mass_bins.mass_mid[i_m], child_cq.zsnap, 
                 lit=kwargs['fq']) 
 
             print 'z = ', child_cq.zsnap, ' M* = ', mass_bins.mass_mid[i_m], ' fq = ', mbin_qf
@@ -496,7 +530,8 @@ def EvolveCenQue(origin_nsnap, final_nsnap, mass_bin=None, alpha=-1.5, **kwargs)
 
             child_cq.sfr[quench_index] = child_cq.parent_sfr[quench_index] + tau_quench 
             child_cq.ssfr[quench_index] = child_cq.sfr[quench_index] - child_cq.mass[quench_index]
-            child_cq.q_ssfr[quench_index] = 0.2 * np.random.randn(ngal_2quench) - 12.0
+            q_ssfr_mean = util.get_q_ssfr_mean(child_cq.mass[quench_index]) 
+            child_cq.q_ssfr[quench_index] = 0.2 * np.random.randn(ngal_2quench) + q_ssfr_mean 
         
         # deal with orphans
         print len(child_cq.gal_type[child_cq.gal_type == '']), ' child galaxies are orphans' 
@@ -525,17 +560,14 @@ def build_cenque_importsnap(**kwargs):
     '''
     for i_snap in [13]: 
         snap = CenQue() 
-        snap.readin(nsnap=i_snap)
+        snap.ImportSnap(nsnap=i_snap)
+        snap.writeout(nsnap=i_snap)
+
         snap.AssignSFR(i_snap, **kwargs) 
         snap.writeout(nsnap=i_snap, file_type='sf assign', **kwargs)
 
 if __name__=='__main__': 
-    #build_cenque_importsnap(fq='cosmosinterp') 
-    #EvolveCenQue(13, 1, fq='cosmosinterp', tau='instant') 
-    #EvolveCenQue(13, 1, fq='cosmosinterp', tau='constant') 
-    #EvolveCenQue(13, 1, fq='cosmosinterp', tau='linear') 
-
-    #build_cenque_importsnap(fq='wetzel') 
+    build_cenque_importsnap(fq='wetzel') 
     EvolveCenQue(13, 1, fq='wetzel', tau='instant') 
-    #EvolveCenQue(13, 1, fq='wetzel', tau='constant') 
-    #EvolveCenQue(13, 1, fq='wetzel', tau='linear') 
+    EvolveCenQue(13, 1, fq='wetzel', tau='constant') 
+    EvolveCenQue(13, 1, fq='wetzel', tau='linear') 

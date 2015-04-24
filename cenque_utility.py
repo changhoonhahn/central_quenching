@@ -141,7 +141,7 @@ def simple_mass_bin():
     '''
     simple_mass_binsize = 0.1
     simple_mass_bin = mass_bin()
-    simple_mass_bin.mass_low = [ 9.0 + np.float(i)*simple_mass_binsize for i in range(20) ]
+    simple_mass_bin.mass_low = [ 9.0 + np.float(i)*simple_mass_binsize for i in range(25) ]
     simple_mass_bin.mass_high = [ simple_mass_bin.mass_low[i] + simple_mass_binsize
             for i in range(len(simple_mass_bin.mass_low)) ]
     simple_mass_bin.mass_mid = [
@@ -233,6 +233,12 @@ def get_quenching_efold(mstar, type='constant'):
         raise NotImplementedError('asdf')
 
     return tau 
+
+def get_q_ssfr_mean(masses): 
+    ''' Quiescent population SSFR mean for array of mass 
+    '''
+    q_ssfr = np.array([ (-0.6 * mass) - 5.617 for mass in masses ])  
+    return q_ssfr 
 
 # fits file treatment -----------------------------------------------------------------------
 class FitsTable:
@@ -330,6 +336,6 @@ def cenque_file( **kwargs ):
 
         cenque_filename = ''.join(['/data1/hahn/central_quenching/', 
             'cenque_centrals_snapshot', str(kwargs['nsnap']), file_type_str, 
-            '.dat']) 
+            '.hdf5']) 
 
     return cenque_filename

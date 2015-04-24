@@ -12,6 +12,7 @@ import numpy as np
 import random
 import os 
 import matplotlib.pyplot as plt
+import h5py
 
 #---- Local ----
 import cenque_utility as util
@@ -39,8 +40,12 @@ def read_group_catalog_galdata(Mrcut=18):
         column_data = getattr(gal_data, column)
         if column == 'stellmass': 
             # stellmass is in units of Msol/h^2
-            column_data = column_data * h**2
+            column_data = column_data / h**2
             setattr(gal_data, 'mass', np.log10(column_data)+0.5)    # convert to log Mass
+        elif column == 'ssfr': 
+            column_data = column_data + np.log10(h**2) 
+            setattr(gal_data, 'ssfr', column_data)    # convert to log Mass
+
         elif column == 'cz': 
             setattr(gal_data, 'z', column_data/299792.458)          # convert to z else: 
             pass
@@ -94,7 +99,7 @@ def build_group_catalog(Mrcut=18, central=True):
         setattr(central_catalog, column, column_data)
 
     output_file = ''.join(['/data1/hahn/group_catalog/', 
-        'massSFR_clf_groups_M', str(Mrcut), '_', str(masscut), '_D360.central.dat']) 
+        'massSFR_clf_groups_M', str(Mrcut), '_', str(masscut), '_D360.central.hdf5']) 
     central_catalog.writeout(columns=group_catalog_columns,
             input_file=output_file) 
 
@@ -109,19 +114,25 @@ def central_catalog(Mrcut=18, clobber=False):
         masscut='10.2'
     
     catalog_file = ''.join(['/data1/hahn/group_catalog/', 
-        'massSFR_clf_groups_M', str(Mrcut), '_', str(masscut), '_D360.central.dat']) 
+        'massSFR_clf_groups_M', str(Mrcut), '_', str(masscut), '_D360.central.hdf5']) 
 
     if (os.path.isfile(catalog_file) == False) or (clobber == True): 
         build_group_catalog(Mrcut=Mrcut, central=True)
-
-    mass, sfr, ssfr = np.loadtxt(catalog_file, skiprows=2, delimiter=',', 
-            unpack=True, usecols=[0,1,2]) 
+    
+    f = h5py.File(catalog_file, 'r') 
+    grp = f['cenque_data']
+    mass = grp['mass'][:]
+    sfr = grp['sfr'][:]
+    ssfr = grp['ssfr'][:]
+    #mass, sfr, ssfr = np.loadtxt(catalog_file, skiprows=2, delimiter=',', 
+    #        unpack=True, usecols=[0,1,2]) 
 
     catalog = cq.CenQue() 
     setattr(catalog, 'mass', mass) 
     setattr(catalog, 'sfr', sfr) 
     setattr(catalog, 'ssfr', ssfr) 
     
+    f.close()
     return catalog 
 
 def double_gaussian(x, p): 
@@ -153,8 +164,7 @@ def double_gaussian_fit(cen_cat):
     
     # hardcoded mass bins
     panel_mass_bins = [
-            [9.5, 10.0], [10.0, 10.5], 
-            [10.5, 11.0], [11.0, 11.5]
+            [10.0, 10.5], [10.5, 11.0], [11.0, 11.5]
             ]
     
     output = []
@@ -257,9 +267,9 @@ def build_group_catalog_match2isedfit(Mrcut=18, central=True):
     match_index = index[gal_index]
     # central or satellite 
     if central == True: 
-        prob_index = match_index[(prob_data.p_sat[gal_index] <= 0.5)]
+        prob_index = (prob_data.p_sat[gal_index] <= 0.5)
     else: 
-        prob_index = match_index[(prob_data.p_sat[gal_index] > 0.5)]
+        prob_index = (prob_data.p_sat[gal_index] > 0.5)
     
     central_catalog = cq.CenQue()       # save as CenQue class
 
@@ -268,16 +278,13 @@ def build_group_catalog_match2isedfit(Mrcut=18, central=True):
         #column_data = getattr(gal_data, column)[prob_index]
         #print len(column_data)
         if column == 'mass': 
-            ####
-            ####
-            ####
-            ####
-            ####
-            ####
-            ####
-            ####
-            ####
-        setattr(central_catalog, column, column_data)
+            setattr(central_catalog, column, mfdata.mass[prob_index])
+        elif column == 'sfr': 
+            setattr(central_catalog, column, mfdata.sfr[prob_index])
+        elif column == 'ssfr': 
+            setattr(central_catalog, column, mfdata.sfr[prob_index] - mfdata.mass[prob_index])
+        else: 
+            raise NameError('asdfasdfasdf') 
 
     output_file = ''.join(['/data1/hahn/group_catalog/', 
         'massSFR_clf_groups_M', str(Mrcut), '_', str(masscut), '_D360_match2isedfit.central.dat']) 
@@ -311,14 +318,8 @@ def central_catalog_match2isedfit(Mrcut=18, clobber=False):
     return catalog 
 
 if __name__=='__main__': 
-    build_group_catalog_match2isedfit(Mrcut=18, central=True)
-    build_group_catalog_match2isedfit(Mrcut=19, central=True)
-    build_group_catalog_match2isedfit(Mrcut=20, central=True)
 
-    #match2_primus_mfdata(Mrcut=18)
-    #match2_primus_mfdata(Mrcut=19)
-    #match2_primus_mfdata(Mrcut=20)
-    #central_ssfr = central_catalog(Mrcut=18, clobber=True) 
-    #central_ssfr = central_catalog(Mrcut=19, clobber=True) 
-    #central_ssfr = central_catalog(Mrcut=20, clobber=True) 
-    #print double_gaussian_fit(central_ssfr) 
+    central_ssfr = central_catalog(Mrcut=18, clobber=True) 
+    central_ssfr = central_catalog(Mrcut=19, clobber=True) 
+    central_ssfr = central_catalog(Mrcut=20, clobber=True) 
+    print double_gaussian_fit(central_ssfr) 
