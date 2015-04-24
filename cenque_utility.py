@@ -10,6 +10,7 @@ import numpy as np
 import pyfits as fits
 import matplotlib.pyplot as plt
 import os 
+import mpfit
 
 # quiescent fraction ------------------------------------------------------------
 class fq: 
@@ -156,7 +157,7 @@ def simple_mass_bin():
     return simple_mass_bin 
 
 # SF property functions ------------------------------------------------------------------------
-def get_sfr_mstar_z(mstar, z_in, deltamass=0.2, deltaz=0.2, lit='primusfit', machine='harmattan'): 
+def get_sfr_mstar_z(mstar, z_in, deltamass=0.2, deltaz=0.2, lit='primusfit', machine='harmattan'):
     ''' Get SFR using SF main sequence as a function of mass and redshift
     outputs [average SFR, standard deviation SFR] for mass and redshift bin  
     '''
@@ -173,7 +174,8 @@ def get_sfr_mstar_z(mstar, z_in, deltamass=0.2, deltaz=0.2, lit='primusfit', mac
         sf_ms = mrdfits(sf_ms_file) 
         
         fid_mass = 10.5         # fid mass (part of the fititng) 
-            
+        
+        sf_ms.yint[sf_ms.z == 0.1] = 0.134      # totally unjustified hack
         SFR_amp = np.interp(z_in, sf_ms.z, sf_ms.yint)  # interpolate SFR amplitude by z input
 
         # closest redshift index
@@ -210,6 +212,26 @@ def get_sfr_mstar_z(mstar, z_in, deltamass=0.2, deltaz=0.2, lit='primusfit', mac
     else: 
         raise NameError("Not yet coded") 
 
+def line(x, p): 
+    return p[0]*x + p[1]
+
+def mpfit_line(p, fjac=None, x=None, y=None): 
+    #model = line_fixedslope(x, p) 
+    model = line(x, p) 
+    status = 0 
+    return([status, (y-model)]) 
+'''
+def sdss_sf_ms_fit(): 
+
+    p0 = [0.02]
+    fa = {'x': np.array([10.25, 10.75, 11.25]), 'y': np.array([-0.0777, 0.248, 0.483])}
+    bestfit_pars = mpfit.mpfit(mpfit_line, p0, functkw=fa, nprint=0)
+    print bestfit_pars.params[0]
+    print line_fixedslope(10.25, bestfit_pars.params) 
+    print line_fixedslope(10.75, bestfit_pars.params) 
+    print line_fixedslope(11.0, bestfit_pars.params) 
+'''
+
 def get_quenching_efold(mstar, type='constant'): 
     ''' get quenching efold based on stellar mass of galaxy 
     '''
@@ -229,6 +251,19 @@ def get_quenching_efold(mstar, type='constant'):
 
         n_arr = len(mstar) 
         tau = np.array([0.001 for i in range(n_arr)]) 
+
+    elif isinstance(type, list) == True:    # if type is a list 
+
+        masses = np.array([9.75, 10.25, 10.75, 11.25]) 
+        
+        #p0 = [-(0.9/1.5), 1.0]
+        #fa = {'x': masses-9.5, 'y': type}
+        #bestfit_pars = mpfit.mpfit(mpfit_line, p0, functkw=fa, nprint=0)
+    
+        #tau = bestfit_pars.params[0] * (mstar - 9.5) + bestfit_pars.params[1]
+        tau = np.interp(mstar, masses, type) 
+        if np.min(tau) == 0.0: 
+            tau[ tau == 0.0 ] = 0.0001
     else: 
         raise NotImplementedError('asdf')
 
@@ -329,8 +364,13 @@ def cenque_file( **kwargs ):
 
                 file_type_str = '_evol_from'+str(original_nsnap) 
                 
-                file_type_str = ''.join(['_', kwargs['tau'], 'tau_', 
-                    kwargs['fq'], 'fq', file_type_str])
+                if isinstance(kwargs['tau'], list) == False: 
+                    file_type_str = ''.join(['_', kwargs['tau'], 'tau_', 
+                        kwargs['fq'], 'fq', file_type_str])
+                else: 
+                    file_type_str = ''.join(['_', 
+                        '_'.join( [str(t) for t in kwargs['tau']] ), 'tau_', 
+                        kwargs['fq'], 'fq', file_type_str])
             else: 
                 raise NameError("File not specified") 
 

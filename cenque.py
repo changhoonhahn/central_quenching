@@ -353,7 +353,7 @@ class CenQue:
         '''
         return np.array(range(len(self.mass)))[bool]
 
-def EvolveCenQue(origin_nsnap, final_nsnap, mass_bin=None, alpha=-1.5, **kwargs): 
+def EvolveCenQue(origin_nsnap, final_nsnap, mass_bin=None, **kwargs): 
     ''' Evolve SF properties from origin_nsnap to final_nsnap 
     '''
 
@@ -547,10 +547,11 @@ def EvolveCenQue(origin_nsnap, final_nsnap, mass_bin=None, alpha=-1.5, **kwargs)
         child_cq.ssfr[over_quenched] = child_cq.q_ssfr[over_quenched]
         child_cq.tau[over_quenched] = -999.0            # done quenching 
 
-        child_cq.writeout(nsnap=child_cq.nsnap, file_type='evol from '+str(origin_nsnap), 
-                columns = ['mass', 'sfr', 'ssfr', 'gal_type', 'tau', 'q_ssfr', 
-                    'parent_sfr', 'parent_mass', 'parent', 'child', 'ilk', 'snap_index'], 
-                **kwargs)  
+        if child_cq.nsnap == final_nsnap: 
+            child_cq.writeout(nsnap=child_cq.nsnap, file_type='evol from '+str(origin_nsnap), 
+                    columns = ['mass', 'sfr', 'ssfr', 'gal_type', 'tau', 'q_ssfr', 
+                        'parent_sfr', 'parent_mass', 'parent', 'child', 'ilk', 'snap_index'], 
+                    **kwargs)  
 
         parent_cq = child_cq
         print 'Quiescent Fraction = ', np.float(len(parent_cq.gal_type[parent_cq.gal_type == 'quiescent']))/np.float(len(parent_cq.gal_type)) 
@@ -567,7 +568,7 @@ def build_cenque_importsnap(**kwargs):
         snap.writeout(nsnap=i_snap, file_type='sf assign', **kwargs)
 
 if __name__=='__main__': 
-    build_cenque_importsnap(fq='wetzel') 
-    EvolveCenQue(13, 1, fq='wetzel', tau='instant') 
-    EvolveCenQue(13, 1, fq='wetzel', tau='constant') 
+    #build_cenque_importsnap(fq='wetzel') 
+    #EvolveCenQue(13, 1, fq='wetzel', tau='instant') 
+    #EvolveCenQue(13, 1, fq='wetzel', tau='constant') 
     EvolveCenQue(13, 1, fq='wetzel', tau='linear') 

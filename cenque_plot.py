@@ -16,6 +16,7 @@ import cenque_utility as util
 import cenque as cq 
 import cenque_groupcat as cq_group
 
+# ssfr distribution ------------------------------------------
 def plot_cenque_ssfr_dist(cenque, fig=None, **kwargs): 
     ''' Plot CenQue data
     '''
@@ -101,17 +102,12 @@ def plot_cenque_ssfr_dist(cenque, fig=None, **kwargs):
 
     return fig   
 
-def plot_cenque_sf_mainseq(cenque): 
-    ''' Given CenQue data, plot the Star-Forming Main Sequence
-    '''
-    pass
-
 def plot_cenque_ssfr_dist_evolution(Mrcut=18, **kwargs): 
     snap = cq.CenQue() 
     snap.readin(nsnap=13, file_type='sf assign', **kwargs) 
     ssfr_fig = plot_cenque_ssfr_dist(snap)
 
-    for i_nsnap in reversed(range(1,13)):
+    for i_nsnap in [1]:#reversed(range(1,13)):
         next_snap = cq.CenQue() 
         next_snap.readin(nsnap=i_nsnap, file_type='evol from 13', **kwargs) 
         
@@ -120,8 +116,14 @@ def plot_cenque_ssfr_dist_evolution(Mrcut=18, **kwargs):
     central_ssfr = cq_group.central_catalog(Mrcut=Mrcut, clobber=True) 
     ssfr_fig = plot_cenque_ssfr_dist(central_ssfr, fig=ssfr_fig, label= 'Mrcut = '+str(Mrcut)) 
     
-    fig_file = ''.join(['/home/users/hahn/research/figures/tinker/', 
-        'cenque_ssfr_evol_', kwargs['tau'], 'tau_', kwargs['fq'], 'fq_Mrcut', str(Mrcut),'.png']) 
+    if isinstance(kwargs['tau'], list) == False: 
+        fig_file = ''.join(['/home/users/hahn/research/figures/tinker/', 
+            'cenque_ssfr_evol_', kwargs['tau'], 'tau_', 
+            kwargs['fq'], 'fq_Mrcut', str(Mrcut),'.png']) 
+    else: 
+        fig_file = ''.join(['/home/users/hahn/research/figures/tinker/', 
+            'cenque_ssfr_evol_', '_'.join([str(t) for t in kwargs['tau']]), 'tau_', 
+            kwargs['fq'], 'fq_Mrcut', str(Mrcut),'.png']) 
     ssfr_fig.savefig(fig_file, bbox_inches='tight') 
     ssfr_fig.clear() 
 
@@ -204,6 +206,38 @@ def plot_sdss_group_cat_bestfit(Mrcut=19):
         'sdss_groupcat_ssfr_bestift_mrcut', str(Mrcut), '.png']) 
     ssfr_fig.savefig(fig_file, bbox_inches='tight')
     ssfr_fig.clear()
+
+def plot_cenque_sf_mainseq(): 
+    ''' Given CenQue data, plot the Star-Forming Main Sequence
+    '''
+    masses = [10.0 + np.float(i)*0.1 for i in range(15)]        # masses
+    redshift = [ 0.05, 0.2, 0.5, 0.9 ] 
+
+    fig = plt.figure(1, figsize=(20,5)) 
+
+    for i_z, z_in in enumerate(redshift): 
+        sub = fig.add_subplot(1, len(redshift), i_z+1) 
+
+        sfr_m_z = [] 
+        for mass in masses: 
+            sfr, sig_sfr = util.get_sfr_mstar_z(mass, z_in, lit='primusfit')
+            sfr_m_z.append(sfr) 
+
+        print masses 
+        print sfr_m_z
+        sub.scatter( masses, sfr_m_z, c='b' ) 
+        if i_z == 0.0:
+            sub.scatter([10.25, 10.75, 11.25], [-0.0777, 0.248, 0.483], c='k', s=6) 
+        sub.text(10.0, 1.0, 'z = '+str(z_in))
+        sub.set_xlim([9.5, 12.0]) 
+        sub.set_ylim([-2.0, 2.0]) 
+        sub.set_xlabel('log M') 
+        if i_z == 0: 
+            sub.set_ylabel('log SFR') 
+    
+    fig_file = ''.join(['/home/users/hahn/research/figures/tinker/', 
+        'sf_ms_evol.png']) 
+    fig.savefig(fig_file) 
 
 def plot_fq_evol(): 
     ''' plot fq evolution 
@@ -338,9 +372,13 @@ def plot_group_cat_bigauss_bestfit():
 if __name__=='__main__': 
     #plot_group_cat_bigauss_bestfit()
     #plot_sdss_group_cat() 
-    plot_cenque_ssfr_dist_evolution(fq='wetzel', tau='instant') 
-    plot_cenque_ssfr_dist_evolution(fq='wetzel', tau='linear') 
-    plot_cenque_ssfr_dist_evolution(fq='wetzel', tau='constant') 
+    #plot_cenque_ssfr_dist_evolution(fq='wetzel', tau='instant') 
+    #plot_cenque_ssfr_dist_evolution(fq='wetzel', tau='linear') 
+    #plot_cenque_ssfr_dist_evolution(fq='wetzel', tau='constant') 
+    plot_cenque_ssfr_dist_evolution(fq='wetzel', tau=[0.6, 0.4, 0.1, 0.0]) 
+    plot_cenque_ssfr_dist_evolution(fq='wetzel', tau=[0.6, 0.4, 0.1, 0.1]) 
+
+    #plot_cenque_sf_mainseq()
 
     #fq_fig = plot_fq_evol_w_geha() 
     #fq_fig = plot_fq_evol()
