@@ -139,6 +139,10 @@ class mass_bin:
 
 def simple_mass_bin(): 
     ''' Simple mass bins 
+
+    output 
+    ------
+    mass_bin class that contains mass bin information
     '''
     simple_mass_binsize = 0.1
     simple_mass_bin = mass_bin()
@@ -157,6 +161,27 @@ def simple_mass_bin():
     return simple_mass_bin 
 
 # SF property functions ------------------------------------------------------------------------
+def get_sfr_mstar_z_flex(mstar, z_in, built_sfms_fit):
+    ''' given built SFMS fits from sf_mainseq function build_sfr_mstar_z 
+    output SFR of mstar and z_in 
+    
+    input
+    -----
+    built_sfms_fit: (z_mid, slope, yint) 
+
+    '''
+    fid_mass = 10.5 
+    
+    SFR_amp = np.interp(z_in, np.array(built_sfms_fit[0]), np.array(built_sfms_fit[2])) 
+
+    # closest redshift index
+    closest_i = min(range(len(sf_ms.z)), key=lambda i: abs(sf_ms.z[i] - z_in))
+
+    # assuming slope doesn't change calculate average SFR
+    avg_sfr = (built_sfms_fit[1])[closest_i] * (mstar - fid_mass) + SFR_amp
+        
+    return [avg_sfr, 0.3]       # 0.3 dex scatter hard-coded
+
 def get_sfr_mstar_z(mstar, z_in, deltamass=0.2, deltaz=0.2, lit='primusfit', machine='harmattan'):
     ''' Get SFR using SF main sequence as a function of mass and redshift
     outputs [average SFR, standard deviation SFR] for mass and redshift bin  
@@ -220,6 +245,7 @@ def mpfit_line(p, fjac=None, x=None, y=None):
     model = line(x, p) 
     status = 0 
     return([status, (y-model)]) 
+
 '''
 def sdss_sf_ms_fit(): 
 
@@ -229,7 +255,7 @@ def sdss_sf_ms_fit():
     print bestfit_pars.params[0]
     print line_fixedslope(10.25, bestfit_pars.params) 
     print line_fixedslope(10.75, bestfit_pars.params) 
-    print line_fixedslope(11.0, bestfit_pars.params) 
+    print line_fixedslope(11.0, bestfit_pars.params)
 '''
 
 def get_quenching_efold(mstar, type='constant'): 

@@ -8,6 +8,7 @@ Author(s): ChangHoon Hahn
 
 import numpy as np
 import matplotlib.pyplot as plt
+import mpfit
 
 #----- Local -----
 from utility.plotting import prettyplot
@@ -15,6 +16,7 @@ from utility.plotting import prettycolors
 import cenque_utility as util 
 import cenque as cq 
 import cenque_groupcat as cq_group
+import sf_mainseq as sfms 
 
 # ssfr distribution ------------------------------------------
 def plot_cenque_ssfr_dist(cenque, fig=None, **kwargs): 
@@ -239,6 +241,7 @@ def plot_cenque_sf_mainseq():
         'sf_ms_evol.png']) 
     fig.savefig(fig_file) 
 
+# quiescent fraction -----------------------------------
 def plot_fq_evol(): 
     ''' plot fq evolution 
     '''
@@ -369,15 +372,79 @@ def plot_group_cat_bigauss_bestfit():
     plot_sdss_group_cat_bestfit(Mrcut=19)
     plot_sdss_group_cat_bestfit(Mrcut=20)
 
+# SF-MS ---------------------------
+def plot_sfms_data(): 
+    ''' plot SF MS from data
+    '''
+
+    prettyplot()        # make pretty 
+    pretty_colors = prettycolors() 
+
+    mass_bin = util.simple_mass_bin()       # mass bin 
+    zbins = [ (0.0, 0.2), (0.2, 0.4), (0.4, 0.6), (0.6, 0.8)]  # zbin
+
+    fig, subs = plt.subplots(1, len(zbins), figsize=[20, 5]) 
+    subs = subs.ravel() 
+
+    # SDSS group catalog best fit 
+    groupcat_slope, groupcat_yint = sfms.sdss_groupcat_sfms_bestfit()
+    subs[0].plot(
+            np.array(mass_bin.mass_mid), 
+            (groupcat_slope * (np.array(mass_bin.mass_mid)-10.5)) + groupcat_yint, 
+            c='k', lw=6, ls='--') 
+
+    fits = [] 
+    for i_z, zbin in enumerate(zbins): 
+        
+        mass = [] 
+        avg_sfrs = []
+        var_sfrs = [] 
+
+        for i_mass in range(len(mass_bin.mass_low)): 
+
+            avg_sfr, var_sfr, ngal = sfms.get_sfr_mstar_z(mass_bin.mass_mid[i_mass], 
+                    0.5*(zbin[0] + zbin[1]))
+
+            if ngal < 10: 
+                continue    # skip mass bin if there aren't many galaxies
+            if mass_bin.mass_mid[i_mass] < 9.5: 
+                continue    # skip low mass
+
+            mass.append(mass_bin.mass_mid[i_mass]) 
+            avg_sfrs.append(avg_sfr)
+            var_sfrs.append(var_sfr)
+            
+        subs[i_z].errorbar(mass, avg_sfrs, yerr=var_sfrs, c=pretty_colors[1])
+
+        p0 = [0.0+i_z*0.2] 
+        fa = {'x': np.array(mass)-10.5, 'y': np.array(avg_sfrs), 'err': np.array(var_sfrs)} 
+
+        bestfit = mpfit.mpfit(sfms.mpfit_line_fixedslope, p0, functkw=fa, nprint=0)
+                
+        print bestfit.params
+        subs[i_z].plot(mass, sfms.line_fixedslope(np.array(mass)-10.5, bestfit.params), c=pretty_colors[2]) 
+        
+        subs[i_z].text(10.0, 1.0, '$\mathtt{z \sim '+str(0.5*(zbin[0]+zbin[1]))+'}$') 
+        subs[i_z].set_xlim([9.5, 12.0]) 
+        subs[i_z].set_ylim([-0.5, 1.5]) 
+        if i_z in (1, 2):
+            subs[i_z].set_xlabel('log(M)') 
+        if i_z == 0: 
+            subs[i_z].set_ylabel('log(SFR)') 
+
+    return fig 
+
 if __name__=='__main__': 
     #plot_group_cat_bigauss_bestfit()
     #plot_sdss_group_cat() 
     #plot_cenque_ssfr_dist_evolution(fq='wetzel', tau='instant') 
     #plot_cenque_ssfr_dist_evolution(fq='wetzel', tau='linear') 
     #plot_cenque_ssfr_dist_evolution(fq='wetzel', tau='constant') 
-    plot_cenque_ssfr_dist_evolution(fq='wetzel', tau=[0.6, 0.4, 0.1, 0.0]) 
-    plot_cenque_ssfr_dist_evolution(fq='wetzel', tau=[0.6, 0.4, 0.1, 0.1]) 
-
+    #plot_cenque_ssfr_dist_evolution(fq='wetzel', tau=[0.9, 0.8, 0.4, 0.3]) 
+    #plot_cenque_ssfr_dist_evolution(fq='wetzel', tau=[0.9, 0.8, 0.4, 0.0]) 
+    #plot_cenque_ssfr_dist_evolution(fq='wetzel', tau=[0.7, 0.4, 0.4, 0.1]) 
+    fig = plot_sfms_data()
+    fig.savefig('/home/users/hahn/research/figures/tinker/sf_ms_data.png', bbox_inches='tight')
     #plot_cenque_sf_mainseq()
 
     #fq_fig = plot_fq_evol_w_geha() 

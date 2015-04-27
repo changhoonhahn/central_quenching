@@ -13,6 +13,7 @@ import h5py
 
 #---- Local ----
 import cenque_utility as util
+import sf_mainseq as sfms
 
 class CenQue: 
     ''' Central quenching (CenQue) galaxy catalogue
@@ -80,6 +81,12 @@ class CenQue:
             mass_bins = util.simple_mass_bin()  # use simplest mass bins
         else: 
             raise NameError("not yet coded") 
+
+        if 'sfms_slope' in kwargs.keys(): 
+            built_sfr_fit = sfms.build_sfr_mstar_z(kwargs['sfms_slope'], kwargs['sfms_yint']) A
+        else: 
+            groupcat_slope, groupcat_yint = sfms.sdss_groupcat_sfms_bestfit()
+            built_sfr_fit = sfms.build_sfr_mstar_z(groupcat_slope, groupcat_yint)
         
         if (min(self.mass) < min(mass_bins.mass_low)) or (max(self.mass) > max(mass_bins.mass_high)): 
             # remove galaxies below the minimum and maximum mass
@@ -157,7 +164,7 @@ class CenQue:
                 '''
                 get average and scatter of SF main sequence 
                 '''
-                [sf_avg_sfr, sf_sig_sfr] = util.get_sfr_mstar_z(mass_bins.mass_mid[i_m], self.zsnap) 
+                [sf_avg_sfr, sf_sig_sfr] = util.get_sfr_mstar_z_flex(mass_bins.mass_mid[i_m], self.zsnap, built_sfr_fit) 
 
                 print 'SF Average(SFR) = ', sf_avg_sfr, ' sigma_SFR = ', sf_sig_sfr
 
@@ -182,7 +189,7 @@ class CenQue:
         # kwargs specifies the input file 
         input_file = util.cenque_file( **kwargs ) 
         f = h5py.File(input_file, 'r') 
-        print input_file 
+        #print input_file 
 
         grp = f['cenque_data']
 
@@ -357,10 +364,17 @@ def EvolveCenQue(origin_nsnap, final_nsnap, mass_bin=None, **kwargs):
     ''' Evolve SF properties from origin_nsnap to final_nsnap 
     '''
 
-    if mass_bin is None: 
+    if mass_bin is None:            # mass bins
         mass_bins = util.simple_mass_bin()  # use simplest mass bins
     else: 
         raise NotImplementedError("not yet coded") 
+
+    # SF-MS fits 
+    if 'sfms_slope' in kwargs.keys(): 
+        built_sfr_fit = sfms.build_sfr_mstar_z(kwargs['sfms_slope'], kwargs['sfms_yint']) A
+    else: 
+        groupcat_slope, groupcat_yint = sfms.sdss_groupcat_sfms_bestfit()
+        built_sfr_fit = sfms.build_sfr_mstar_z(groupcat_slope, groupcat_yint)
   
     # import original snap SF prop 
     parent_cq = CenQue()
@@ -441,10 +455,10 @@ def EvolveCenQue(origin_nsnap, final_nsnap, mass_bin=None, **kwargs):
         sf_child_parent_indx = np.array(parent_indx)[sf_child]
         
         # SFR evolution amount
-        child_sfr, child_sig_sfr = util.get_sfr_mstar_z(child_cq.mass[sf_child_indx], 
-                child_cq.zsnap)
-        parent_sfr, parent_sig_sfr = util.get_sfr_mstar_z(parent_cq.mass[sf_child_parent_indx], 
-                parent_cq.zsnap) 
+        child_sfr, child_sig_sfr = util.get_sfr_mstar_z_flex(child_cq.mass[sf_child_indx], 
+                child_cq.zsnap, built_sfr_fit)
+        parent_sfr, parent_sig_sfr = util.get_sfr_mstar_z_flex(parent_cq.mass[sf_child_parent_indx], 
+                parent_cq.zsnap, built_sfr_fit) 
         dSFR = child_sfr - parent_sfr
         #util.get_sfr_mstar_z([(parent_cq.mass)[i] for i in sf_child_parent_indx], parent_cq.z) 
         
