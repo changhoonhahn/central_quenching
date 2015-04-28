@@ -82,11 +82,13 @@ class CenQue:
         else: 
             raise NameError("not yet coded") 
 
+        # if slope/yint of the SF-MS is specified in kwargs
         if 'sfms_slope' in kwargs.keys(): 
-            built_sfr_fit = sfms.build_sfr_mstar_z(kwargs['sfms_slope'], kwargs['sfms_yint']) A
-        else: 
+            sfms_sfr_fit = sfms.get_sfmsfit_sfr(kwargs['sfms_slope'], kwargs['sfms_yint'])
+        else:   
+            # otherwise, just use the fit from the group catalogs 
             groupcat_slope, groupcat_yint = sfms.sdss_groupcat_sfms_bestfit()
-            built_sfr_fit = sfms.build_sfr_mstar_z(groupcat_slope, groupcat_yint)
+            sfms_sfr_fit = sfms.get_sfmsfit_sfr(groupcat_slope, groupcat_yint)
         
         if (min(self.mass) < min(mass_bins.mass_low)) or (max(self.mass) > max(mass_bins.mass_high)): 
             # remove galaxies below the minimum and maximum mass
@@ -130,9 +132,9 @@ class CenQue:
             # Ngal,active in mass bin 
             mass_bin_n_sf = mass_bin_ngal - mass_bin_n_q
 
-            print mass_bins.mass_low[i_m], ' - ', mass_bins.mass_high[i_m]
-            print 'fQ = ', mass_bin_qf, ' Ngal = ', mass_bin_ngal, \
-                    ' Ngal,Q = ', mass_bin_n_q, ' Ngal,SF = ', mass_bin_n_sf
+            #print mass_bins.mass_low[i_m], ' - ', mass_bins.mass_high[i_m]
+            #print 'fQ = ', mass_bin_qf, ' Ngal = ', mass_bin_ngal, \
+            #        ' Ngal,Q = ', mass_bin_n_q, ' Ngal,SF = ', mass_bin_n_sf
             
             #### Quiescent ####
             if mass_bin_n_q > 0: 
@@ -164,9 +166,9 @@ class CenQue:
                 '''
                 get average and scatter of SF main sequence 
                 '''
-                [sf_avg_sfr, sf_sig_sfr] = util.get_sfr_mstar_z_flex(mass_bins.mass_mid[i_m], self.zsnap, built_sfr_fit) 
+                [sf_avg_sfr, sf_sig_sfr] = util.get_sfr_mstar_z_flex(mass_bins.mass_mid[i_m], self.zsnap, sfms_sfr_fit) 
 
-                print 'SF Average(SFR) = ', sf_avg_sfr, ' sigma_SFR = ', sf_sig_sfr
+                #print 'SF Average(SFR) = ', sf_avg_sfr, ' sigma_SFR = ', sf_sig_sfr
 
                 self.sfr[mass_bin_sf_index] = sf_sig_sfr * np.random.randn(mass_bin_n_sf) + sf_avg_sfr 
                 self.ssfr[mass_bin_sf_index] = \
@@ -329,7 +331,7 @@ class CenQue:
 
         if not silent: 
             n_remove = len(bool) - len(bool[bool == True])
-            print 'Removing ', n_remove, ' elements from ', len(bool)  
+            #print 'Removing ', n_remove, ' elements from ', len(bool)  
     
         if columns is None:         # if data columns aren't specified
             data_columns = ['mass', 'sfr', 'ssfr', 'gal_type', 
@@ -371,16 +373,16 @@ def EvolveCenQue(origin_nsnap, final_nsnap, mass_bin=None, **kwargs):
 
     # SF-MS fits 
     if 'sfms_slope' in kwargs.keys(): 
-        built_sfr_fit = sfms.build_sfr_mstar_z(kwargs['sfms_slope'], kwargs['sfms_yint']) A
+        sfms_sfr_fit = sfms.get_sfmsfit_sfr(kwargs['sfms_slope'], kwargs['sfms_yint'])
     else: 
         groupcat_slope, groupcat_yint = sfms.sdss_groupcat_sfms_bestfit()
-        built_sfr_fit = sfms.build_sfr_mstar_z(groupcat_slope, groupcat_yint)
+        sfms_sfr_fit = sfms.get_sfmsfit_sfr(groupcat_slope, groupcat_yint)
   
     # import original snap SF prop 
     parent_cq = CenQue()
     parent_cq.readin(nsnap=origin_nsnap, file_type='sf assign', **kwargs)   
 
-    print 'Quiescent Fraction = ', np.float(len(parent_cq.gal_type[parent_cq.gal_type == 'quiescent']))/np.float(len(parent_cq.gal_type)) 
+    #print 'Quiescent Fraction = ', np.float(len(parent_cq.gal_type[parent_cq.gal_type == 'quiescent']))/np.float(len(parent_cq.gal_type)) 
 
     for i_step in range(0, origin_nsnap - final_nsnap):    # evolve snapshot by snapshot 
 
@@ -397,7 +399,7 @@ def EvolveCenQue(origin_nsnap, final_nsnap, mass_bin=None, **kwargs):
                 columns = ['mass', 'parent', 'child', 'ilk', 'snap_index']  
                 )                   
         n_child = len(child_cq.mass)     # number of children left 
-        print 'Snapshot ', child_snap, ' has ', n_child, ' Galaxies'
+        #print 'Snapshot ', child_snap, ' has ', n_child, ' Galaxies'
 
         # set up columns for assignment 
         child_cq.gal_type = np.array(['' for i in range(n_child)], dtype='|S16') 
@@ -421,8 +423,8 @@ def EvolveCenQue(origin_nsnap, final_nsnap, mass_bin=None, **kwargs):
         
         # children inherit galaxy type and store parent SFR and mass 
         (child_cq.gal_type)[child_indx] = [(parent_cq.gal_type)[i] for i in parent_indx]
-        print len(child_cq.gal_type[child_cq.gal_type == '']), ' out of ',\
-                len(child_cq.gal_type), ' child galaxies are orphans' 
+        #print len(child_cq.gal_type[child_cq.gal_type == '']), ' out of ',\
+        #        len(child_cq.gal_type), ' child galaxies are orphans' 
         (child_cq.parent_sfr)[child_indx] = [(parent_cq.sfr)[i] for i in parent_indx]
         (child_cq.parent_mass)[child_indx] = [(parent_cq.mass)[i] for i in parent_indx]
         
@@ -444,7 +446,7 @@ def EvolveCenQue(origin_nsnap, final_nsnap, mass_bin=None, **kwargs):
                     child_cq.parent_sfr[still_quenching_indx] + tau_quench 
             child_cq.ssfr[still_quenching_indx] = \
                     child_cq.sfr[still_quenching_indx] - child_cq.mass[still_quenching_indx]
-            print child_cq.gal_type[still_quenching_indx]
+            #print child_cq.gal_type[still_quenching_indx]
             
             # children inherit final quenched SSFR 
             (child_cq.q_ssfr)[child_indx] = [(parent_cq.q_ssfr)[i] for i in parent_indx]
@@ -456,9 +458,9 @@ def EvolveCenQue(origin_nsnap, final_nsnap, mass_bin=None, **kwargs):
         
         # SFR evolution amount
         child_sfr, child_sig_sfr = util.get_sfr_mstar_z_flex(child_cq.mass[sf_child_indx], 
-                child_cq.zsnap, built_sfr_fit)
-        parent_sfr, parent_sig_sfr = util.get_sfr_mstar_z_flex(parent_cq.mass[sf_child_parent_indx], 
-                parent_cq.zsnap, built_sfr_fit) 
+                child_cq.zsnap, sfms_sfr_fit)
+        parent_sfr, parent_sig_sfr = util.get_sfr_mstar_z_flex(
+                parent_cq.mass[sf_child_parent_indx], parent_cq.zsnap, sfms_sfr_fit) 
         dSFR = child_sfr - parent_sfr
         #util.get_sfr_mstar_z([(parent_cq.mass)[i] for i in sf_child_parent_indx], parent_cq.z) 
         
@@ -484,7 +486,7 @@ def EvolveCenQue(origin_nsnap, final_nsnap, mass_bin=None, **kwargs):
             mass_bin_bool = (child_cq.mass > mass_bins.mass_low[i_m]) & \
                     (child_cq.mass <= mass_bins.mass_high[i_m]) & \
                     (child_cq.gal_type != '') 
-            print mass_bins.mass_low[i_m], ' - ', mass_bins.mass_high[i_m]
+            #print mass_bins.mass_low[i_m], ' - ', mass_bins.mass_high[i_m]
 
             # indices of galaxies within mass range
             mass_bin_index = child_cq.get_index(mass_bin_bool) 
@@ -496,7 +498,7 @@ def EvolveCenQue(origin_nsnap, final_nsnap, mass_bin=None, **kwargs):
             mbin_qf = util.get_fq(mass_bins.mass_mid[i_m], child_cq.zsnap, 
                 lit=kwargs['fq']) 
 
-            print 'z = ', child_cq.zsnap, ' M* = ', mass_bins.mass_mid[i_m], ' fq = ', mbin_qf
+            #print 'z = ', child_cq.zsnap, ' M* = ', mass_bins.mass_mid[i_m], ' fq = ', mbin_qf
             
             mbin_exp_n_q = int( np.rint(mbin_qf * np.float(mbin_ngal)) )    # Ngal,Q_expected
 
@@ -507,9 +509,9 @@ def EvolveCenQue(origin_nsnap, final_nsnap, mass_bin=None, **kwargs):
             child_gal_type = child_cq.gal_type[mass_bin_bool] 
 
             ngal_2quench = mbin_exp_n_q - len(child_gal_type[child_gal_type == 'quiescent'])  
-            print ngal_2quench, ' SF galaxies will be quenched'
+            #print ngal_2quench, ' SF galaxies will be quenched'
             if ngal_2quench <= 0: 
-                print ngal_2quench
+                #print ngal_2quench
                 continue 
             
             # randomly sample mass_bin_n_q galaxies from the mass bin 
@@ -517,10 +519,10 @@ def EvolveCenQue(origin_nsnap, final_nsnap, mass_bin=None, **kwargs):
                     [ mass_bin_bool & (child_cq.gal_type == 'star-forming')] 
                     ) 
 
-            print ngal_2quench, ' galaxies to quench'
-            print len(child_gal_type[child_gal_type == 'star-forming']), len(child_gal_type[child_gal_type == 'quiescent'])
-            print len(child_gal_type[child_gal_type == 'star-forming']) + len(child_gal_type[child_gal_type == 'quiescent']), mbin_ngal
-            print mbin_exp_n_q, ' expected quiescent galaxies' 
+            #print ngal_2quench, ' galaxies to quench'
+            #print len(child_gal_type[child_gal_type == 'star-forming']), len(child_gal_type[child_gal_type == 'quiescent'])
+            #print len(child_gal_type[child_gal_type == 'star-forming']) + len(child_gal_type[child_gal_type == 'quiescent']), mbin_ngal
+            #print mbin_exp_n_q, ' expected quiescent galaxies' 
             if len(child_gal_type[child_gal_type == 'star-forming']) < ngal_2quench: 
                 print ngal_2quench, ' galaxies to quench'
                 print len(child_gal_type[child_gal_type == 'star-forming']), len(child_gal_type[child_gal_type == 'quiescent'])
@@ -548,7 +550,7 @@ def EvolveCenQue(origin_nsnap, final_nsnap, mass_bin=None, **kwargs):
             child_cq.q_ssfr[quench_index] = 0.2 * np.random.randn(ngal_2quench) + q_ssfr_mean 
         
         # deal with orphans
-        print len(child_cq.gal_type[child_cq.gal_type == '']), ' child galaxies are orphans' 
+        #print len(child_cq.gal_type[child_cq.gal_type == '']), ' child galaxies are orphans' 
 
         child_cq.AssignSFR(child_cq.nsnap, **kwargs) 
 
@@ -568,18 +570,17 @@ def EvolveCenQue(origin_nsnap, final_nsnap, mass_bin=None, **kwargs):
                     **kwargs)  
 
         parent_cq = child_cq
-        print 'Quiescent Fraction = ', np.float(len(parent_cq.gal_type[parent_cq.gal_type == 'quiescent']))/np.float(len(parent_cq.gal_type)) 
+        #print 'Quiescent Fraction = ', np.float(len(parent_cq.gal_type[parent_cq.gal_type == 'quiescent']))/np.float(len(parent_cq.gal_type)) 
 
 def build_cenque_importsnap(**kwargs): 
     ''' 
     '''
     for i_snap in [13]: 
-        snap = CenQue() 
-        snap.ImportSnap(nsnap=i_snap)
-        snap.writeout(nsnap=i_snap)
-
         snap.AssignSFR(i_snap, **kwargs) 
         snap.writeout(nsnap=i_snap, file_type='sf assign', **kwargs)
+        #snap = CenQue() 
+        #snap.ImportSnap(nsnap=i_snap)
+        #snap.writeout(nsnap=i_snap)
 
 if __name__=='__main__': 
     #build_cenque_importsnap(fq='wetzel') 

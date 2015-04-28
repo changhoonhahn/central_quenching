@@ -118,6 +118,13 @@ def plot_cenque_ssfr_dist_evolution(Mrcut=18, **kwargs):
     central_ssfr = cq_group.central_catalog(Mrcut=Mrcut, clobber=True) 
     ssfr_fig = plot_cenque_ssfr_dist(central_ssfr, fig=ssfr_fig, label= 'Mrcut = '+str(Mrcut)) 
     
+    if 'sfms_slope' in kwargs.keys(): 
+        slope_str = "%.2f" % kwargs['sfms_slope'] 
+        yint_str = "%.2f" % kwargs['sfms_yint']
+        sfms_str = '_sfms_slope'+slope_str+'_yint'+yint_str
+    else: 
+        sfms_str = ''
+
     if isinstance(kwargs['tau'], list) == False: 
         fig_file = ''.join(['/home/users/hahn/research/figures/tinker/', 
             'cenque_ssfr_evol_', kwargs['tau'], 'tau_', 
@@ -125,7 +132,7 @@ def plot_cenque_ssfr_dist_evolution(Mrcut=18, **kwargs):
     else: 
         fig_file = ''.join(['/home/users/hahn/research/figures/tinker/', 
             'cenque_ssfr_evol_', '_'.join([str(t) for t in kwargs['tau']]), 'tau_', 
-            kwargs['fq'], 'fq_Mrcut', str(Mrcut),'.png']) 
+            kwargs['fq'], 'fq_Mrcut', str(Mrcut), sfms_str, '.png']) 
     ssfr_fig.savefig(fig_file, bbox_inches='tight') 
     ssfr_fig.clear() 
 
@@ -373,8 +380,9 @@ def plot_group_cat_bigauss_bestfit():
     plot_sdss_group_cat_bestfit(Mrcut=20)
 
 # SF-MS ---------------------------
-def plot_sfms_data(): 
-    ''' plot SF MS from data
+def plot_sfms_data(lowz_slope, lowz_yint): 
+    ''' plot SF MS from data (flexible SFMS fit)
+
     '''
 
     prettyplot()        # make pretty 
@@ -393,13 +401,12 @@ def plot_sfms_data():
             (groupcat_slope * (np.array(mass_bin.mass_mid)-10.5)) + groupcat_yint, 
             c='k', lw=6, ls='--') 
 
+    zmids, slopes, yints = sfms.get_sfmsfit_sfr(lowz_slope, lowz_yint, clobber=True) 
+
     fits = [] 
     for i_z, zbin in enumerate(zbins): 
         
-        mass = [] 
-        avg_sfrs = []
-        var_sfrs = [] 
-
+        mass, avg_sfrs, var_sfrs = [], [], [] 
         for i_mass in range(len(mass_bin.mass_low)): 
 
             avg_sfr, var_sfr, ngal = sfms.get_sfr_mstar_z(mass_bin.mass_mid[i_mass], 
@@ -415,16 +422,14 @@ def plot_sfms_data():
             var_sfrs.append(var_sfr)
             
         subs[i_z].errorbar(mass, avg_sfrs, yerr=var_sfrs, c=pretty_colors[1])
-
-        p0 = [0.0+i_z*0.2] 
-        fa = {'x': np.array(mass)-10.5, 'y': np.array(avg_sfrs), 'err': np.array(var_sfrs)} 
-
-        bestfit = mpfit.mpfit(sfms.mpfit_line_fixedslope, p0, functkw=fa, nprint=0)
-                
-        print bestfit.params
-        subs[i_z].plot(mass, sfms.line_fixedslope(np.array(mass)-10.5, bestfit.params), c=pretty_colors[2]) 
+        
+        print str(zbin[0]) + ' < ' + str(zmids[i_z]) + ' < ' + str(zbin[1])
+        subs[i_z].plot(mass, slopes[i_z]*(np.array(mass)-10.5) + yints[i_z], c=pretty_colors[2])
         
         subs[i_z].text(10.0, 1.0, '$\mathtt{z \sim '+str(0.5*(zbin[0]+zbin[1]))+'}$') 
+        subs[i_z].text(10.75, -0.25,'slope= '+str('%.2f' % slopes[i_z])) 
+        subs[i_z].text(10.75, -0.4, 'y-int= '+str('%.2f' % yints[i_z])) 
+
         subs[i_z].set_xlim([9.5, 12.0]) 
         subs[i_z].set_ylim([-0.5, 1.5]) 
         if i_z in (1, 2):
@@ -440,11 +445,12 @@ if __name__=='__main__':
     #plot_cenque_ssfr_dist_evolution(fq='wetzel', tau='instant') 
     #plot_cenque_ssfr_dist_evolution(fq='wetzel', tau='linear') 
     #plot_cenque_ssfr_dist_evolution(fq='wetzel', tau='constant') 
-    #plot_cenque_ssfr_dist_evolution(fq='wetzel', tau=[0.9, 0.8, 0.4, 0.3]) 
-    #plot_cenque_ssfr_dist_evolution(fq='wetzel', tau=[0.9, 0.8, 0.4, 0.0]) 
-    #plot_cenque_ssfr_dist_evolution(fq='wetzel', tau=[0.7, 0.4, 0.4, 0.1]) 
-    fig = plot_sfms_data()
-    fig.savefig('/home/users/hahn/research/figures/tinker/sf_ms_data.png', bbox_inches='tight')
+    plot_cenque_ssfr_dist_evolution(fq='wetzel', tau=[0.6, 0.4, 0.1, 0.0], 
+            sfms_slope=0.3, sfms_yint=-0.1) 
+
+    #fig = plot_sfms_data(0.3, -0.1)
+    #fig.savefig('/home/users/hahn/research/figures/tinker/sf_ms_data_0.3_-0.1.png', bbox_inches='tight')
+    #fig.clear()
     #plot_cenque_sf_mainseq()
 
     #fq_fig = plot_fq_evol_w_geha() 

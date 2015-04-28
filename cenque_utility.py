@@ -174,8 +174,10 @@ def get_sfr_mstar_z_flex(mstar, z_in, built_sfms_fit):
     
     SFR_amp = np.interp(z_in, np.array(built_sfms_fit[0]), np.array(built_sfms_fit[2])) 
 
+    zmids = built_sfms_fit[0]
+
     # closest redshift index
-    closest_i = min(range(len(sf_ms.z)), key=lambda i: abs(sf_ms.z[i] - z_in))
+    closest_i = min(range(len(zmids)), key=lambda i: abs(zmids[i] - z_in))
 
     # assuming slope doesn't change calculate average SFR
     avg_sfr = (built_sfms_fit[1])[closest_i] * (mstar - fid_mass) + SFR_amp
@@ -289,7 +291,7 @@ def get_quenching_efold(mstar, type='constant'):
         #tau = bestfit_pars.params[0] * (mstar - 9.5) + bestfit_pars.params[1]
         tau = np.interp(mstar, masses, type) 
         if np.min(tau) == 0.0: 
-            tau[ tau == 0.0 ] = 0.0001
+            tau[ tau < 0.05 ] = 0.05
     else: 
         raise NotImplementedError('asdf')
 
@@ -395,13 +397,20 @@ def cenque_file( **kwargs ):
                         kwargs['fq'], 'fq', file_type_str])
                 else: 
                     file_type_str = ''.join(['_', 
-                        '_'.join( [str(t) for t in kwargs['tau']] ), 'tau_', 
+                        '_'.join( [str("%.2f" % t) for t in kwargs['tau']] ), 'tau_', 
                         kwargs['fq'], 'fq', file_type_str])
             else: 
                 raise NameError("File not specified") 
+    
+        if 'sfms_slope' not in kwargs.keys(): 
+            sfms_param_str = ''
+        else: 
+            slope_str = "%.2f" % kwargs['sfms_slope']
+            yint_str = "%.2f" % kwargs['sfms_yint'] 
+            sfms_param_str = '_sfms_slope'+slope_str+'_yint'+yint_str
 
         cenque_filename = ''.join(['/data1/hahn/central_quenching/', 
-            'cenque_centrals_snapshot', str(kwargs['nsnap']), file_type_str, 
+            'cenque_centrals_snapshot', str(kwargs['nsnap']), file_type_str, sfms_param_str, 
             '.hdf5']) 
 
     return cenque_filename

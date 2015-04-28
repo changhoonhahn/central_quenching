@@ -11,6 +11,9 @@ import pyfits as fits
 import matplotlib.pyplot as plt
 import os 
 import mpfit
+import h5py
+
+# --- Local ---
 import cenque_utility as util 
 
 
@@ -89,18 +92,17 @@ def sdss_groupcat_sfms_bestfit():
 
     return [bestfit.params[0], bestfit.params[1]]
 
-def line_fixedslope(x, p): 
+def line_fixedslope(x, p, slope=0.56): 
     ''' Line with slope of SF MS linear fit 
     '''
-    slope, yint = sdss_groupcat_sfms_bestfit()
     return slope * x + p[0]
 
-def mpfit_line_fixedslope(p, fjac=None, x=None, y=None, err=None): 
-    model = line_fixedslope(x, p) 
+def mpfit_line_fixedslope(p, slope=0.56, fjac=None, x=None, y=None, err=None): 
+    model = line_fixedslope(x, p, slope=slope) 
     status = 0 
     return([status, (y-model)/err]) 
 
-def build_sfr_mstar_z(lowz_slope, lowz_yint):
+def build_sfmsfit_sfr(lowz_slope, lowz_yint):
     ''' Given z~0.1 SF MS slope and yint
     fit fixed slope line to other redshift limits
     
@@ -110,6 +112,7 @@ def build_sfr_mstar_z(lowz_slope, lowz_yint):
     yint: yint of z ~ 0.1 SF-MS
 
     '''
+    fid_mass = 10.5
 
     mass_bin = util.simple_mass_bin() 
     zbins = [ (0.0, 0.2), (0.2, 0.4), (0.4, 0.6), (0.6, 0.8), (0.8, 1.0) ] 
@@ -138,7 +141,8 @@ def build_sfr_mstar_z(lowz_slope, lowz_yint):
             var_sfrs.append(var_sfr)
 
         p0 = [0.1] 
-        fa = {'x': np.array(mass)-10.5, 'y': np.array(avg_sfrs), 'err': np.array(var_sfrs)} 
+        fa = {'slope': lowz_slope, 
+                'x': np.array(mass)-fid_mass, 'y': np.array(avg_sfrs), 'err': np.array(var_sfrs)}
 
         bestfit = mpfit.mpfit(mpfit_line_fixedslope, p0, functkw=fa, nprint=0)
         
@@ -148,10 +152,53 @@ def build_sfr_mstar_z(lowz_slope, lowz_yint):
             yints.append(lowz_yint) 
         else: 
             yints.append(bestfit.params[0]) 
+    
+    output_file = get_sfmsfit_slope_yint_file(lowz_slope, lowz_yint) 
+    f = h5py.File(output_file, 'w') 
+    grp = f.create_group('slope_yint')
+    
+    grp.attrs['fid_mass'] = fid_mass
+    grp.create_dataset('zmid', data=zmids) 
+    grp.create_dataset('slope', data=slopes) 
+    grp.create_dataset('yint', data=yints) 
 
+    f.close()
+
+def get_sfmsfit_sfr(slope, yint, clobber=True):
+    ''' Wrapper to extra slope, yint fit values
+    '''
+    fit_file = get_sfmsfit_slope_yint_file(slope, yint)
+    if (os.path.isfile(fit_file) == False) or (clobber == True):   # file doesn't exist 
+        build_sfmsfit_sfr(slope, yint) 
+    
+    f = h5py.File(fit_file, 'r') 
+
+    zmids = f['slope_yint/zmid'][:]
+    slopes = f['slope_yint/slope'][:]
+    yints = f['slope_yint/yint'][:]
+    
+    f.close() 
     return [zmids, slopes, yints]
+
+def get_sfmsfit_slope_yint_file(slope, yint): 
+    ''' Given low redshift slope and y-int, get fit files
+    input
+    -----
+    slope, yint
+
+    output
+    ------
+    file name 
+    '''
+
+    slope_str = "%.2f" % slope
+    yint_str = "%.2f" % yint 
+    output_file = ''.join(['/data1/hahn/central_quenching/sf_ms/', 
+        'sf_ms_fit_slope', slope_str, '_yint', yint_str, '.hdf5']) 
+
+    return output_file 
 
 if __name__=='__main__':
     # SDSS group catalog best fit 
     groupcat_slope, groupcat_yint = sdss_groupcat_sfms_bestfit()
-    print build_sfr_mstar_z(groupcat_slope, groupcat_yint)
+    print get_sfmsfit_sfr(groupcat_slope, groupcat_yint)
