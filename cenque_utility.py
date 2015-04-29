@@ -260,7 +260,7 @@ def sdss_sf_ms_fit():
     print line_fixedslope(11.0, bestfit_pars.params)
 '''
 
-def get_quenching_efold(mstar, type='constant'): 
+def get_quenching_efold(mstar, type='constant', param=None): 
     ''' get quenching efold based on stellar mass of galaxy 
     '''
 
@@ -280,18 +280,22 @@ def get_quenching_efold(mstar, type='constant'):
         n_arr = len(mstar) 
         tau = np.array([0.001 for i in range(n_arr)]) 
 
-    elif isinstance(type, list) == True:    # if type is a list 
-
+    elif type == 'discrete': 
+        # param will give 4 discrete tau at the center of mass bins 
         masses = np.array([9.75, 10.25, 10.75, 11.25]) 
+
+        if param is None: 
+            raise ValueError('asdfasdfa') 
+
+        tau = np.interp(mstar, masses, param) 
+        tau[ tau < 0.05 ] = 0.05
+
+    elif type == 'linefit': 
+        # param will give slope and yint of pivoted tau line 
         
-        #p0 = [-(0.9/1.5), 1.0]
-        #fa = {'x': masses-9.5, 'y': type}
-        #bestfit_pars = mpfit.mpfit(mpfit_line, p0, functkw=fa, nprint=0)
-    
-        #tau = bestfit_pars.params[0] * (mstar - 9.5) + bestfit_pars.params[1]
-        tau = np.interp(mstar, masses, type) 
-        if np.min(tau) == 0.0: 
-            tau[ tau < 0.05 ] = 0.05
+        tau = param[0] * (mstar - 10.5) + param[1]
+        tau[ tau < 0.05 ] = 0.05
+
     else: 
         raise NotImplementedError('asdf')
 
@@ -392,12 +396,18 @@ def cenque_file( **kwargs ):
 
                 file_type_str = '_evol_from'+str(original_nsnap) 
                 
-                if isinstance(kwargs['tau'], list) == False: 
-                    file_type_str = ''.join(['_', kwargs['tau'], 'tau_', 
-                        kwargs['fq'], 'fq', file_type_str])
-                else: 
+                if kwargs['tau'] == 'discrete': 
                     file_type_str = ''.join(['_', 
-                        '_'.join( [str("%.2f" % t) for t in kwargs['tau']] ), 'tau_', 
+                        '_'.join( [str("%.1f" % t) for t in kwargs['tau_param']] ), 'tau_', 
+                        kwargs['fq'], 'fq', file_type_str])
+
+                elif kwargs['tau'] == 'linefit':
+                    file_type_str = ''.join(['_line', 
+                        '_'.join( [str("%.2f" % t) for t in kwargs['tau_param']] ), 'tau_', 
+                        kwargs['fq'], 'fq', file_type_str])
+
+                else: 
+                    file_type_str = ''.join(['_', kwargs['tau_param'], 'tau_', 
                         kwargs['fq'], 'fq', file_type_str])
             else: 
                 raise NameError("File not specified") 

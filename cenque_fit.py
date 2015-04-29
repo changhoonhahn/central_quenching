@@ -17,7 +17,7 @@ import cenque_utility as util
 import cenque as cq 
 import cenque_groupcat as cq_group
 
-def cq_evolution_param_grid(): 
+def cq_evolution_param_grid(type='linefit'): 
     ''' Run EvolveCenQue for different parameters
     '''
     
@@ -25,20 +25,32 @@ def cq_evolution_param_grid():
         for yint in np.arange(-0.05, 0.1, 0.05): 
 
             print 'slope = ', slope, ', y-int = ', yint 
+            cq.build_cenque_importsnap(fq='wetzel', sfms_slope=slope, sfms_yint=yint) 
 
-            cq.build_cenque_importsnap(fq='wetzel', 
-                    sfms_slope=slope, sfms_yint=yint) 
-    
-            # loop throuhg tau parameters
-            for alpha in np.arange(0.6, 1.0, 0.1): 
-                for beta in np.arange(0.4, 0.9, 0.1): 
-                    for gamma in np.arange(0.1, 0.5, 0.1): 
-                        for delta in np.arange(0.1, 0.4, 0.1): 
-                            print 'a = ', alpha, ' b = ', beta, ' c = ', gamma, ' d = ', delta
-                            
-                            cq.EvolveCenQue(13, 1, 
-                                    fq='wetzel', tau=[alpha, beta, gamma, delta], 
-                                    sfms_slope=slope, sfms_yint=yint) 
+            print type
+            if type == 'discrete': 
+                # loop throuhg tau parameters
+                for alpha in np.arange(0.6, 1.0, 0.1): 
+                    for beta in np.arange(0.4, 0.9, 0.1): 
+                        for gamma in np.arange(0.1, 0.5, 0.1): 
+                            for delta in np.arange(0.1, 0.4, 0.1): 
+                                print 'a = ', alpha, ' b = ', beta, ' c = ', gamma, ' d = ', delta
+                                
+                                cq.EvolveCenQue(13, 1, fq='wetzel', 
+                                        tau='discrete', tau_param=[alpha, beta, gamma, delta], 
+                                        sfms_slope=slope, sfms_yint=yint) 
+
+            elif type == 'linefit': 
+                for alpha in np.arange(0.1, 0.4, 0.1): 
+                    for beta in np.arange(-0.8, -0.4, 0.1): 
+                        print 'tau slope', beta, ' yint', alpha 
+
+                        cq.EvolveCenQue(13, 1, 
+                                fq='wetzel', tau='linefit', tau_param=[beta, alpha], 
+                                sfms_slope=slope, sfms_yint=yint) 
+
+            else: 
+                raise NameError("asdfasdlfkjasldfkjasdjfkaldjflk") 
 
 def cq_evolution_groupcat_fit(i_nsnap, Mrcut=18, alpha=[0.6, 1.0], beta=[0.4, 0.9], gamma=[0.1, 0.5], delta=[0.0, 0.4]): 
     ''' Fit Evolve CenQue sSFR to SDSS group catalog sSFR. 
@@ -113,18 +125,21 @@ def cq_evolution_groupcat_fit(i_nsnap, Mrcut=18, alpha=[0.6, 1.0], beta=[0.4, 0.
     print 'gamma =', (param_dict['gamma'])[min_index]
     print 'delta =', (param_dict['delta'])[min_index]
 
-def cq_evolution_groupcat_obj_func(params, nsnap=1, Mrcut=18): 
-    ''' Least Square Objective Function 
+def cenq_evol_wrapper(alpha, beta, gamma, delta, sfms_slope, sfms_yint): 
+    ''' Function 
     '''
-    alpha, beta, gamma, delta, slope, yint = params
 
-    cenq_file = util.cenque_file(nsnap=nsnap, file_type='evol from 13', 
+    slope = sfms_slope
+    yint = sfms_yint 
+
+    cenq_file = util.cenque_file(nsnap=1, file_type='evol from 13', 
             fq='wetzel', tau=[alpha, beta, gamma, delta], 
             sfms_slope=slope, sfms_yint=yint) 
 
     if os.path.isfile(cenq_file) == False:      # if not yet computed then re-compute 
         sfassign_file = util.cenque_file(nsnap=13, file_type='sf assign', fq='wetzel', 
                 sfms_slope=slope, sfms_yint=yint)
+
         if os.path.isfile(sfassign_file) == False: 
             print 'Building ',sfassign_file  
             cq.build_cenque_importsnap(fq='wetzel', sfms_slope=slope, sfms_yint=yint) 
@@ -137,11 +152,20 @@ def cq_evolution_groupcat_obj_func(params, nsnap=1, Mrcut=18):
     
     # readin cenque file 
     cenq = cq.CenQue() 
-    cenq.readin(nsnap=nsnap, file_type='evol from 13', 
+    cenq.readin(nsnap=1, file_type='evol from 13', 
             fq='wetzel', tau=[alpha, beta, gamma, delta], 
             sfms_slope=slope, sfms_yint=yint) 
+    return cenq
 
-    centrals = cq_group.central_catalog(Mrcut=Mrcut)    # read in SDSS group cat
+
+def cq_evolution_groupcat_obj_func(params): 
+    ''' Least Square Objective Function 
+    '''
+    alpha, beta, gamma, delta, slope, yint = params
+    
+    cenq = cenq_evol_wrapper(alpha, beta, gamma, delta, slope, yint)
+
+    centrals = cq_group.central_catalog(Mrcut=18)    # read in SDSS group cat
 
     panel_mass_bins = [
             [10.0, 10.5], [10.5, 11.0], [11.0, 11.5]
@@ -167,17 +191,16 @@ def cq_evolution_groupcat_obj_func(params, nsnap=1, Mrcut=18):
 
     return least_sqr
 
-def cq_evol_grpcat_optimize(maxfun): 
+def cq_evol_grpcat_optimize():#maxfun): 
     ''' Use SciPy Optimize fmin_l_bfgs_b (modified BFGS) to find best-fit parameters
     '''
-    
-    param_guess = [ 0.8, 0.4, 0.4, 0.1, 0.56, 0.07 ] 
-    param_bounds = [ (0.0, None), (0.0, None), (0.0, None), (0.0, None), 
-            (None, None), (None,None) ]
-    spopt.fmin_l_bfgs_b(cq_evolution_groupcat_obj_func, 
-            x0=param_guess, bounds=param_bounds, approx_grad=True, maxfun=maxfun)
+    #param_guess = [ 0.8, 0.4, 0.4, 0.1, 0.56, 0.07 ] 
+    param_guess = np.array([ 1.0, 0.7, 0.4, 0.1, 0.56, 0.07 ])
+    #param_bounds = [ (0.0, None), (0.0, None), (0.0, None), (0.0, None), 
+    #        (None, None), (None,None) ]
+    return spopt.fmin_l_bfgs_b(cq_evolution_groupcat_obj_func, x0=param_guess, approx_grad=True)#, maxfun=maxfun)
 
 if __name__=='__main__': 
-    #cq_evolution_param_grid()
+    cq_evolution_param_grid(type='linefit')
     #cq_evolution_groupcat_fit(1)
-    cq_evol_grpcat_optimize(maxfun=300) 
+    #print cq_evol_grpcat_optimize()#maxfun=300) 

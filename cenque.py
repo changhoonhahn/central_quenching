@@ -536,7 +536,8 @@ def EvolveCenQue(origin_nsnap, final_nsnap, mass_bin=None, **kwargs):
 
             if 'tau' in kwargs.keys(): 
                 child_cq.tau[quench_index] = util.get_quenching_efold(
-                        child_cq.parent_mass[quench_index], type=kwargs['tau'])
+                        child_cq.parent_mass[quench_index], 
+                        type=kwargs['tau'], param=kwargs['tau_param'])
             else: 
                 raise TypeError('specify quenching e-fold: tau = instant, constant, linear') 
 
@@ -576,9 +577,9 @@ def build_cenque_importsnap(**kwargs):
     ''' 
     '''
     for i_snap in [13]: 
+        snap = CenQue() 
         snap.AssignSFR(i_snap, **kwargs) 
         snap.writeout(nsnap=i_snap, file_type='sf assign', **kwargs)
-        #snap = CenQue() 
         #snap.ImportSnap(nsnap=i_snap)
         #snap.writeout(nsnap=i_snap)
 
