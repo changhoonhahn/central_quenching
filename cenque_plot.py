@@ -9,6 +9,7 @@ Author(s): ChangHoon Hahn
 import numpy as np
 import matplotlib.pyplot as plt
 import mpfit
+import scipy.stats as scistat
 
 #----- Local -----
 from utility.plotting import prettyplot
@@ -26,15 +27,15 @@ def plot_cenque_ssfr_dist(cenque, fig=None, **kwargs):
     pretty_colors = prettycolors() 
     
     if fig == None: 
-        fig = plt.figure(1, figsize=(20,8))
+        fig = plt.figure(1, figsize=(25,8))
         fig.subplots_adjust(hspace=0., wspace=0.)
         new_plot = True
     else: 
         new_plot = False
 
     # mass bins of the panel        ( hardcoded ) 
-    panel_mass_bins = [
-            [10.0, 10.5], [10.5, 11.0], [11.0, 11.5]
+    panel_mass_bins = [ 
+            [9.7, 10.2], [10.2, 10.7], [10.7, 11.2], [11.2, 11.7]
             ]
     
     for i_mass, panel_mass in enumerate(panel_mass_bins):       # loop through each panel 
@@ -74,7 +75,7 @@ def plot_cenque_ssfr_dist(cenque, fig=None, **kwargs):
         else: 
             line_style = '-'
 
-        sub = fig.add_subplot(1, 3, i_mass+1)       # panel subplot 
+        sub = fig.add_subplot(1, 4, i_mass+1)       # panel subplot 
         sub.plot(ssfr_bin_mid, ssfr_hist, 
                 color=line_color, lw=4, ls=line_style, label=ssfr_hist_label) 
         
@@ -89,7 +90,7 @@ def plot_cenque_ssfr_dist(cenque, fig=None, **kwargs):
         # set y-axes labels
         if i_mass == 0: 
             sub.set_ylabel(r'$P(log \; SSFR)$') 
-        elif i_mass == 1:
+        elif i_mass in [1, 2]:
             sub.set_yticklabels([])
             sub.set_xlabel(r'$log \; SSFR \;[yr^{-1}]$') 
         else: 
@@ -109,7 +110,7 @@ def plot_cenque_ssfr_dist_evolution(Mrcut=18, **kwargs):
     snap.readin(nsnap=13, file_type='sf assign', **kwargs) 
     ssfr_fig = plot_cenque_ssfr_dist(snap)
 
-    for i_nsnap in [1]:#reversed(range(1,13)):
+    for i_nsnap in [1]: #reversed(range(1,13)):
         next_snap = cq.CenQue() 
         next_snap.readin(nsnap=i_nsnap, file_type='evol from 13', **kwargs) 
         
@@ -125,10 +126,17 @@ def plot_cenque_ssfr_dist_evolution(Mrcut=18, **kwargs):
     else: 
         sfms_str = ''
 
-    if isinstance(kwargs['tau'], list) == False: 
+    if kwargs['tau'] == 'discrete': 
         fig_file = ''.join(['/home/users/hahn/research/figures/tinker/', 
-            'cenque_ssfr_evol_', kwargs['tau'], 'tau_', 
-            kwargs['fq'], 'fq_Mrcut', str(Mrcut),'.png']) 
+            'cenque_ssfr_evol_', '_'.join( [str("%.1f" % t) for t in kwargs['tau_param']] ), 
+            'tau_', kwargs['fq'], 'fq_Mrcut', str(Mrcut),'.png']) 
+
+    elif kwargs['tau'] == 'linefit':
+        fig_file = ''.join(['/home/users/hahn/research/figures/tinker/', 
+            'cenque_ssfr_evol_line',
+            '_'.join( [str("%.2f" % t) for t in [kwargs['sfms_slope'], kwargs['sfms_yint']] ] ), 
+            'sfms_line', '_'.join( [str("%.2f" % t) for t in kwargs['tau_param']] ) , 
+            'tau_', kwargs['fq'], 'fq_Mrcut', str(Mrcut),'.png']) 
     else: 
         fig_file = ''.join(['/home/users/hahn/research/figures/tinker/', 
             'cenque_ssfr_evol_', '_'.join([str(t) for t in kwargs['tau']]), 'tau_', 
@@ -205,11 +213,28 @@ def plot_sdss_group_cat_bestfit(Mrcut=19):
 
         sub = ssfr_fig.add_subplot(1, 3, i_mass+1)       # panel subplot 
 
-        sub.plot(ssfr_bin_mid, cq_group.double_gaussian(ssfr_bin_mid, (output[i_mass])[2]), 
+        #sub.plot(ssfr_bin_mid, cq_group.double_gaussian(ssfr_bin_mid, (output[i_mass])[2]), 
+        #        color='blue', lw=4, ls='-', label='Best Fit') 
+        
+        if i_mass == 0: 
+            byeye_param = np.array([0.2, -11.8, -10.318, 0.19, 0.25]) 
+        elif i_mass == 1: 
+            byeye_param = np.array([0.3, -12.15, -10.57, 0.19, 0.25]) 
+        elif i_mass == 2: 
+            byeye_param = np.array([0.6, -12.38, -10.75, 0.175, 0.25]) 
+
+
+        sub.plot(ssfr_bin_mid, cq_group.double_gaussian(ssfr_bin_mid, byeye_param), 
                 color='blue', lw=4, ls='-', label='Best Fit') 
+        sub.vlines(((output[i_mass])[2])[1], 0.0, 1.5, lw=4)
+        sub.vlines(((output[i_mass])[2])[2], 0.0, 1.5, lw=4)
+
         sub.text(-11, 0.7, 'Best fit fQ = '+str(((output[i_mass])[2])[0]))
         sub.text(-11, 0.65, 'Best fit SSFR Q = '+str(((output[i_mass])[2])[1]))
         sub.text(-11, 0.6, 'Best fit SSFR SF = '+str(((output[i_mass])[2])[2]))
+        
+        sub.text(-11, 0.55, 'Best fit sig Q = '+str(((output[i_mass])[2])[3]))
+        sub.text(-11, 0.5, 'Best fit sig SF = '+str(((output[i_mass])[2])[4]))
 
     fig_file = ''.join(['/home/users/hahn/research/figures/tinker/', 
         'sdss_groupcat_ssfr_bestift_mrcut', str(Mrcut), '.png']) 
@@ -381,7 +406,12 @@ def plot_group_cat_bigauss_bestfit():
 
 # SF-MS ---------------------------
 def plot_sfms_data(lowz_slope, lowz_yint): 
-    ''' plot SF MS from data (flexible SFMS fit)
+    ''' Plot StarForming Main Sequence from iSEDfit data and flexible SFMS fit function 
+
+    Parameters
+    ----------
+    lowz_slope : designated low-z SDSS SF-MS slope
+    lowz_yint : designated low-z SDSS SF-MS y-intercept
 
     '''
 
@@ -395,11 +425,11 @@ def plot_sfms_data(lowz_slope, lowz_yint):
     subs = subs.ravel() 
 
     # SDSS group catalog best fit 
-    groupcat_slope, groupcat_yint = sfms.sdss_groupcat_sfms_bestfit()
-    subs[0].plot(
-            np.array(mass_bin.mass_mid), 
-            (groupcat_slope * (np.array(mass_bin.mass_mid)-10.5)) + groupcat_yint, 
-            c='k', lw=6, ls='--') 
+    #groupcat_slope, groupcat_yint = sfms.sdss_groupcat_sfms_bestfit()
+    #subs[0].plot(
+    #        np.array(mass_bin.mass_mid), 
+    #        (groupcat_slope * (np.array(mass_bin.mass_mid)-10.5)) + groupcat_yint, 
+    #        c='k', lw=6, ls='--') 
 
     zmids, slopes, yints = sfms.get_sfmsfit_sfr(lowz_slope, lowz_yint, clobber=True) 
 
@@ -421,7 +451,16 @@ def plot_sfms_data(lowz_slope, lowz_yint):
             avg_sfrs.append(avg_sfr)
             var_sfrs.append(var_sfr)
             
-        subs[i_z].errorbar(mass, avg_sfrs, yerr=var_sfrs, c=pretty_colors[1])
+        if i_z == 0:    # for SDSS panel 
+            centrals = cq_group.central_catalog(Mrcut=19) 
+            subs[i_z].hist2d(centrals.mass, centrals.sfr, bins=[30, 1000])
+            #subs[i_z].scatter(centrals.mass, centrals.sfr, s=2, color=pretty_colors[3]) 
+            #centrals = cq_group.central_catalog(Mrcut=19) 
+            #subs[i_z].scatter(centrals.mass, centrals.sfr, s=2, color=pretty_colors[4]) 
+            #centrals = cq_group.central_catalog(Mrcut=20) 
+            #subs[i_z].scatter(centrals.mass, centrals.sfr, s=2, color=pretty_colors[5]) 
+
+        subs[i_z].errorbar(mass, avg_sfrs, yerr=var_sfrs, lw=4, c=pretty_colors[1])
         
         print str(zbin[0]) + ' < ' + str(zmids[i_z]) + ' < ' + str(zbin[1])
         subs[i_z].plot(mass, slopes[i_z]*(np.array(mass)-10.5) + yints[i_z], c=pretty_colors[2])
@@ -445,11 +484,19 @@ if __name__=='__main__':
     #plot_cenque_ssfr_dist_evolution(fq='wetzel', tau='instant') 
     #plot_cenque_ssfr_dist_evolution(fq='wetzel', tau='linear') 
     #plot_cenque_ssfr_dist_evolution(fq='wetzel', tau='constant') 
-    plot_cenque_ssfr_dist_evolution(fq='wetzel', tau=[0.6, 0.4, 0.1, 0.0], 
-            sfms_slope=0.3, sfms_yint=-0.1) 
+    #plot_cenque_ssfr_dist_evolution(fq='wetzel', tau=[0.6, 0.4, 0.1, 0.0], 
+    #        sfms_slope=0.3, sfms_yint=-0.1) 
+    #plot_cenque_ssfr_dist_evolution(Mrcut=18, fq='wetzel', tau='linefit', tau_param=[-0.5, 0.4], 
+    #        sfms_slope=0.7, sfms_yint=0.125) 
+    #plot_cenque_ssfr_dist_evolution(Mrcut=19, fq='wetzel', tau='linefit', tau_param=[-0.5, 0.4], 
+    #        sfms_slope=0.7, sfms_yint=0.125) 
+    #plot_cenque_ssfr_dist_evolution(Mrcut=20, fq='wetzel', tau='linefit', tau_param=[-0.5, 0.4], 
+    #        sfms_slope=0.7, sfms_yint=0.125) 
 
-    #fig = plot_sfms_data(0.3, -0.1)
-    #fig.savefig('/home/users/hahn/research/figures/tinker/sf_ms_data_0.3_-0.1.png', bbox_inches='tight')
+    #plot_cenque_ssfr_dist_evolution(fq='wetzel', tau='linefit', tau_param=[-0.5, 0.4], 
+    #        sfms_slope=0.65, sfms_yint=0.1) 
+    fig = plot_sfms_data(0.3, -0.1)
+    fig.savefig('/home/users/hahn/research/figures/tinker/sf_ms_data_0.3_-0.1.png', bbox_inches='tight')
     #fig.clear()
     #plot_cenque_sf_mainseq()
 

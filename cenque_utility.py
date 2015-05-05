@@ -182,7 +182,7 @@ def get_sfr_mstar_z_flex(mstar, z_in, built_sfms_fit):
     # assuming slope doesn't change calculate average SFR
     avg_sfr = (built_sfms_fit[1])[closest_i] * (mstar - fid_mass) + SFR_amp
         
-    return [avg_sfr, 0.3]       # 0.3 dex scatter hard-coded
+    return [avg_sfr, 0.28]       # 0.3 dex scatter hard-coded
 
 def get_sfr_mstar_z(mstar, z_in, deltamass=0.2, deltaz=0.2, lit='primusfit', machine='harmattan'):
     ''' Get SFR using SF main sequence as a function of mass and redshift
@@ -304,7 +304,7 @@ def get_quenching_efold(mstar, type='constant', param=None):
 def get_q_ssfr_mean(masses): 
     ''' Quiescent population SSFR mean for array of mass 
     '''
-    q_ssfr = np.array([ (-0.6 * mass) - 5.617 for mass in masses ])  
+    q_ssfr = np.array([ (-0.7 * mass) - 4.625 for mass in masses ])  
     return q_ssfr 
 
 # fits file treatment -----------------------------------------------------------------------

@@ -20,12 +20,12 @@ import cenque_utility as util
 def get_sfr_mstar_z(m_star, z_in, machine='harmattan'): 
     ''' Get SFR(m_star, z_in) from SDSS/PRIMUS envcount data 
 
-    input
-    -----
+    Parameter 
+    ---------
     m_star: stellar mass 
     z_in: redshift
     
-    output
+    Return
     ------
     sfr_out: star formation rate
     '''

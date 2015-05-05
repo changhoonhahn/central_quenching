@@ -151,7 +151,7 @@ class CenQue:
                 centered about some determined mean
                 '''
                 q_ssfr_mean = util.get_q_ssfr_mean(self.mass[mass_bin_q_index]) 
-                self.ssfr[mass_bin_q_index] = 0.2 * np.random.randn(mass_bin_n_q) + q_ssfr_mean
+                self.ssfr[mass_bin_q_index] = 0.19 * np.random.randn(mass_bin_n_q) + q_ssfr_mean
                 # calculate SFR by SSFR+Mass
                 self.sfr[mass_bin_q_index] = self.ssfr[mass_bin_q_index] + self.mass[mass_bin_q_index]
 
@@ -166,7 +166,9 @@ class CenQue:
                 '''
                 get average and scatter of SF main sequence 
                 '''
-                [sf_avg_sfr, sf_sig_sfr] = util.get_sfr_mstar_z_flex(mass_bins.mass_mid[i_m], self.zsnap, sfms_sfr_fit) 
+                [sf_avg_sfr, sf_sig_sfr] = util.get_sfr_mstar_z(mass_bins.mass_mid[i_m], 
+                        self.zsnap, lit='primusfit') 
+                #[sf_avg_sfr, sf_sig_sfr] = util.get_sfr_mstar_z_flex(mass_bins.mass_mid[i_m], self.zsnap, sfms_sfr_fit) 
 
                 #print 'SF Average(SFR) = ', sf_avg_sfr, ' sigma_SFR = ', sf_sig_sfr
 
@@ -457,10 +459,14 @@ def EvolveCenQue(origin_nsnap, final_nsnap, mass_bin=None, **kwargs):
         sf_child_parent_indx = np.array(parent_indx)[sf_child]
         
         # SFR evolution amount
-        child_sfr, child_sig_sfr = util.get_sfr_mstar_z_flex(child_cq.mass[sf_child_indx], 
-                child_cq.zsnap, sfms_sfr_fit)
-        parent_sfr, parent_sig_sfr = util.get_sfr_mstar_z_flex(
-                parent_cq.mass[sf_child_parent_indx], parent_cq.zsnap, sfms_sfr_fit) 
+        child_sfr, child_sig_sfr = util.get_sfr_mstar_z(child_cq.mass[sf_child_indx], 
+                child_cq.zsnap, lit='primusfit')
+        parent_sfr, parent_sig_sfr = util.get_sfr_mstar_z( parent_cq.mass[sf_child_parent_indx], 
+                parent_cq.zsnap, lit='primusfit') 
+        #child_sfr, child_sig_sfr = util.get_sfr_mstar_z_flex(child_cq.mass[sf_child_indx], 
+        #        child_cq.zsnap, sfms_sfr_fit)
+        #parent_sfr, parent_sig_sfr = util.get_sfr_mstar_z_flex(
+        #        parent_cq.mass[sf_child_parent_indx], parent_cq.zsnap, sfms_sfr_fit) 
         dSFR = child_sfr - parent_sfr
         #util.get_sfr_mstar_z([(parent_cq.mass)[i] for i in sf_child_parent_indx], parent_cq.z) 
         
@@ -548,7 +554,7 @@ def EvolveCenQue(origin_nsnap, final_nsnap, mass_bin=None, **kwargs):
             child_cq.sfr[quench_index] = child_cq.parent_sfr[quench_index] + tau_quench 
             child_cq.ssfr[quench_index] = child_cq.sfr[quench_index] - child_cq.mass[quench_index]
             q_ssfr_mean = util.get_q_ssfr_mean(child_cq.mass[quench_index]) 
-            child_cq.q_ssfr[quench_index] = 0.2 * np.random.randn(ngal_2quench) + q_ssfr_mean 
+            child_cq.q_ssfr[quench_index] = 0.19 * np.random.randn(ngal_2quench) + q_ssfr_mean 
         
         # deal with orphans
         #print len(child_cq.gal_type[child_cq.gal_type == '']), ' child galaxies are orphans' 
@@ -587,4 +593,9 @@ if __name__=='__main__':
     #build_cenque_importsnap(fq='wetzel') 
     #EvolveCenQue(13, 1, fq='wetzel', tau='instant') 
     #EvolveCenQue(13, 1, fq='wetzel', tau='constant') 
-    EvolveCenQue(13, 1, fq='wetzel', tau='linear') 
+    #EvolveCenQue(13, 1, fq='wetzel', tau='linear') 
+                        
+    build_cenque_importsnap(fq='wetzel', sfms_slope=0.7, sfms_yint=0.125) 
+    EvolveCenQue(13, 1, 
+            fq='wetzel', tau='linefit', tau_param=[-0.5, 0.4], 
+            sfms_slope=0.7, sfms_yint=0.125) 

@@ -52,23 +52,26 @@ def cq_evolution_param_grid(type='linefit'):
             else: 
                 raise NameError("asdfasdlfkjasldfkjasdjfkaldjflk") 
 
-def cq_evolution_groupcat_fit(i_nsnap, Mrcut=18, alpha=[0.6, 1.0], beta=[0.4, 0.9], gamma=[0.1, 0.5], delta=[0.0, 0.4]): 
+def cq_evolution_groupcat_fit(i_nsnap, Mrcut=18, sfms={'param':[]}, tau='linefit', tau_param={'param':[]}): 
     ''' Fit Evolve CenQue sSFR to SDSS group catalog sSFR. 
     Uses chi^2. Very naive calculation 
 
-    input
-    ------
-    i_nsnap: final evolution snapshot #
-    alpha, beta, gamma, delta: Tau parameter range to calculate from 
-
+    Paramters
+    ---------
+    i_nsnap : final evolution snapshot # (default is 1 for z ~ 0.05) 
+    Mrcut : absolute magntiude of the SDSS central catalog (18, 19, 20) 
+    tau : 
+    
+    Returns 
+    -------
     '''
+
     # mass bins for comparison 
     panel_mass_bins = [
             [10.0, 10.5], [10.5, 11.0], [11.0, 11.5]
             ]
 
-    # import central SSFR 
-    centrals = cq_group.central_catalog(Mrcut=Mrcut) 
+    centrals = cq_group.central_catalog(Mrcut=Mrcut)    # read central catlaog 
     central_ssfrs = [] 
     for panel_mass in panel_mass_bins:      # loop through panel mass bins 
 
@@ -85,45 +88,71 @@ def cq_evolution_groupcat_fit(i_nsnap, Mrcut=18, alpha=[0.6, 1.0], beta=[0.4, 0.
 
         central_ssfrs.append( [ central_ssfr_hist, ssfr_bin_mid ] )     # append to list 
 
+    bestfit = {'params': [], 'least_square': []} 
     
-    param_dict = {'alpha': [], 'beta': [], 'gamma': [], 'delta': [], 'least_square':[]} 
-    for a in np.arange(alpha[0], alpha[1], 0.1): 
-        for b in np.arange(beta[0], beta[1], 0.1): 
-            for c in np.arange(gamma[0], gamma[1], 0.1): 
-                for d in np.arange(delta[0], delta[1], 0.1): 
-                    # import snapshot with parameters (a,b,c,d) 
-                    cenq = cq.CenQue() 
-                    cenq.readin(nsnap=i_nsnap, file_type='evol from 13', 
-                            fq='wetzel', tau=[a, b, c, d]) 
+    for sfms_par in sfms['params']: 
 
-                    least_sqr = 0.0
-                    for i_panel, panel_mass in enumerate(panel_mass_bins):  
-                        # loop through panel mass bins 
+        slope, yint = sfms_par 
 
-                        mass_limit = (cenq.mass >= panel_mass[0]) & \
-                                (cenq.mass < panel_mass[1]) 
+        if tau == 'discrete': 
+        
+            for param in tau_param['params']: 
+                # import snapshot with parameters (a,b,c,d) 
+                cenq = cq.CenQue() 
+                cenq.readin(nsnap=i_nsnap, file_type='evol from 13', 
+                        fq='wetzel', tau='discrete', tau_param=param, 
+                        sfms_slope=slope, sfms_yint=yint) 
 
-                        cenq_ssfr_hist, cenq_ssfr_bin_edges = \
-                                np.histogram(cenq.ssfr[mass_limit], 
-                                        range=[-13.0, -7], bins=40, normed=True)
+                least_sqr = 0.0
+                for i_panel, panel_mass in enumerate(panel_mass_bins):  
+                    # loop through panel mass bins 
 
-                        # calculate least square
-                        least_sqr += np.sum(((central_ssfrs[i_panel])[0] - cenq_ssfr_hist)**2)
-                    
-                    param_dict['alpha'].append(a) 
-                    param_dict['beta'].append(b) 
-                    param_dict['gamma'].append(c) 
-                    param_dict['delta'].append(d) 
+                    mass_limit = (cenq.mass >= panel_mass[0]) & \
+                            (cenq.mass < panel_mass[1]) 
 
-                    param_dict['least_square'].append(least_sqr) 
+                    cenq_ssfr_hist, cenq_ssfr_bin_edges = \
+                            np.histogram(cenq.ssfr[mass_limit], 
+                                    range=[-13.0, -7], bins=40, normed=True)
+
+                    # calculate least square
+                    least_sqr += np.sum(((central_ssfrs[i_panel])[0] - cenq_ssfr_hist)**2)
+    
+                bestfit['params'].append([slope, yint, param]) 
+                bestfit['least_square'].append(least_sqr) 
+
+        elif tau == 'linefit': 
+
+            for param in tau_param['params']: 
+                cenq = cq.CenQue() 
+                cenq.readin(nsnap=i_nsnap, file_type='evol from 13', 
+                        fq='wetzel', tau='linefit', tau_param=param, 
+                        sfms_slope=slope, sfms_yint=yint) 
+                
+                least_sqr = 0.0
+                for i_panel, panel_mass in enumerate(panel_mass_bins):  
+                    # loop through panel mass bins 
+
+                    mass_limit = (cenq.mass >= panel_mass[0]) & \
+                            (cenq.mass < panel_mass[1]) 
+
+                    cenq_ssfr_hist, cenq_ssfr_bin_edges = \
+                            np.histogram(cenq.ssfr[mass_limit], 
+                                    range=[-13.0, -7], bins=40, normed=True)
+
+                    # calculate least square
+                    least_sqr += np.sum(((central_ssfrs[i_panel])[0] - cenq_ssfr_hist)**2)
+  
+                bestfit['params'].append([slope, yint, param]) 
+                bestfit['least_square'].append(least_sqr) 
+                print [slope, yint, param]
+                print least_sqr 
+
 
     # find minimum least square
-    min_index = param_dict['least_square'].index( min(param_dict['least_square']) ) 
+    min_index = bestfit['least_square'].index( min(bestfit['least_square']) ) 
 
-    print 'alpha =', (param_dict['alpha'])[min_index]
-    print 'beta =', (param_dict['beta'] )[min_index]
-    print 'gamma =', (param_dict['gamma'])[min_index]
-    print 'delta =', (param_dict['delta'])[min_index]
+    print min(bestfit['least_square'])
+    return (bestfit['params'])[min_index]
 
 def cenq_evol_wrapper(alpha, beta, gamma, delta, sfms_slope, sfms_yint): 
     ''' Function 
@@ -201,6 +230,18 @@ def cq_evol_grpcat_optimize():#maxfun):
     return spopt.fmin_l_bfgs_b(cq_evolution_groupcat_obj_func, x0=param_guess, approx_grad=True)#, maxfun=maxfun)
 
 if __name__=='__main__': 
-    cq_evolution_param_grid(type='linefit')
-    #cq_evolution_groupcat_fit(1)
+    #cq_evolution_param_grid(type='linefit')
+    sfms_param = {} 
+    sfms_param['params'] = [] 
+    for slope in np.arange(0.5, 0.65, 0.05):    # go through slope, yint 
+        for yint in np.arange(-0.05, 0.1, 0.05): 
+            sfms_param['params'].append([slope, yint]) 
+
+    tau_param = {} 
+    tau_param['params'] = [] 
+    for alpha in np.arange(-0.8, -0.4, 0.1): 
+        for beta in np.arange(0.1, 0.4, 0.1): 
+            tau_param['params'].append([alpha, beta]) 
+
+    print cq_evolution_groupcat_fit(1, sfms=sfms_param, tau='linefit', tau_param=tau_param)
     #print cq_evol_grpcat_optimize()#maxfun=300) 
