@@ -14,16 +14,19 @@ import mpfit
 import h5py
 
 # --- Local ---
+import cenque as cq
+import cenque_groupcat as cq_group
 import cenque_utility as util 
 
 
-def get_sfr_mstar_z(m_star, z_in, machine='harmattan'): 
-    ''' Get SFR(m_star, z_in) from SDSS/PRIMUS envcount data 
+def get_sfr_mstar_z_envcount(m_star, z_in, machine='harmattan'): 
+    ''' Return SFR(m_star, z_in) from SDSS/PRIMUS envcount data 
 
-    Parameter 
-    ---------
+    Parameters 
+    ----------
     m_star: stellar mass 
     z_in: redshift
+    machine : set to harmattan 
     
     Return
     ------
@@ -79,19 +82,6 @@ def get_sfr_mstar_z(m_star, z_in, machine='harmattan'):
 
     return [avg_sfr, var_sfr, n_gal] 
 
-def sdss_groupcat_sfms_bestfit():
-    ''' SF MS linear fit 
-    Using sSFR from SDSS Group Catalog 
-    '''
-    mass = np.array([10.25, 10.75, 11.25])
-    SFR = np.array([-0.0777, 0.248, 0.483])
-
-    p0 = [0.5607, 0.0775917]
-    fa = {'x': mass-10.5, 'y': SFR}
-    bestfit = mpfit.mpfit(util.mpfit_line, p0, functkw=fa, nprint=0) 
-
-    return [bestfit.params[0], bestfit.params[1]]
-
 def line_fixedslope(x, p, slope=0.56): 
     ''' Line with slope of SF MS linear fit 
     '''
@@ -103,11 +93,11 @@ def mpfit_line_fixedslope(p, slope=0.56, fjac=None, x=None, y=None, err=None):
     return([status, (y-model)/err]) 
 
 def build_sfmsfit_sfr(lowz_slope, lowz_yint):
-    ''' Given z~0.1 SF MS slope and yint
-    fit fixed slope line to other redshift limits
+    ''' Given z~0.1 SF MS slope and yint fit fixed slope line to higher redshift bins
+    to get best fit y-int values 
     
-    input 
-    -----
+    Parameters
+    -----------
     slope: slope of z ~ 0.1 SF-MS  
     yint: yint of z ~ 0.1 SF-MS
 
@@ -128,7 +118,7 @@ def build_sfmsfit_sfr(lowz_slope, lowz_yint):
 
         for i_mass in range(len(mass_bin.mass_low)): 
 
-            avg_sfr, var_sfr, ngal = get_sfr_mstar_z(mass_bin.mass_mid[i_mass], 
+            avg_sfr, var_sfr, ngal = get_sfr_mstar_z_envcount(mass_bin.mass_mid[i_mass], 
                     0.5*(zbin[0] + zbin[1]))
 
             if ngal < 10: 
@@ -164,10 +154,11 @@ def build_sfmsfit_sfr(lowz_slope, lowz_yint):
 
     f.close()
 
-def get_sfmsfit_sfr(slope, yint, clobber=True):
+def get_sfmsfit_sfr(slope, yint, clobber=False):
     ''' Wrapper to extra slope, yint fit values
     '''
     fit_file = get_sfmsfit_slope_yint_file(slope, yint)
+
     if (os.path.isfile(fit_file) == False) or (clobber == True):   # file doesn't exist 
         build_sfmsfit_sfr(slope, yint) 
     
@@ -198,7 +189,406 @@ def get_sfmsfit_slope_yint_file(slope, yint):
 
     return output_file 
 
+# Group catalog SF-MS ----------------
+def build_groupcat_sf(Mrcut=18): 
+    ''' Build SF population for the SDSS group catalog for group catalog with specified Mrcut 
+
+    Parameters
+    ----------
+    Mrcut : Absolute magnitude cut that specifies the group catalog 
+
+    '''
+    if Mrcut == 18: 
+        masscut='9.4'
+    elif Mrcut == 19: 
+        masscut='9.8'
+    elif Mrcut == 20: 
+        masscut='10.2'
+
+    # import centrals  
+    centrals = cq_group.central_catalog(Mrcut=Mrcut, clobber=True) 
+    
+    # classification motivated by Salim et al. 
+    sf_gals = centrals.sfr > -1.30 + 0.65*(centrals.mass-10.0)
+
+    centrals_sfms = cq.CenQue() 
+
+    group_catalog_columns = ['mass', 'sfr', 'ssfr']
+    for column in group_catalog_columns: 
+        column_data = getattr(centrals, column)[sf_gals]
+        setattr(centrals_sfms, column, column_data) 
+
+    output_file = ''.join(['/data1/hahn/group_catalog/', 
+        'massSFR_clf_groups_M', str(Mrcut), '_', str(masscut), '_D360.central.starforming.hdf5']) 
+    centrals_sfms.writeout(columns=group_catalog_columns,
+            input_file=output_file) 
+
+def sf_centrals(Mrcut=18, clobber=False): 
+    ''' Read SDSS star-forming central group catalog into CenQue class
+
+    Parameters
+    ----------
+    Mrcut : Absolute mangitude cut that specifies the group catalog 
+    clobber : If True, re-construct the catalog. If False, just read catalog 
+
+    Notes
+    -----
+    SF determined by a variation of the Salim et al. equation from Moustakas et al. 2013
+
+    '''
+    if Mrcut == 18: 
+        masscut='9.4'
+    elif Mrcut == 19: 
+        masscut='9.8'
+    elif Mrcut == 20: 
+        masscut='10.2'
+    
+    catalog_file = ''.join(['/data1/hahn/group_catalog/', 
+        'massSFR_clf_groups_M', str(Mrcut), '_', str(masscut), '_D360.central.starforming.hdf5']) 
+    if (os.path.isfile(catalog_file) == False) or (clobber == True): 
+        build_groupcat_sf(Mrcut=Mrcut, central=True)
+    
+    f = h5py.File(catalog_file, 'r') 
+    grp = f['cenque_data']
+    mass = grp['mass'][:]
+    sfr = grp['sfr'][:]
+    ssfr = grp['ssfr'][:]
+
+    catalog = cq.CenQue() 
+    setattr(catalog, 'mass', mass) 
+    setattr(catalog, 'sfr', sfr) 
+    setattr(catalog, 'ssfr', ssfr) 
+    
+    f.close()
+    return catalog 
+
+def get_sfr_mstar_z_groupcat(m_star, Mrcut=18, clobber=False): 
+    ''' Return SFR(m_star, z_in) from SDSS Group Catalog SFMS 
+
+    Parameters 
+    ----------
+    m_star: stellar mass 
+    Mrcut : absolute magnitude cut that specifies the group catalog
+    clobber : If True,____. If False 
+    
+    Return
+    ------
+    sfr_out: star formation rate
+    '''
+    sf_data = sf_centrals(Mrcut=Mrcut, clobber=clobber) 
+    
+    # determine mass bin and redshift bin to splice the data
+    massbins = util.simple_mass_bin()
+    mbin_index = (np.array(massbins.mass_low) <= m_star) & \
+            (np.array(massbins.mass_high) > m_star) 
+    mass_low = (np.array(massbins.mass_low)[mbin_index])[0]
+    mass_high = (np.array(massbins.mass_high)[mbin_index])[0]
+
+    # splice data
+    bin_index = (sf_data.mass >= mass_low) & \
+            (sf_data.mass < mass_high)
+
+    n_gal = len(sf_data.mass[bin_index])
+
+    if len(sf_data.sfr[bin_index]) > 0: 
+        avg_sfr = np.average(sf_data.sfr[bin_index]) 
+        var_sfr = np.average( (sf_data.sfr[bin_index] - avg_sfr)**2 ) 
+    else: 
+        avg_sfr = -999.
+        var_sfr = -999.
+
+    return [avg_sfr, var_sfr, n_gal] 
+
+def get_bestfit_groupcat_sfms(Mrcut=18, clobber=False):
+    ''' Returns parameters for the best-fit line of the Star-forming SDSS Group Catalog (SF-MS)
+
+    Parameters 
+    ----------
+    Mrcut : absolute magntiude cut that specifies the group catalog
+    clobber : Rewrite if True
+
+    Notes
+    -----
+    * Uses the SF SDSS Group Catalog 
+    * Bestfit values are accessed from file,  unless it doesn't exist or clobber == True 
+
+    '''
+    fid_mass = 10.5         # fiducial mass 
+
+    save_file = ''.join(['/data1/hahn/central_quenching/sf_ms/'
+        'sf_ms_fit_starforming_groupcat.hdf5']) 
+    
+    if (os.path.isfile(save_file) == False) or (clobber == True): 
+        # if file doesn't exist save to hdf5 file 
+        f = h5py.File(save_file, 'w') 
+        grp = f.create_group('slope_yint')      # slope-yint group
+    
+        grp.attrs['fid_mass'] = fid_mass    # fid mass meta data 
+
+        avg_sfrs, var_sfrs, masses = [], [], [] 
+        for mass in np.arange(9.5, 11.5, 0.25): 
+            avg_sfr, var_sfr, ngal = get_sfr_mstar_z_groupcat(mass, Mrcut=Mrcut)
+            
+            if ngal < 100: 
+                continue 
+
+            masses.append(mass)
+            avg_sfrs.append(avg_sfr)
+            var_sfrs.append(var_sfr)
+
+        p0 = [0.5607, 0.0775917]
+        fa = {'x': np.array(masses)-10.5, 'y': np.array(avg_sfrs)}
+        bestfit = mpfit.mpfit(util.mpfit_line, p0, functkw=fa, nprint=0) 
+        
+        # save to file 
+        grp.create_dataset('zmid', data=[0.1]) 
+        grp.create_dataset('slope', data=[bestfit.params[0]]) 
+        grp.create_dataset('yint', data=[bestfit.params[1]]) 
+        
+        return [bestfit.params[0], bestfit.params[1]]
+    else: 
+        # if file already exists then just access the numbers from file 
+        f = h5py.File(save_file, 'r') 
+
+        return [f['slope_yint/slope'][:], f['slope_yint/yint'][:]] 
+
+def build_groupcat_q(Mrcut=18): 
+    ''' Build Q population for the SDSS group catalog for group catalog with specified Mrcut 
+
+    Parameters
+    ----------
+    Mrcut : Absolute magnitude cut that specifies the group catalog 
+
+    '''
+    if Mrcut == 18: 
+        masscut='9.4'
+    elif Mrcut == 19: 
+        masscut='9.8'
+    elif Mrcut == 20: 
+        masscut='10.2'
+
+    # import centrals  
+    centrals = cq_group.central_catalog(Mrcut=Mrcut, clobber=True) 
+    
+    # classification motivated by Salim et al. 
+    sf_gals = centrals.sfr < -1.30 + 0.65*(centrals.mass-10.0)
+
+    centrals_sfms = cq.CenQue() 
+
+    group_catalog_columns = ['mass', 'sfr', 'ssfr']
+    for column in group_catalog_columns: 
+        column_data = getattr(centrals, column)[sf_gals]
+        setattr(centrals_sfms, column, column_data) 
+
+    output_file = ''.join(['/data1/hahn/group_catalog/', 
+        'massSFR_clf_groups_M', str(Mrcut), '_', str(masscut), '_D360.central.quiescent.hdf5']) 
+    centrals_sfms.writeout(columns=group_catalog_columns,
+            input_file=output_file) 
+
+def q_centrals(Mrcut=18, clobber=False): 
+    ''' Read SDSS quiescent central group catalog into CenQue class
+
+    Parameters
+    ----------
+    Mrcut : Absolute mangitude cut that specifies the group catalog 
+    clobber : If True, re-construct the catalog. If False, just read catalog 
+
+    Notes
+    -----
+    Q determined by a variation of the Salim et al. equation from Moustakas et al. 2013
+
+    '''
+    if Mrcut == 18: 
+        masscut='9.4'
+    elif Mrcut == 19: 
+        masscut='9.8'
+    elif Mrcut == 20: 
+        masscut='10.2'
+    
+    catalog_file = ''.join(['/data1/hahn/group_catalog/', 
+        'massSFR_clf_groups_M', str(Mrcut), '_', str(masscut), '_D360.central.quiescent.hdf5']) 
+
+    if (os.path.isfile(catalog_file) == False) or (clobber == True): 
+        # (re)construct quiescent group catalog 
+        build_groupcat_q(Mrcut=Mrcut)
+    
+    f = h5py.File(catalog_file, 'r') 
+    grp = f['cenque_data']
+    mass = grp['mass'][:]
+    sfr = grp['sfr'][:]
+    ssfr = grp['ssfr'][:]
+
+    catalog = cq.CenQue() 
+    setattr(catalog, 'mass', mass) 
+    setattr(catalog, 'sfr', sfr) 
+    setattr(catalog, 'ssfr', ssfr) 
+    
+    f.close()
+    return catalog 
+
+def get_ssfr_mstar_qgroupcat(m_star, Mrcut=18, clobber=False): 
+    ''' Return SSFR(m_star) from the Quiescent SDSS Group Catalog
+
+    Parameters 
+    ----------
+    m_star: stellar mass 
+    Mrcut : absolute magnitude cut that specifies the group catalog
+    clobber : If True,____. If False 
+    
+    Return
+    ------
+    ssfr_out: Star formation rate (SFR) at m_star
+
+    Notes
+    -----
+    * Output sSFR is the median sSFR of the sSFR in the mass bin  
+
+    '''
+    q_data = q_centrals(Mrcut=Mrcut, clobber=clobber) 
+    
+    # determine mass bin and redshift bin to splice the data
+    massbins = util.simple_mass_bin()
+    mbin_index = (np.array(massbins.mass_low) <= m_star) & \
+            (np.array(massbins.mass_high) > m_star) 
+    mass_low = (np.array(massbins.mass_low)[mbin_index])[0]
+    mass_high = (np.array(massbins.mass_high)[mbin_index])[0]
+
+    # splice data
+    bin_index = (q_data.mass >= mass_low) & \
+            (q_data.mass < mass_high)
+
+    n_gal = len(q_data.mass[bin_index])
+
+    if len(q_data.sfr[bin_index]) > 0: 
+        avg_ssfr = np.average(q_data.ssfr[bin_index]) 
+        median_ssfr = np.median(q_data.ssfr[bin_index]) 
+        var_ssfr = np.average( (q_data.ssfr[bin_index] - avg_ssfr)**2 ) 
+    else: 
+        avg_ssfr = -999.
+        median_ssfr = -999.
+        var_ssfr = -999.
+
+    return [median_ssfr, var_ssfr, n_gal] 
+
+def get_bestfit_qgroupcat_ssfr(Mrcut=18, clobber=False):
+    ''' Returns parameters for the best-fit line of the mass vs sSFR relation of the 
+    quiescent SDSS Group Catalog
+
+    Parameters 
+    ----------
+    Mrcut : absolute magntiude cut that specifies the group catalog
+    clobber : Rewrite if True
+
+    Notes
+    -----
+    * Uses the Q SDSS Group Catalog 
+    * Bestfit values are accessed from file,  unless it doesn't exist or clobber == True 
+
+    '''
+    fid_mass = 10.5         # fiducial mass 
+
+    save_file = ''.join(['/data1/hahn/central_quenching/sf_ms/'
+        'ssfr_mass_fit_quiescent_groupcat.hdf5']) 
+    
+    if (os.path.isfile(save_file) == False) or (clobber == True): 
+        # if file doesn't exist save to hdf5 file 
+        f = h5py.File(save_file, 'w') 
+        grp = f.create_group('slope_yint')      # slope-yint group
+    
+        grp.attrs['fid_mass'] = fid_mass    # fid mass meta data 
+
+        med_ssfrs, var_ssfrs, masses = [], [], [] 
+        for mass in np.arange(9.5, 11.5, 0.25): 
+            med_ssfr, var_ssfr, ngal = get_ssfr_mstar_qgroupcat(mass, Mrcut=Mrcut)
+            
+            if ngal < 10: 
+                continue 
+
+            masses.append(mass)
+            med_ssfrs.append(med_ssfr)
+            var_ssfrs.append(var_ssfr)
+
+        p0 = [0.5, -12.0]
+        fa = {'x': np.array(masses)-10.5, 'y': np.array(med_ssfrs)}
+        bestfit = mpfit.mpfit(util.mpfit_line, p0, functkw=fa, nprint=0) 
+        
+        # save to file 
+        grp.create_dataset('zmid', data=[0.1]) 
+        grp.create_dataset('slope', data=[bestfit.params[0].item()]) 
+        grp.create_dataset('yint', data=[bestfit.params[1].item()]) 
+        
+        return [bestfit.params[0], bestfit.params[1]]
+    else: 
+        # if file already exists then just access the numbers from file 
+        f = h5py.File(save_file, 'r') 
+
+        return [f['slope_yint/slope'][:], f['slope_yint/yint'][:]] 
+
+# EnvCount SF-MS --------------------
+def get_bestfit_envcount_sfms(clobber=False):
+    ''' Returns parameters for the best-fit line of the Star-forming Envcount (SF-MS)
+
+    Parameters 
+    ----------
+    clobber : If True, reconstruct file 
+
+    Returns 
+    -------
+    [ slope, yint ] : slope and yint of SF-MS bestfit line of SDSS data 
+
+    Notes
+    -----
+    * Uses Star-forming sample of QFENV project
+    * Reads from file if available. Otherwise constructs file
+
+    '''
+    fid_mass = 10.5         # fiducial mass 
+
+    save_file = ''.join(['/data1/hahn/central_quenching/sf_ms/'
+        'sf_ms_fit_starforming_envcount.hdf5']) 
+
+    if (os.path.isfile(save_file) == False) or (clobber == True): 
+        # if file doesn't exist save to hdf5 file 
+        f = h5py.File(save_file, 'w') 
+        grp = f.create_group('slope_yint')      # slope-yint group
+    
+        grp.attrs['fid_mass'] = fid_mass    # fid mass meta data 
+
+        avg_sfrs, var_sfrs, masses = [], [], [] 
+        for mass in np.arange(9.0, 11.5, 0.25): 
+            avg_sfr, var_sfr, ngal = get_sfr_mstar_z_envcount(mass, 0.1)
+            
+            if ngal < 100: 
+                continue 
+
+            masses.append(mass)
+            avg_sfrs.append(avg_sfr)
+            var_sfrs.append(var_sfr)
+
+        p0 = [0.5607, 0.0775917]
+        fa = {'x': np.array(masses)-10.5, 'y': np.array(avg_sfrs)}
+        bestfit = mpfit.mpfit(util.mpfit_line, p0, functkw=fa, nprint=0) 
+        
+        # save to file 
+        grp.create_dataset('zmid', data=[0.1]) 
+        grp.create_dataset('slope', data=[bestfit.params[0]]) 
+        grp.create_dataset('yint', data=[bestfit.params[1]]) 
+        
+        return [bestfit.params[0], bestfit.params[1]]
+    else: 
+        # if file already exists then just access the numbers from file 
+        f = h5py.File(save_file, 'r') 
+
+        return [f['slope_yint/slope'][:], f['slope_yint/yint'][:]] 
+
 if __name__=='__main__':
+    print get_bestfit_groupcat_sfms(Mrcut=18) 
+    print get_bestfit_groupcat_sfms(Mrcut=19) 
+    print get_bestfit_groupcat_sfms(Mrcut=20) 
+    #build_groupcat_sf(Mrcut=18)
+    #build_groupcat_sf(Mrcut=19)
+    #build_groupcat_sf(Mrcut=20)
+
     # SDSS group catalog best fit 
-    groupcat_slope, groupcat_yint = sdss_groupcat_sfms_bestfit()
-    print get_sfmsfit_sfr(groupcat_slope, groupcat_yint)
+    #groupcat_slope, groupcat_yint = sdss_groupcat_sfms_bestfit()
+    #print get_sfmsfit_sfr(groupcat_slope, groupcat_yint)

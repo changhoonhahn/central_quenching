@@ -93,7 +93,7 @@ def build_group_catalog(Mrcut=18, central=True):
     
     central_catalog = cq.CenQue()       # save as CenQue class
 
-    group_catalog_columns = ['mass', 'sfr', 'ssfr']
+    group_catalog_columns = ['mass', 'sfr', 'ssfr', 'z']
     for column in group_catalog_columns: 
         column_data = getattr(gal_data, column)[prob_index]
         setattr(central_catalog, column, column_data)
@@ -124,7 +124,7 @@ def central_catalog(Mrcut=18, clobber=False):
     mass = grp['mass'][:]
     sfr = grp['sfr'][:]
     ssfr = grp['ssfr'][:]
-    #z = grp['z'][:]
+    z = grp['z'][:]
     #mass, sfr, ssfr = np.loadtxt(catalog_file, skiprows=2, delimiter=',', 
     #        unpack=True, usecols=[0,1,2]) 
 
@@ -132,7 +132,7 @@ def central_catalog(Mrcut=18, clobber=False):
     setattr(catalog, 'mass', mass) 
     setattr(catalog, 'sfr', sfr) 
     setattr(catalog, 'ssfr', ssfr) 
-    #setattr(catalog, 'z', z) 
+    setattr(catalog, 'z', z) 
     
     f.close()
     return catalog 

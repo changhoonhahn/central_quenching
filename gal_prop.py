@@ -96,7 +96,6 @@ def sfr_mass(Mrcut=18):
     '''
     prettyplot()                        #make things pretty 
     pretty_colors = prettycolors() 
-
     
     fig = plt.figure(1, figsize=(8,8))
     sub = fig.add_subplot(111)
@@ -110,9 +109,9 @@ def sfr_mass(Mrcut=18):
     #sub.scatter(centrals.mass, centrals.sfr, s=4, c=pretty_colors[3])   # plot (mass, SFR) 
 
     # plot Salim et al. classification 
-    #masses = np.arange(9.0, 12.0, 0.05) 
-    #sfrs = (lambda m: -0.49 + 0.65*(m-10.0))(masses)
-    #sub.scatter(masses, sfrs, s=6, c=pretty_colors[4]) 
+    masses = np.arange(9.0, 12.0, 0.05) 
+    sfrs = (lambda m: -1.2 + 0.65*(m-10.0))(masses)
+    sub.scatter(masses, sfrs, s=6, c=pretty_colors[4]) 
 
     ##sub.scatter(np.arange(-5.0, 5.0, 0.01), np.arange(-5.0, 5.0, 0.01), s=6, c=pretty_colors[4]) 
     sub.set_ylabel('MPA JHU log(SFR)', fontsize=18) 
@@ -127,12 +126,14 @@ def sfr_mass(Mrcut=18):
     fig.clear()
 
 if __name__=="__main__": 
-    #sfr_mass(Mrcut=18)
-    #sfr_mass(Mrcut=19)
-    #sfr_mass(Mrcut=20)
-    #mass_kcorr_isedfit(Mrcut=18)
-    #mass_kcorr_isedfit(Mrcut=19)
-    #mass_kcorr_isedfit(Mrcut=20)
+    sfr_mass(Mrcut=18)
+    sfr_mass(Mrcut=19)
+    sfr_mass(Mrcut=20)
+
+    mass_kcorr_isedfit(Mrcut=18)
+    mass_kcorr_isedfit(Mrcut=19)
+    mass_kcorr_isedfit(Mrcut=20)
+
     sfr_mpajhu_isedfit(Mrcut=18)
     sfr_mpajhu_isedfit(Mrcut=19)
     sfr_mpajhu_isedfit(Mrcut=20)

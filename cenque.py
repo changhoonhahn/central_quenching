@@ -86,8 +86,8 @@ class CenQue:
         if 'sfms_slope' in kwargs.keys(): 
             sfms_sfr_fit = sfms.get_sfmsfit_sfr(kwargs['sfms_slope'], kwargs['sfms_yint'])
         else:   
-            # otherwise, just use the fit from the group catalogs 
-            groupcat_slope, groupcat_yint = sfms.sdss_groupcat_sfms_bestfit()
+            # otherwise, just use the fit from the group catalogs (hardcoded)
+            groupcat_slope, groupcat_yint = sfms.get_bestfit_groupcat_sfms(Mrcut=18)
             sfms_sfr_fit = sfms.get_sfmsfit_sfr(groupcat_slope, groupcat_yint)
         
         if (min(self.mass) < min(mass_bins.mass_low)) or (max(self.mass) > max(mass_bins.mass_high)): 
@@ -166,9 +166,12 @@ class CenQue:
                 '''
                 get average and scatter of SF main sequence 
                 '''
-                [sf_avg_sfr, sf_sig_sfr] = util.get_sfr_mstar_z(mass_bins.mass_mid[i_m], 
-                        self.zsnap, lit='primusfit') 
-                #[sf_avg_sfr, sf_sig_sfr] = util.get_sfr_mstar_z_flex(mass_bins.mass_mid[i_m], self.zsnap, sfms_sfr_fit) 
+                #[sf_avg_sfr, sf_sig_sfr] = util.get_sfr_mstar_z(
+                #        mass_bins.mass_mid[i_m], self.zsnap, lit='primusfit') 
+                #[sf_avg_sfr, sf_sig_sfr] = util.get_sfr_mstar_z_flex(
+                #        mass_bins.mass_mid[i_m], self.zsnap, sfms_sfr_fit) 
+                [sf_avg_sfr, sf_sig_sfr] = util.get_sfr_mstar_z_bestfit(
+                        mass_bins.mass_mid[i_m], self.zsnap, Mrcut=18) 
 
                 #print 'SF Average(SFR) = ', sf_avg_sfr, ' sigma_SFR = ', sf_sig_sfr
 
@@ -377,7 +380,7 @@ def EvolveCenQue(origin_nsnap, final_nsnap, mass_bin=None, **kwargs):
     if 'sfms_slope' in kwargs.keys(): 
         sfms_sfr_fit = sfms.get_sfmsfit_sfr(kwargs['sfms_slope'], kwargs['sfms_yint'])
     else: 
-        groupcat_slope, groupcat_yint = sfms.sdss_groupcat_sfms_bestfit()
+        groupcat_slope, groupcat_yint = sfms.get_bestfit_groupcat_sfms(Mrcut=18)
         sfms_sfr_fit = sfms.get_sfmsfit_sfr(groupcat_slope, groupcat_yint)
   
     # import original snap SF prop 
@@ -459,16 +462,23 @@ def EvolveCenQue(origin_nsnap, final_nsnap, mass_bin=None, **kwargs):
         sf_child_parent_indx = np.array(parent_indx)[sf_child]
         
         # SFR evolution amount
-        child_sfr, child_sig_sfr = util.get_sfr_mstar_z(child_cq.mass[sf_child_indx], 
-                child_cq.zsnap, lit='primusfit')
-        parent_sfr, parent_sig_sfr = util.get_sfr_mstar_z( parent_cq.mass[sf_child_parent_indx], 
-                parent_cq.zsnap, lit='primusfit') 
+        #child_sfr, child_sig_sfr = util.get_sfr_mstar_z(child_cq.mass[sf_child_indx], 
+        #        child_cq.zsnap, lit='primusfit')
+        #parent_sfr, parent_sig_sfr = util.get_sfr_mstar_z( parent_cq.mass[sf_child_parent_indx], 
+        #        parent_cq.zsnap, lit='primusfit') 
         #child_sfr, child_sig_sfr = util.get_sfr_mstar_z_flex(child_cq.mass[sf_child_indx], 
         #        child_cq.zsnap, sfms_sfr_fit)
         #parent_sfr, parent_sig_sfr = util.get_sfr_mstar_z_flex(
         #        parent_cq.mass[sf_child_parent_indx], parent_cq.zsnap, sfms_sfr_fit) 
+
+        child_sfr, child_sig_sfr = util.get_sfr_mstar_z_bestfit(
+                child_cq.mass[sf_child_indx], child_cq.zsnap, Mrcut=18)
+        parent_sfr, parent_sig_sfr = util.get_sfr_mstar_z_bestfit(
+                parent_cq.mass[sf_child_parent_indx], parent_cq.zsnap, Mrcut=18) 
+    
+        ''' SFR evolution is assumed to be equal to the overall change in SFR  
+        '''
         dSFR = child_sfr - parent_sfr
-        #util.get_sfr_mstar_z([(parent_cq.mass)[i] for i in sf_child_parent_indx], parent_cq.z) 
         
         # evolve sf children SFR
         child_cq.sfr[sf_child_indx] = child_cq.parent_sfr[sf_child_indx] + dSFR   
@@ -570,11 +580,11 @@ def EvolveCenQue(origin_nsnap, final_nsnap, mass_bin=None, **kwargs):
         child_cq.ssfr[over_quenched] = child_cq.q_ssfr[over_quenched]
         child_cq.tau[over_quenched] = -999.0            # done quenching 
 
-        if child_cq.nsnap == final_nsnap: 
-            child_cq.writeout(nsnap=child_cq.nsnap, file_type='evol from '+str(origin_nsnap), 
-                    columns = ['mass', 'sfr', 'ssfr', 'gal_type', 'tau', 'q_ssfr', 
-                        'parent_sfr', 'parent_mass', 'parent', 'child', 'ilk', 'snap_index'], 
-                    **kwargs)  
+        #if child_cq.nsnap == final_nsnap: 
+        child_cq.writeout(nsnap=child_cq.nsnap, file_type='evol from '+str(origin_nsnap), 
+                columns = ['mass', 'sfr', 'ssfr', 'gal_type', 'tau', 'q_ssfr', 
+                    'parent_sfr', 'parent_mass', 'parent', 'child', 'ilk', 'snap_index'], 
+                **kwargs)  
 
         parent_cq = child_cq
         #print 'Quiescent Fraction = ', np.float(len(parent_cq.gal_type[parent_cq.gal_type == 'quiescent']))/np.float(len(parent_cq.gal_type)) 
@@ -595,7 +605,5 @@ if __name__=='__main__':
     #EvolveCenQue(13, 1, fq='wetzel', tau='constant') 
     #EvolveCenQue(13, 1, fq='wetzel', tau='linear') 
                         
-    build_cenque_importsnap(fq='wetzel', sfms_slope=0.7, sfms_yint=0.125) 
-    EvolveCenQue(13, 1, 
-            fq='wetzel', tau='linefit', tau_param=[-0.5, 0.4], 
-            sfms_slope=0.7, sfms_yint=0.125) 
+    #build_cenque_importsnap(fq='wetzel', sfms_slope=0.7, sfms_yint=0.125) 
+    EvolveCenQue(13, 1, fq='wetzel', tau='linefit', tau_param=[-0.5, 0.4]) 

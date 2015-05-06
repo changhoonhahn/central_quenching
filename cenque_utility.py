@@ -12,6 +12,12 @@ import matplotlib.pyplot as plt
 import os 
 import mpfit
 
+# ---- Local -----
+import cenque as cq 
+import cenque_groupcat as cq_group
+import sf_mainseq as sfms 
+
+
 # quiescent fraction ------------------------------------------------------------
 class fq: 
     ''' quiescent fraction 
@@ -165,8 +171,10 @@ def get_sfr_mstar_z_flex(mstar, z_in, built_sfms_fit):
     ''' given built SFMS fits from sf_mainseq function build_sfr_mstar_z 
     output SFR of mstar and z_in 
     
-    input
-    -----
+    Parameters
+    ----------
+    mstar : 
+    z_in : 
     built_sfms_fit: (z_mid, slope, yint) 
 
     '''
@@ -186,7 +194,7 @@ def get_sfr_mstar_z_flex(mstar, z_in, built_sfms_fit):
 
 def get_sfr_mstar_z(mstar, z_in, deltamass=0.2, deltaz=0.2, lit='primusfit', machine='harmattan'):
     ''' Get SFR using SF main sequence as a function of mass and redshift
-    outputs [average SFR, standard deviation SFR] for mass and redshift bin  
+    outputs [average SFR, standard deviation SFR] for mass and redshift bin 
     '''
     sig_mass = 0.5 * deltamass
     sig_z = 0.5 * deltaz
@@ -238,6 +246,46 @@ def get_sfr_mstar_z(mstar, z_in, deltamass=0.2, deltaz=0.2, lit='primusfit', mac
         return [avg_sfr, std_sfr]
     else: 
         raise NameError("Not yet coded") 
+
+def get_sfr_mstar_z_bestfit(mstar, z_in, Mrcut=18):
+    ''' Return SFR of SF main sequence as a function of mass and redshift
+
+    Parameters
+    ----------
+    mstar : Stellar mass of galaxy
+    z_in : Redshift 
+    Mrcut : Absolute magnitude cut that specified the group catalog 
+
+    Returns
+    -------
+    [average SFR, standard deviation SFR]
+
+    Notes
+    -----
+    * Best-fit SFMS y-int offsets for redshift bins determined from EnvCount project 
+    * Slope and SDSS y-int determined from SF Main Sequence of Group Catalog 
+    * Fiducial Mass = 10.5
+    * Assumptions: 
+        * 
+
+    '''
+    fid_mass = 10.5
+
+    # Best-fit slope and y-int of SF SDSS Group Catalog 
+    groupcat_fit_param = sfms.get_bestfit_groupcat_sfms(Mrcut=Mrcut)
+    
+    # Best-fit slope and y-int of SF EnvCount
+    envcount_fit_param = sfms.get_bestfit_envcount_sfms()
+    zmids, slopes, yints = sfms.get_sfmsfit_sfr(
+            (envcount_fit_param[0]).item(), (envcount_fit_param[1]).item(), 
+            clobber=True)
+        
+    d_yints = np.interp(z_in, zmids, yints) - yints[0] 
+    SFR_amp = groupcat_fit_param[1] + d_yints
+
+    avg_SFR = groupcat_fit_param[0] * (mstar - fid_mass) + SFR_amp
+        
+    return [avg_SFR, 0.3] 
 
 def line(x, p): 
     return p[0]*x + p[1]
@@ -301,10 +349,23 @@ def get_quenching_efold(mstar, type='constant', param=None):
 
     return tau 
 
-def get_q_ssfr_mean(masses): 
-    ''' Quiescent population SSFR mean for array of mass 
+def get_q_ssfr_mean(masses, Mrcut=18): 
+    ''' Return average/median sSFR of quiscent population of the SDSS Group Catalog for an
+    array of mass 
+
+    Parameters 
+    ----------
+    masses : array of masses 
+    Mrcut : 
+
     '''
-    q_ssfr = np.array([ (-0.7 * mass) - 4.625 for mass in masses ])  
+    fit_line_param = sfms.get_bestfit_qgroupcat_ssfr(Mrcut=Mrcut) 
+    fit_slope = fit_line_param[0].item() 
+    fit_yint = fit_line_param[1].item() 
+
+    q_ssfr = np.array([ fit_slope * (mass - 10.5) + fit_yint for mass in masses ])  
+
+    #q_ssfr = np.array([ (-0.7 * mass) - 4.625 for mass in masses ])  
     return q_ssfr 
 
 # fits file treatment -----------------------------------------------------------------------
