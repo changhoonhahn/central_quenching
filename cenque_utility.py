@@ -363,7 +363,7 @@ def get_q_ssfr_mean(masses, Mrcut=18):
     fit_slope = fit_line_param[0].item() 
     fit_yint = fit_line_param[1].item() 
 
-    q_ssfr = np.array([ fit_slope * (mass - 10.5) + fit_yint for mass in masses ])  
+    q_ssfr = np.array([ fit_slope * (mass - 10.5) + fit_yint - 0.1 for mass in masses ])  
 
     #q_ssfr = np.array([ (-0.7 * mass) - 4.625 for mass in masses ])  
     return q_ssfr 
@@ -468,7 +468,7 @@ def cenque_file( **kwargs ):
                         kwargs['fq'], 'fq', file_type_str])
 
                 else: 
-                    file_type_str = ''.join(['_', kwargs['tau_param'], 'tau_', 
+                    file_type_str = ''.join(['_', kwargs['tau'], 'tau_', 
                         kwargs['fq'], 'fq', file_type_str])
             else: 
                 raise NameError("File not specified") 

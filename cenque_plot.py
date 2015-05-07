@@ -121,7 +121,7 @@ def plot_cenque_ssfr_dist_evolution(Mrcut=18, **kwargs):
     
     # determine which snapshots to plot 
     if 'nsnaps' in kwargs.keys():   
-        nsnaps = kwargs['nsnap']
+        nsnaps = kwargs['nsnaps']
     else: 
         nsnaps = [1] 
 
@@ -656,7 +656,7 @@ if __name__=='__main__':
     #plot_cenque_ssfr_dist_evolution(Mrcut=20, fq='wetzel', tau='linefit', tau_param=[-0.5, 0.4], 
     #        sfms_slope=0.7, sfms_yint=0.125) 
     #plot_q_groupcat(Mrcut=18)
-    plot_cenque_ssfr_dist_evolution(fq='wetzel', tau='linefit', tau_param=[-0.5, 0.4])
+    plot_cenque_ssfr_dist_evolution(nsnaps=[1], fq='wetzel', tau='instant') #tau='linefit', tau_param=[-0.5, 0.4])
 
     #plot_sfms_data(0.51, -0.22)
 

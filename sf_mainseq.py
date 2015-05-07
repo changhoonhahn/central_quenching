@@ -508,7 +508,7 @@ def get_bestfit_qgroupcat_ssfr(Mrcut=18, clobber=False):
             med_ssfrs.append(med_ssfr)
             var_ssfrs.append(var_ssfr)
 
-        p0 = [0.5, -12.0]
+        p0 = [-0.5, -12.0]
         fa = {'x': np.array(masses)-10.5, 'y': np.array(med_ssfrs)}
         bestfit = mpfit.mpfit(util.mpfit_line, p0, functkw=fa, nprint=0) 
         

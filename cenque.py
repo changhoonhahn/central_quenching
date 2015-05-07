@@ -151,7 +151,7 @@ class CenQue:
                 centered about some determined mean
                 '''
                 q_ssfr_mean = util.get_q_ssfr_mean(self.mass[mass_bin_q_index]) 
-                self.ssfr[mass_bin_q_index] = 0.19 * np.random.randn(mass_bin_n_q) + q_ssfr_mean
+                self.ssfr[mass_bin_q_index] = 0.18 * np.random.randn(mass_bin_n_q) + q_ssfr_mean
                 # calculate SFR by SSFR+Mass
                 self.sfr[mass_bin_q_index] = self.ssfr[mass_bin_q_index] + self.mass[mass_bin_q_index]
 
@@ -267,8 +267,8 @@ class CenQue:
     def writeout(self, **kwargs): 
         ''' simply outputs specified columns to file
         '''
-
         output_file = util.cenque_file( **kwargs )  # output file 
+        print 'Writing ', output_file 
         f = h5py.File(output_file, 'w')         # hdf5 file format (open file) 
         grp = f.create_group('cenque_data')     # create group 
     
@@ -551,9 +551,14 @@ def EvolveCenQue(origin_nsnap, final_nsnap, mass_bin=None, **kwargs):
             child_cq.gal_type[quench_index] = 'quiescent'  # boom quenched 
 
             if 'tau' in kwargs.keys(): 
-                child_cq.tau[quench_index] = util.get_quenching_efold(
-                        child_cq.parent_mass[quench_index], 
-                        type=kwargs['tau'], param=kwargs['tau_param'])
+                if 'tau_param' in kwargs.keys(): 
+                    child_cq.tau[quench_index] = util.get_quenching_efold(
+                            child_cq.parent_mass[quench_index], 
+                            type=kwargs['tau'], param=kwargs['tau_param'])
+                else: 
+                    child_cq.tau[quench_index] = util.get_quenching_efold(
+                            child_cq.parent_mass[quench_index], 
+                            type=kwargs['tau'])
             else: 
                 raise TypeError('specify quenching e-fold: tau = instant, constant, linear') 
 
@@ -564,7 +569,7 @@ def EvolveCenQue(origin_nsnap, final_nsnap, mass_bin=None, **kwargs):
             child_cq.sfr[quench_index] = child_cq.parent_sfr[quench_index] + tau_quench 
             child_cq.ssfr[quench_index] = child_cq.sfr[quench_index] - child_cq.mass[quench_index]
             q_ssfr_mean = util.get_q_ssfr_mean(child_cq.mass[quench_index]) 
-            child_cq.q_ssfr[quench_index] = 0.19 * np.random.randn(ngal_2quench) + q_ssfr_mean 
+            child_cq.q_ssfr[quench_index] = 0.18 * np.random.randn(ngal_2quench) + q_ssfr_mean 
         
         # deal with orphans
         #print len(child_cq.gal_type[child_cq.gal_type == '']), ' child galaxies are orphans' 
@@ -606,4 +611,4 @@ if __name__=='__main__':
     #EvolveCenQue(13, 1, fq='wetzel', tau='linear') 
                         
     #build_cenque_importsnap(fq='wetzel', sfms_slope=0.7, sfms_yint=0.125) 
-    EvolveCenQue(13, 1, fq='wetzel', tau='linefit', tau_param=[-0.5, 0.4]) 
+    EvolveCenQue(13, 1, fq='wetzel', tau='instant')  #tau='linefit', tau_param=[-0.5, 0.4]) 
