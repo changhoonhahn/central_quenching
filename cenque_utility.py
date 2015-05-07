@@ -102,6 +102,59 @@ def get_fq_alpha(Mstar, z_in, alpha):
 
     return output 
 
+# 'quenching' fraction 
+def get_fquenching(Mstar, z_in, **kwargs): 
+    ''' Return the *quenching* fraction for given stellar mass and redshift 
+    
+    Parameters
+    ----------
+    Mstar : Stellar mass 
+    z_in : Redshift
+
+    Returns
+    -------
+    fquenching : quenching fraction 
+
+    Notes
+    -----
+    * *Quenching* fraction is *not* quiescent fraction
+    * Based on Wetzel et al. Quiescent Fraction parameterization 
+    * Redshift evolution is the same as Wetzel     
+
+    '''
+    if 'slope' in kwargs.keys(): 
+        slope = kwargs['slope']
+    else: 
+        slope = 0.63                # Wetzel slope
+
+    if 'yint' in kwargs.keys(): 
+        yint = kwargs['yint'] 
+    else: 
+        yint = -6.04
+
+    qf_z0 = yint + slope*Mstar
+    
+    if Mstar < 9.5: 
+        alpha = -2.3
+    elif (Mstar >= 9.5) & (Mstar < 10.0): 
+        alpha = -2.1
+    elif (Mstar >= 10.0) & (Mstar < 10.5): 
+        alpha = -2.2
+    elif (Mstar >= 10.5) & (Mstar < 11.0): 
+        alpha = -2.0
+    elif (Mstar >= 11.0) & (Mstar < 11.5): 
+        alpha = -1.3
+    else: 
+        raise NameError('Mstar is out of range')
+
+    output = qf_z0 * ( 1.0 + z_in )**alpha 
+    if output < 0.0: 
+        output = 0.0
+    elif output > 1.0: 
+        output = 1.0 
+
+    return output 
+
 # SSFR distribution ----------------------------------------------------------------
 
 class CQssfr: 
@@ -357,6 +410,10 @@ def get_q_ssfr_mean(masses, Mrcut=18):
     ----------
     masses : array of masses 
     Mrcut : 
+
+    Notes
+    -----
+    * A little bit of hardcoded tweaking but these should not matter because ultimately  
 
     '''
     fit_line_param = sfms.get_bestfit_qgroupcat_ssfr(Mrcut=Mrcut) 

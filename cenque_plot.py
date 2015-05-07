@@ -290,9 +290,10 @@ def plot_cenque_sf_mainseq():
 
 # quiescent fraction -----------------------------------
 def plot_fq_evol(): 
-    ''' plot fq evolution 
+    ''' Plot fq evolution 
     '''
 
+    # snapshot redshifts
     zbin = np.loadtxt('snapshot_table.dat', unpack=True, usecols=[2])
     zbin = zbin[zbin < 1.0]
     #zbin = [0.1*np.float(i) for i in range(1,10)]   # zbin 
@@ -304,6 +305,11 @@ def plot_fq_evol():
 
     prettyplot()        # make pretty 
     pretty_colors = prettycolors() 
+    
+    # load literature data 
+    # modified tinker
+    mod_tink_file = ''.join(['/data1/hahn/central_quenching/literature/modified_tinker_fq.dat']) 
+    mod_tink_mass, mod_tink_fq = np.loadtxt(mod_tink_file, unpack=True, usecols=[0,1])   
 
     fq_types = ['cosmosinterp', 'cosmosfit', 'wetzel'] 
     for i_fq, fq_type in enumerate(fq_types): 
@@ -314,6 +320,9 @@ def plot_fq_evol():
                     for i in range(len(mass_bin.mass_mid))]
             subs[i_fq].plot(mass_bin.mass_mid, fq_mass, 
                     color=pretty_colors[i_z], lw=4, label='z = '+str(z) ) 
+        
+        subs[i_fq].plot(mod_tink_mass, mod_tink_fq, 
+            color='black', lw=6, label='Modified Tinker Group' ) 
 
         subs[i_fq].set_title(fq_type) 
 
@@ -329,6 +338,7 @@ def plot_fq_evol():
                 for i in range(len(mass_bin.mass_mid))]
         subs[3].plot(mass_bin.mass_mid, fq_mass, 
                 color=pretty_colors[i_z], lw=4, label='z = '+str(z) ) 
+    
 
     subs[3].set_title('Evolved from z = 0.88') 
 
@@ -336,51 +346,6 @@ def plot_fq_evol():
     subs[3].set_ylim([0.0, 1.0])
 
     subs[3].set_xlabel('Mass') 
-
-    subs[0].set_ylabel('Quiescent Fraction') 
-    subs[0].legend(loc='upper left') 
-    return fig
-
-def plot_fq_evol_w_geha(): 
-    ''' plot fq evolution with literature results overplotted
-    '''
-
-    zbin = np.loadtxt('snapshot_table.dat', unpack=True, usecols=[2])
-    zbin = zbin[ zbin < 1.0 ] 
-    #zbin = [0.1*np.float(i) for i in range(1,10)]   # zbin 
-    mass_bin = util.simple_mass_bin()                    # mass bin 
-       
-    fig, subs = plt.subplots(1,3, figsize=[15, 5]) 
-    subs = subs.ravel() 
-
-    prettyplot()        # make pretty 
-    pretty_colors = prettycolors() 
-
-    ## load literature data 
-    # modified tinker
-    mod_tink_file = ''.join(['/data1/hahn/central_quenching/literature/modified_tinker_fq.dat']) 
-    mod_tink_mass, mod_tink_fq = np.loadtxt(mod_tink_file, unpack=True, usecols=[0,1])   
-
-    fq_types = ['cosmosinterp', 'cosmosfit', 'wetzel'] 
-    for i_fq, fq_type in enumerate(fq_types): 
-        for i_z, z in enumerate(zbin): 
-
-            # plot fq(Mass) 
-            fq_mass = [util.get_fq(mass_bin.mass_mid[i], z, lit=fq_type) 
-                    for i in range(len(mass_bin.mass_mid))]
-            subs[i_fq].plot(mass_bin.mass_mid, fq_mass, 
-                    color=pretty_colors[i_z], lw=4, label='z = '+str(z) ) 
-
-        subs[i_fq].plot(mod_tink_mass, mod_tink_fq, 
-                color='black', lw=6, label='Modified Tinker Group' ) 
-
-        subs[i_fq].set_title(fq_type) 
-
-        subs[i_fq].set_xlim([9.0, 12.0])
-        subs[i_fq].set_ylim([0.0, 1.0])
-
-        subs[i_fq].set_xlabel('Mass') 
-        subs[i_fq].set_xlabel('Mass') 
 
     subs[0].set_ylabel('Quiescent Fraction') 
     subs[0].legend(loc='upper left') 
@@ -656,7 +621,7 @@ if __name__=='__main__':
     #plot_cenque_ssfr_dist_evolution(Mrcut=20, fq='wetzel', tau='linefit', tau_param=[-0.5, 0.4], 
     #        sfms_slope=0.7, sfms_yint=0.125) 
     #plot_q_groupcat(Mrcut=18)
-    plot_cenque_ssfr_dist_evolution(nsnaps=[1], fq='wetzel', tau='instant') #tau='linefit', tau_param=[-0.5, 0.4])
+    #plot_cenque_ssfr_dist_evolution(nsnaps=[1], fq='wetzel', tau='instant') #tau='linefit', tau_param=[-0.5, 0.4])
 
     #plot_sfms_data(0.51, -0.22)
 
@@ -666,8 +631,8 @@ if __name__=='__main__':
     #plot_cenque_sf_mainseq()
 
     #fq_fig = plot_fq_evol_w_geha() 
-    #fq_fig = plot_fq_evol()
-    #fq_fig.savefig('/home/users/hahn/research/figures/tinker/fq_evol_fig_lit.png', bbox_inches='tight')
+    fq_fig = plot_fq_evol()
+    fq_fig.savefig('/home/users/hahn/research/figures/tinker/fq_evol_fig_lit.png', bbox_inches='tight')
     #
     #tau_fig = plot_quenching_efold() 
     #tau_fig.savefig('quenching_efold_fig.png', bbox_inches='tight')
