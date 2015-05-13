@@ -45,7 +45,8 @@ def plot_cenque_ssfr_dist(cenque, fig=None, **kwargs):
         # SSFR histogram 
         ssfr_hist, ssfr_bin_edges = np.histogram(cenque.ssfr[mass_limit], 
                 range=[-13.0, -7], bins=40, normed=True)
-        
+        ngal_bin = len(cenque.ssfr[mass_limit])
+
         # SSFR bins 
         ssfr_bin_low = ssfr_bin_edges[:-1]
         ssfr_bin_high = ssfr_bin_edges[1:]
@@ -78,7 +79,8 @@ def plot_cenque_ssfr_dist(cenque, fig=None, **kwargs):
         sub = fig.add_subplot(1, 4, i_mass+1)       # panel subplot 
         sub.plot(ssfr_bin_mid, ssfr_hist, 
                 color=line_color, lw=4, ls=line_style, label=ssfr_hist_label) 
-        
+
+        #sub.text(-12.0, 1.2, r'$N_{gal}='+str(ngal_bin)+'$')
         if new_plot == True:        # put mass labels in panels 
             plt.text(-10.75, 1.4, 
                     r'$\mathtt{log \; M_{*} = ['+str(panel_mass[0])+', '+str(panel_mass[1])+']}$', 
@@ -395,13 +397,11 @@ def plot_group_cat_bigauss_bestfit():
     plot_sdss_group_cat_bestfit(Mrcut=20)
 
 # SF-MS ---------------------------
-def plot_sfms_data(lowz_slope, lowz_yint, Mrcut=18): 
+def plot_sfms_data(Mrcut=18): 
     ''' Plot StarForming Main Sequence from iSEDfit data and flexible SFMS fit function 
 
     Parameters
     ----------
-    lowz_slope : designated low-z SDSS SF-MS slope
-    lowz_yint : designated low-z SDSS SF-MS y-intercept
 
     '''
     prettyplot()        # make pretty 
@@ -412,15 +412,6 @@ def plot_sfms_data(lowz_slope, lowz_yint, Mrcut=18):
 
     fig, subs = plt.subplots(1, len(zbins), figsize=[20, 5]) 
     subs = subs.ravel() 
-
-    # SDSS group catalog best fit 
-    #groupcat_slope, groupcat_yint = sfms.sdss_groupcat_sfms_bestfit()
-    #subs[0].plot(
-    #        np.array(mass_bin.mass_mid), 
-    #        (groupcat_slope * (np.array(mass_bin.mass_mid)-10.5)) + groupcat_yint, 
-    #        c='k', lw=6, ls='--') 
-
-    zmids, slopes, yints = sfms.get_sfmsfit_sfr(lowz_slope, lowz_yint, clobber=True) 
 
     fits = [] 
     for i_z, zbin in enumerate(zbins): 
@@ -445,12 +436,13 @@ def plot_sfms_data(lowz_slope, lowz_yint, Mrcut=18):
             #centrals = cq_group.central_catalog(Mrcut=Mrcut) 
             #subs[i_z].hist2d(centrals.mass, centrals.sfr, bins=[30, 1000])
             centrals = sfms.sf_centrals(Mrcut=Mrcut) 
-            subs[i_z].hist2d(centrals.mass, centrals.sfr, bins=[30, 100])
+            subs[i_z].hist2d(centrals.mass, centrals.sfr, bins=[30, 50])
 
         subs[i_z].errorbar(mass, avg_sfrs, yerr=var_sfrs, 
                 lw=4, c=pretty_colors[1], label='Avg SFR (EnvCount)')
 
         if i_z == 0: 
+            # plot bestfit line for envcount SF-MS 
             param = sfms.get_bestfit_envcount_sfms()
             subs[i_z].plot(mass, param[0]*(np.array(mass)-10.5) + param[1], 
                     c=pretty_colors[2])
@@ -474,19 +466,14 @@ def plot_sfms_data(lowz_slope, lowz_yint, Mrcut=18):
             subs[i_z].errorbar(mass, avg_sfrs, yerr=var_sfrs, 
                     lw=4, c=pretty_colors[3], label='Avg SFR (GroupCat)')
 
-        #print str(zbin[0]) + ' < ' + str(zmids[i_z]) + ' < ' + str(zbin[1])
-        subs[i_z].plot(mass, slopes[i_z]*(np.array(mass)-10.5) + yints[i_z], c=pretty_colors[2])
-    
         bestfit_sfr = [] 
         for m in mass: 
-            blah = util.get_sfr_mstar_z_bestfit(m, 0.5*(zbin[0]+zbin[1]))
+            blah = util.get_sfr_mstar_z_bestfit(m, 0.5*(zbin[0]+zbin[1]), clobber=True)
             bestfit_sfr.append(blah[0]) 
 
         subs[i_z].plot(mass, bestfit_sfr, c=pretty_colors[3])
         
         subs[i_z].text(10.0, 1.25, '$\mathtt{z \sim '+str(0.5*(zbin[0]+zbin[1]))+'}$') 
-        subs[i_z].text(10.75, -0.75,'slope= '+str('%.2f' % slopes[i_z])) 
-        subs[i_z].text(10.75, -1.0, 'y-int= '+str('%.2f' % yints[i_z])) 
 
         subs[i_z].set_xlim([9.5, 12.0]) 
         subs[i_z].set_ylim([-1.5, 1.5]) 
@@ -497,8 +484,7 @@ def plot_sfms_data(lowz_slope, lowz_yint, Mrcut=18):
         #if i_z == 3: 
         #    subs[i_z].legend()
     
-    fig_file = ''.join(['figure/tinker/', 
-        'sf_ms_data_', str("%.2f" % lowz_slope), '_', str("%.2f" % lowz_yint), '.png'])
+    fig_file = ''.join(['figure/', 'sf_ms_data.png'])
     fig.savefig(fig_file, bbox_inches='tight')
     fig.clear() 
 
@@ -542,7 +528,7 @@ def plot_sfms_groupcat(Mrcut=18):
         var_sfrs.append(var_sfr)
         
     sf_cen = sfms.sf_centrals(Mrcut=Mrcut) 
-    subs.hist2d(sf_cen.mass, sf_cen.sfr, bins=[30, 100])
+    subs.hist2d(sf_cen.mass, sf_cen.sfr, bins=[30, 50])
     #subs[i_z].scatter(centrals.mass, centrals.sfr, s=2, color=pretty_colors[3]) 
     #centrals = cq_group.central_catalog(Mrcut=19) 
     #subs[i_z].scatter(centrals.mass, centrals.sfr, s=2, color=pretty_colors[4]) 
@@ -552,7 +538,7 @@ def plot_sfms_groupcat(Mrcut=18):
     subs.errorbar(mass, avg_sfrs, yerr=var_sfrs, 
             lw=4, c=pretty_colors[1], label='Average SFR')
 
-    bestfit_params = sfms.get_bestfit_groupcat_sfms(Mrcut=Mrcut) 
+    bestfit_params = sfms.get_bestfit_groupcat_sfms(Mrcut=Mrcut, clobber=True) 
     subs.plot(mass, util.line(np.array(mass)-10.5, bestfit_params), 
             lw=4, ls='--', c=pretty_colors[2], label='MPfit line') 
     subs.text(11.25, 0.0, 'Slope = '+str("%.2f" % bestfit_params[0]))
@@ -564,8 +550,62 @@ def plot_sfms_groupcat(Mrcut=18):
     subs.set_ylabel('log(SFR)') 
     subs.legend(loc='upper right') 
     
-    fig_name = ''.join(['figure/tinker/',
-        'sf_ms_groupcat_', str(Mrcut), '.png'])
+    fig_name = ''.join(['figure/', 'sf_ms_groupcat_', str(Mrcut), '.png'])
+    fig.savefig(fig_name, bbox_inches='tight')
+    fig.clear()
+
+def plot_ssfms_groupcat(Mrcut=18):
+    ''' Plot Specific SF Main Sequence (mass vs SFR) from Star-Forming SDSS group catalog  
+
+    Parameters
+    ----------
+    None
+
+    '''
+    prettyplot()        # make pretty 
+    pretty_colors = prettycolors() 
+
+    mass_bin = util.simple_mass_bin()       # mass bin 
+
+    fig = plt.figure(1)#, figsize=[7,5])
+    subs = fig.add_subplot(111) 
+
+    mass, avg_sfrs, var_sfrs, avg_ssfrs = [], [], [], [] 
+    for i_mass in range(len(mass_bin.mass_low)): 
+        avg_sfr, var_sfr, ngal = sfms.get_sfr_mstar_z_groupcat(mass_bin.mass_mid[i_mass], 
+                Mrcut=Mrcut) 
+
+        if ngal < 10: 
+            continue    # skip mass bin if there aren't many galaxies
+
+        if mass_bin.mass_mid[i_mass] < 9.5: 
+            continue    # skip low mass
+
+        mass.append(mass_bin.mass_mid[i_mass]) 
+        avg_sfrs.append(avg_sfr)
+        var_sfrs.append(var_sfr)
+        avg_ssfrs.append(avg_sfr-mass_bin.mass_mid[i_mass])
+    
+    # 2D histogram of centrals
+    sf_cen = sfms.sf_centrals(Mrcut=Mrcut) 
+    subs.hist2d(sf_cen.mass, sf_cen.ssfr, bins=[30, 50])
+
+    subs.errorbar(mass, avg_ssfrs, yerr=var_sfrs, 
+            lw=4, c=pretty_colors[1], label='Average SFR')
+
+    bestfit_params = sfms.get_bestfit_groupcat_sfms(Mrcut=Mrcut, clobber=True) 
+    subs.plot(mass, util.line(np.array(mass)-10.5, bestfit_params) - np.array(mass), 
+            lw=4, ls='--', c=pretty_colors[2], label='MPfit line') 
+    subs.text(11.25, -10.0, 'Slope = '+str("%.2f" % bestfit_params[0]))
+    subs.text(11.25, -10.5, 'Y-int = '+str("%.2f" % bestfit_params[1]))
+
+    subs.set_xlim([9.5, 12.0]) 
+    subs.set_ylim([-9.5, -11.75]) 
+    subs.set_xlabel('log(M)') 
+    subs.set_ylabel('log(sSFR)') 
+    subs.legend(loc='upper right') 
+    
+    fig_name = ''.join(['figure/', 'ssf_ms_groupcat_', str(Mrcut), '.png'])
     fig.savefig(fig_name, bbox_inches='tight')
     fig.clear()
 
@@ -633,13 +673,16 @@ if __name__=='__main__':
     #plot_q_groupcat(Mrcut=18)
     #plot_cenque_ssfr_dist_evolution(nsnaps=[1], fq='wetzel', tau='instant') #tau='linefit', tau_param=[-0.5, 0.4])
     
-    plot_cenque_ssfr_dist_evolution(Mrcut=18, fqing_yint=-5.0, tau='instant') 
+    #plot_cenque_ssfr_dist_evolution(Mrcut=18, fqing_yint=-5.84, tau='instant') 
+    #plot_cenque_ssfr_dist_evolution(Mrcut=19, fqing_yint=-5.84, tau='instant') 
+    #plot_cenque_ssfr_dist_evolution(Mrcut=18, fqing_yint=-5.84, tau='constant') 
+    #plot_cenque_ssfr_dist_evolution(Mrcut=18, fqing_yint=-5.84, tau='linear') 
 
-    #plot_sfms_data(0.51, -0.22)
-
-    #plot_sfms_groupcat(Mrcut=18)
-    #plot_sfms_groupcat(Mrcut=19)
-    #plot_sfms_groupcat(Mrcut=20)
+    #plot_ssfms_groupcat(Mrcut=18)
+    #plot_ssfms_groupcat(Mrcut=19)
+    #plot_ssfms_groupcat(Mrcut=20)
+    
+    plot_sfms_data()
     #plot_cenque_sf_mainseq()
 
     #fq_fig = plot_fq_evol_w_geha() 

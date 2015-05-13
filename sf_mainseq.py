@@ -274,6 +274,11 @@ def get_sfr_mstar_z_groupcat(m_star, Mrcut=18, clobber=False):
     Return
     ------
     sfr_out: star formation rate
+
+    Notes
+    -----
+    * Average is skewed due to the Star-Forming classification which includes many 'transitioning galaxies' 
+
     '''
     sf_data = sf_centrals(Mrcut=Mrcut, clobber=clobber) 
     
@@ -289,15 +294,34 @@ def get_sfr_mstar_z_groupcat(m_star, Mrcut=18, clobber=False):
             (sf_data.mass < mass_high)
 
     n_gal = len(sf_data.mass[bin_index])
-
-    if len(sf_data.sfr[bin_index]) > 0: 
-        avg_sfr = np.average(sf_data.sfr[bin_index]) 
-        var_sfr = np.average( (sf_data.sfr[bin_index] - avg_sfr)**2 ) 
+    
+    bin_sfr = sf_data.sfr[bin_index]
+    if len(sf_data.sfr[bin_index]) > 30: 
+        print 'Ngal = ', len(sf_data.sfr[bin_index])
+        med_sfr = np.median(bin_sfr)
+        avg_sfr = np.average(bin_sfr)
+        var_sfr = np.average( (bin_sfr - avg_sfr)**2 ) 
+            
+        print mass_low, mass_high, '-', med_sfr, avg_sfr, var_sfr, np.min(sf_data.sfr[bin_index]), np.max(sf_data.sfr[bin_index])
+    
+        for iter in range(3): 
+            sfr_range = (bin_sfr > med_sfr-3.0*var_sfr) & (bin_sfr < med_sfr+3.0*var_sfr)
+            
+            if np.median(bin_sfr[sfr_range]) > med_sfr: 
+                med_sfr = np.median(bin_sfr[sfr_range]) 
+                avg_sfr = np.average(bin_sfr[sfr_range]) 
+                var_sfr = np.average( (bin_sfr[sfr_range] - avg_sfr)**2 ) 
+                print mass_low, mass_high, '-', med_sfr, avg_sfr, var_sfr, np.min(sf_data.sfr[bin_index]), np.max(sf_data.sfr[bin_index])
+            else: 
+                pass
+        
+        var_sfr = np.average( (bin_sfr - avg_sfr)**2 ) 
     else: 
+        med_sfr = -999.
         avg_sfr = -999.
         var_sfr = -999.
 
-    return [avg_sfr, var_sfr, n_gal] 
+    return [med_sfr, var_sfr, n_gal] 
 
 def get_bestfit_groupcat_sfms(Mrcut=18, clobber=False):
     ''' Returns parameters for the best-fit line of the Star-forming SDSS Group Catalog (SF-MS)
@@ -316,7 +340,7 @@ def get_bestfit_groupcat_sfms(Mrcut=18, clobber=False):
     fid_mass = 10.5         # fiducial mass 
 
     save_file = ''.join(['dat/central_quenching/sf_ms/'
-        'sf_ms_fit_starforming_groupcat.hdf5']) 
+        'sf_ms_fit_starforming_groupcat_', str(Mrcut), '.hdf5']) 
     
     if (os.path.isfile(save_file) == False) or (clobber == True): 
         # if file doesn't exist save to hdf5 file 
@@ -329,7 +353,7 @@ def get_bestfit_groupcat_sfms(Mrcut=18, clobber=False):
         for mass in np.arange(9.5, 11.5, 0.25): 
             avg_sfr, var_sfr, ngal = get_sfr_mstar_z_groupcat(mass, Mrcut=Mrcut)
             
-            if ngal < 100: 
+            if ngal < 500: 
                 continue 
 
             masses.append(mass)
@@ -582,13 +606,13 @@ def get_bestfit_envcount_sfms(clobber=False):
         return [f['slope_yint/slope'][:], f['slope_yint/yint'][:]] 
 
 if __name__=='__main__':
-    print get_bestfit_groupcat_sfms(Mrcut=18) 
-    print get_bestfit_groupcat_sfms(Mrcut=19) 
-    print get_bestfit_groupcat_sfms(Mrcut=20) 
+    print get_bestfit_groupcat_sfms(Mrcut=18, clobber=True) 
+    print get_bestfit_groupcat_sfms(Mrcut=19, clobber=True) 
+    print get_bestfit_groupcat_sfms(Mrcut=20, clobber=True) 
     #build_groupcat_sf(Mrcut=18)
     #build_groupcat_sf(Mrcut=19)
     #build_groupcat_sf(Mrcut=20)
 
     # SDSS group catalog best fit 
     #groupcat_slope, groupcat_yint = sdss_groupcat_sfms_bestfit()
-    #print get_sfmsfit_sfr(groupcat_slope, groupcat_yint)
+    print get_sfmsfit_sfr(groupcat_slope, groupcat_yint)

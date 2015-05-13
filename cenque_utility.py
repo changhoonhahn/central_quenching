@@ -301,7 +301,7 @@ def get_sfr_mstar_z(mstar, z_in, deltamass=0.2, deltaz=0.2, lit='primusfit', mac
     else: 
         raise NameError("Not yet coded") 
 
-def get_sfr_mstar_z_bestfit(mstar, z_in, Mrcut=18):
+def get_sfr_mstar_z_bestfit(mstar, z_in, Mrcut=18, clobber=False):
     ''' Return SFR of SF main sequence as a function of mass and redshift
 
     Parameters
@@ -332,7 +332,7 @@ def get_sfr_mstar_z_bestfit(mstar, z_in, Mrcut=18):
     envcount_fit_param = sfms.get_bestfit_envcount_sfms()
     zmids, slopes, yints = sfms.get_sfmsfit_sfr(
             (envcount_fit_param[0]).item(), (envcount_fit_param[1]).item(), 
-            clobber=True)
+            clobber=clobber)
         
     d_yints = np.interp(z_in, zmids, yints) - yints[0] 
     SFR_amp = groupcat_fit_param[1] + d_yints

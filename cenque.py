@@ -86,9 +86,10 @@ class CenQue:
         if 'sfms_slope' in kwargs.keys(): 
             sfms_sfr_fit = sfms.get_sfmsfit_sfr(kwargs['sfms_slope'], kwargs['sfms_yint'])
         else:   
-            # otherwise, just use the fit from the group catalogs (hardcoded)
-            groupcat_slope, groupcat_yint = sfms.get_bestfit_groupcat_sfms(Mrcut=18)
-            sfms_sfr_fit = sfms.get_sfmsfit_sfr(groupcat_slope, groupcat_yint)
+            pass
+            ## otherwise, just use the fit from the group catalogs (hardcoded)
+            #groupcat_slope, groupcat_yint = sfms.get_bestfit_groupcat_sfms(Mrcut=18)
+            #sfms_sfr_fit = sfms.get_sfmsfit_sfr(groupcat_slope, groupcat_yint)
         
         if (min(self.mass) < min(mass_bins.mass_low)) or (max(self.mass) > max(mass_bins.mass_high)): 
             # remove galaxies below the minimum and maximum mass
@@ -380,8 +381,9 @@ def EvolveCenQue(origin_nsnap, final_nsnap, mass_bin=None, **kwargs):
     if 'sfms_slope' in kwargs.keys(): 
         sfms_sfr_fit = sfms.get_sfmsfit_sfr(kwargs['sfms_slope'], kwargs['sfms_yint'])
     else: 
-        groupcat_slope, groupcat_yint = sfms.get_bestfit_groupcat_sfms(Mrcut=18)
-        sfms_sfr_fit = sfms.get_sfmsfit_sfr(groupcat_slope, groupcat_yint)
+        pass
+        #groupcat_slope, groupcat_yint = sfms.get_bestfit_groupcat_sfms(Mrcut=18)
+        #sfms_sfr_fit = sfms.get_sfmsfit_sfr(groupcat_slope, groupcat_yint)
   
     # import original snap SF prop 
     parent_cq = CenQue()
@@ -609,5 +611,8 @@ if __name__=='__main__':
     #EvolveCenQue(13, 1, fq='wetzel', tau='constant') 
     #EvolveCenQue(13, 1, fq='wetzel', tau='linear') 
                         
-    build_cenque_importsnap(fqing_yint=-5.0)
-    EvolveCenQue(13, 1, fqing_yint=-5.0, tau='instant')  #tau='linefit', tau_param=[-0.5, 0.4]) 
+    #build_cenque_importsnap(fqing_yint=-5.0)
+    build_cenque_importsnap(fqing_yint=-5.84)
+    EvolveCenQue(13, 1, fqing_yint=-5.84, tau='instant')  #tau='linefit', tau_param=[-0.5, 0.4]) 
+    #EvolveCenQue(13, 1, fqing_yint=-5.84, tau='constant')
+    #EvolveCenQue(13, 1, fqing_yint=-5.84, tau='linear')
