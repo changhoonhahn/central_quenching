@@ -143,17 +143,17 @@ def plot_cenque_ssfr_dist_evolution(Mrcut=18, **kwargs):
         sfms_str = ''
 
     if kwargs['tau'] == 'discrete': 
-        fig_file = ''.join(['/home/users/hahn/research/figures/tinker/', 
+        fig_file = ''.join(['figure/tinker/', 
             'cenque_ssfr_evol_', '_'.join( [str("%.1f" % t) for t in kwargs['tau_param']] ), 
             'tau_', kwargs['fq'], 'fq_Mrcut', str(Mrcut),'.png']) 
 
     elif kwargs['tau'] == 'linefit':
-        fig_file = ''.join(['/home/users/hahn/research/figures/tinker/', 
+        fig_file = ''.join(['figure/tinker/', 
             'cenque_ssfr_evol', sfms_str, 
             '_'.join( [str("%.2f" % t) for t in kwargs['tau_param']] ) , 
             'tau_', kwargs['fq'], 'fq_Mrcut', str(Mrcut),'.png']) 
     else: 
-        fig_file = ''.join(['/home/users/hahn/research/figures/tinker/', 
+        fig_file = ''.join(['figure/tinker/', 
             'cenque_ssfr_evol_', '_'.join([str(t) for t in kwargs['tau']]), 'tau_', 
             kwargs['fq'], 'fq_Mrcut', str(Mrcut), sfms_str, '.png']) 
     ssfr_fig.savefig(fig_file, bbox_inches='tight') 
@@ -173,7 +173,7 @@ def plot_cenque_ssfr_dist_evolution_match2isedfit(Mrcut=18, **kwargs):
     central_ssfr = cq_group.central_catalog_match2isedfit(Mrcut=Mrcut, clobber=True) 
     ssfr_fig = plot_cenque_ssfr_dist(central_ssfr, fig=ssfr_fig, label= 'Mrcut = '+str(Mrcut)) 
     
-    fig_file = ''.join(['/home/users/hahn/research/figures/tinker/', 
+    fig_file = ''.join(['figure/tinker/', 
         'cenque_ssfr_evol_', kwargs['tau'], 'tau_', kwargs['fq'], 'fq_Mrcut', str(Mrcut),
         '_match2isedfit.png']) 
     ssfr_fig.savefig(fig_file, bbox_inches='tight') 
@@ -198,7 +198,7 @@ def plot_sdss_group_cat():
     ssfr_fig = plot_cenque_ssfr_dist(central_ssfr, fig=ssfr_fig, 
             label='Mrcut=20', line_color=pretty_colors[5], line_style='-.') 
 
-    fig_file = ''.join(['/home/users/hahn/research/figures/tinker/', 
+    fig_file = ''.join(['figure/tinker/', 
         'sdss_groupcat_ssfr.png']) 
     ssfr_fig.savefig(fig_file, bbox_inches='tight')
 
@@ -251,7 +251,7 @@ def plot_sdss_group_cat_bestfit(Mrcut=19):
         sub.text(-11, 0.55, 'Best fit sig Q = '+str(((output[i_mass])[2])[3]))
         sub.text(-11, 0.5, 'Best fit sig SF = '+str(((output[i_mass])[2])[4]))
 
-    fig_file = ''.join(['/home/users/hahn/research/figures/tinker/', 
+    fig_file = ''.join(['figure/tinker/', 
         'sdss_groupcat_ssfr_bestift_mrcut', str(Mrcut), '.png']) 
     ssfr_fig.savefig(fig_file, bbox_inches='tight')
     ssfr_fig.clear()
@@ -284,7 +284,7 @@ def plot_cenque_sf_mainseq():
         if i_z == 0: 
             sub.set_ylabel('log SFR') 
     
-    fig_file = ''.join(['/home/users/hahn/research/figures/tinker/', 
+    fig_file = ''.join(['figure/tinker/', 
         'sf_ms_evol.png']) 
     fig.savefig(fig_file) 
 
@@ -308,7 +308,7 @@ def plot_fq_evol():
     
     # load literature data 
     # modified tinker
-    mod_tink_file = ''.join(['/data1/hahn/central_quenching/literature/modified_tinker_fq.dat']) 
+    mod_tink_file = ''.join(['dat/central_quenching/literature/modified_tinker_fq.dat']) 
     mod_tink_mass, mod_tink_fq = np.loadtxt(mod_tink_file, unpack=True, usecols=[0,1])   
 
     fq_types = ['cosmosinterp', 'cosmosfit', 'wetzel'] 
@@ -487,7 +487,7 @@ def plot_sfms_data(lowz_slope, lowz_yint, Mrcut=18):
         #if i_z == 3: 
         #    subs[i_z].legend()
     
-    fig_file = ''.join(['/home/users/hahn/research/figures/tinker/', 
+    fig_file = ''.join(['figure/tinker/', 
         'sf_ms_data_', str("%.2f" % lowz_slope), '_', str("%.2f" % lowz_yint), '.png'])
     fig.savefig(fig_file, bbox_inches='tight')
     fig.clear() 
@@ -554,7 +554,7 @@ def plot_sfms_groupcat(Mrcut=18):
     subs.set_ylabel('log(SFR)') 
     subs.legend(loc='upper right') 
     
-    fig_name = ''.join(['/home/users/hahn/research/figures/tinker/',
+    fig_name = ''.join(['figure/tinker/',
         'sf_ms_groupcat_', str(Mrcut), '.png'])
     fig.savefig(fig_name, bbox_inches='tight')
     fig.clear()
@@ -601,7 +601,7 @@ def plot_q_groupcat(Mrcut=18):
     subs.set_xlabel('log(M)') 
     subs.set_ylabel('log(sSFR)') 
     
-    fig_name = ''.join(['/home/users/hahn/research/figures/tinker/',
+    fig_name = ''.join(['figure/tinker/',
         'ssfr_mass_q_groupcat_mrcut', str(Mrcut), '.png'])
     fig.savefig(fig_name, bbox_inches='tight')
     fig.clear()
@@ -632,7 +632,7 @@ if __name__=='__main__':
 
     #fq_fig = plot_fq_evol_w_geha() 
     fq_fig = plot_fq_evol()
-    fq_fig.savefig('/home/users/hahn/research/figures/tinker/fq_evol_fig_lit.png', bbox_inches='tight')
+    fq_fig.savefig('figure/tinker/fq_evol_fig_lit.png', bbox_inches='tight')
     #
     #tau_fig = plot_quenching_efold() 
     #tau_fig.savefig('quenching_efold_fig.png', bbox_inches='tight')

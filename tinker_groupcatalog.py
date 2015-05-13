@@ -12,7 +12,7 @@ class groupcatalog:
             masscut='9.8'
         elif Mrcut == 20: 
             masscut='10.2'
-        catalogDir = '/data1/hahn/group_catalog/'
+        catalogDir = 'dat/group_catalog/'
         filePre = 'clf_groups_M'
         fileExt = '.galdata_corr.fits'
         filename = ''.join([catalogDir, filePre, str(Mrcut), '_', str(masscut), '_D360', fileExt])
@@ -59,7 +59,7 @@ class treepm_evomock:
         '''
         Read mock file with evolved list of galaxy properties that are hardcoded in the code 
         '''
-        evomock_file = ''.join(['/data1/hahn/wetzel_tree/', 
+        evomock_file = ''.join(['dat/wetzel_tree/', 
             'subhalo_sham_centrals_snapshot', str(nsnap), '_ssfr_mbin', str(mass_bin), '_evolfrom_snapshot13_', tau, 'tau.fits'])
         evomock_data = mrdfits(evomock_file) 
         gal_props = ['sfq', 'sfr', 'mass', 'ssfr']

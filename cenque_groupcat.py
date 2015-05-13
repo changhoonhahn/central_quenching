@@ -32,7 +32,7 @@ def read_group_catalog_galdata(Mrcut=18):
 
     h = 0.7
     
-    file = ''.join(['/data1/hahn/group_catalog/', 
+    file = ''.join(['/dat/group_catalog/', 
         'clf_groups_M', str(Mrcut), '_', str(masscut), '_D360.galdata_corr.fits']) 
 
     gal_data = util.mrdfits(file) 
@@ -64,7 +64,7 @@ def read_group_catalog_prob(Mrcut=18):
     elif Mrcut == 20: 
         masscut='10.2'
     
-    file = ''.join(['/data1/hahn/group_catalog/', 
+    file = ''.join(['/dat/group_catalog/', 
         'clf_groups_M', str(Mrcut), '_', str(masscut), '_D360.prob.fits']) 
 
     prob_data = util.mrdfits(file)            # import probability file 
@@ -98,7 +98,7 @@ def build_group_catalog(Mrcut=18, central=True):
         column_data = getattr(gal_data, column)[prob_index]
         setattr(central_catalog, column, column_data)
 
-    output_file = ''.join(['/data1/hahn/group_catalog/', 
+    output_file = ''.join(['dat/group_catalog/', 
         'massSFR_clf_groups_M', str(Mrcut), '_', str(masscut), '_D360.central.hdf5']) 
     central_catalog.writeout(columns=group_catalog_columns,
             input_file=output_file) 
@@ -113,7 +113,7 @@ def central_catalog(Mrcut=18, clobber=False):
     elif Mrcut == 20: 
         masscut='10.2'
     
-    catalog_file = ''.join(['/data1/hahn/group_catalog/', 
+    catalog_file = ''.join(['dat/group_catalog/', 
         'massSFR_clf_groups_M', str(Mrcut), '_', str(masscut), '_D360.central.hdf5']) 
 
     if (os.path.isfile(catalog_file) == False) or (clobber == True): 
@@ -220,7 +220,7 @@ def match2_primus_mfdata(Mrcut=18):
     gal_dec = gal_data.dec * 57.2957795 
 
     # import sdss mf data 
-    mfdata = util.mrdfits('/data1/hahn/group_catalog/mfdata_all_supergrid01_sdss.fits.gz') 
+    mfdata = util.mrdfits('dat/group_catalog/mfdata_all_supergrid01_sdss.fits.gz') 
     mf_ra = mfdata.ra
     mf_dec = mfdata.dec
 
@@ -259,7 +259,7 @@ def build_group_catalog_match2isedfit(Mrcut=18, central=True):
     gal_dec = gal_data.dec * 57.2957795 
     
     # import sdss mf data 
-    mfdata = util.mrdfits('/data1/hahn/group_catalog/mfdata_all_supergrid01_sdss.fits.gz') 
+    mfdata = util.mrdfits('dat/group_catalog/mfdata_all_supergrid01_sdss.fits.gz') 
 
     mf_ra = mfdata.ra
     mf_dec = mfdata.dec
@@ -296,7 +296,7 @@ def build_group_catalog_match2isedfit(Mrcut=18, central=True):
         else: 
             raise NameError('asdfasdfasdf') 
 
-    output_file = ''.join(['/data1/hahn/group_catalog/', 
+    output_file = ''.join(['dat/group_catalog/', 
         'massSFR_clf_groups_M', str(Mrcut), '_', str(masscut), '_D360_match2isedfit.central.hdf5']) 
     central_catalog.writeout(columns=group_catalog_columns,
             input_file=output_file) 
@@ -311,7 +311,7 @@ def central_catalog_match2isedfit(Mrcut=18, clobber=False):
     elif Mrcut == 20: 
         masscut='10.2'
     
-    catalog_file = ''.join(['/data1/hahn/group_catalog/', 
+    catalog_file = ''.join(['dat/group_catalog/', 
         'massSFR_clf_groups_M', str(Mrcut), '_', str(masscut), '_D360_match2isedfit.central.dat']) 
 
     if (os.path.isfile(catalog_file) == False) or (clobber == True): 

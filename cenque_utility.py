@@ -35,7 +35,7 @@ def get_fq(Mstar, z_in, lit='cosmosinterp'):
 
         fq_z = [] 
         for zbin in zbins: 
-            fq_file = ''.join([ '/data1/hahn/wetzel_tree/', 
+            fq_file = ''.join([ 'dat/wetzel_tree/', 
                 'qf_z', str(zbin), 'cen.dat' ]) 
            
             # read in mass and quiescent fraction
@@ -85,7 +85,7 @@ def get_fq_alpha(Mstar, z_in, alpha):
     ''' Quiescent fraction evolved from z = 0.88 by (1+z)^alpha where alpha is a free parameter
     '''
 
-    fq_file = ''.join([ '/data1/hahn/wetzel_tree/', 
+    fq_file = ''.join([ 'dat/wetzel_tree/', 
         'qf_z0.88cen.dat' ]) 
            
     # read in mass and quiescent fraction at z = 0.88 
@@ -258,7 +258,7 @@ def get_sfr_mstar_z(mstar, z_in, deltamass=0.2, deltaz=0.2, lit='primusfit', mac
 
         '''
         # import SF-MainSequence best-fit 
-        sf_ms_file = ''.join(['/data1/hahn/wetzel_tree/envcount/', 
+        sf_ms_file = ''.join(['dat/wetzel_tree/envcount/', 
             'sfr_mstar_fit_param_fixedslope.fits']) 
         sf_ms = mrdfits(sf_ms_file) 
         
@@ -278,7 +278,7 @@ def get_sfr_mstar_z(mstar, z_in, deltamass=0.2, deltaz=0.2, lit='primusfit', mac
     elif lit == 'primus':       # using PRIMUS central galaxy data 
         
         if machine == 'harmattan': 
-            data_dir = '/data1/hahn/wetzel_tree/envcount/'
+            data_dir = 'dat/wetzel_tree/envcount/'
         else: 
             data_dir = '/global/data/scr/chh327/primus/data/envcount/'
         # iSEDfit galaxy set 
@@ -574,7 +574,7 @@ def cenque_file( **kwargs ):
             yint_str = "%.2f" % kwargs['sfms_yint'] 
             sfms_param_str = '_sfms_slope'+slope_str+'_yint'+yint_str
 
-        cenque_filename = ''.join(['/data1/hahn/central_quenching/', 
+        cenque_filename = ''.join(['dat/central_quenching/', 
             'cenque_centrals_snapshot', str(kwargs['nsnap']), file_type_str, sfms_param_str, 
             '.hdf5']) 
 

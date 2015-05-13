@@ -48,7 +48,7 @@ def mass_kcorr_isedfit(Mrcut=18):
     sub.set_xlim([9.0, 12.0]) 
     sub.set_ylim([9.0, 12.0]) 
     
-    fig_file = ''.join(['/home/users/hahn/research/figures/tinker/', 
+    fig_file = ''.join(['figure/tinker/', 
         'mass_kcorr_isedfit_comparison_mrcut', str(Mrcut), '.png']) 
         
     fig.savefig(fig_file, bbox_inches='tight')
@@ -80,7 +80,7 @@ def sfr_mpajhu_isedfit(Mrcut=18):
     sub.set_xlim([-5.0, 5.0]) 
     sub.set_ylim([-5.0, 5.0]) 
     
-    fig_file = ''.join(['/home/users/hahn/research/figures/tinker/', 
+    fig_file = ''.join(['figure/tinker/', 
         'sfr_mpajhu_isedfit_comparison_mrcut', str(Mrcut), '.png']) 
         
     fig.savefig(fig_file, bbox_inches='tight')
@@ -119,7 +119,7 @@ def sfr_mass(Mrcut=18):
     sub.set_xlim([9.0, 12.0]) 
     sub.set_ylim([-5.0, 5.0]) 
     
-    fig_file = ''.join(['/home/users/hahn/research/figures/tinker/', 
+    fig_file = ''.join(['figure/tinker/', 
         'sfr_mass_mrcut', str(Mrcut), '.png']) 
         
     fig.savefig(fig_file, bbox_inches='tight')

@@ -34,7 +34,7 @@ def get_sfr_mstar_z_envcount(m_star, z_in, machine='harmattan'):
     '''
     # PRIMUS Star-Forming environment count data  
     if machine == 'harmattan': 
-        file_dir = '/data1/hahn/wetzel_tree/envcount/'
+        file_dir = 'dat/wetzel_tree/envcount/'
     else: 
         raise NotImplementedError('asdfasdf')
     if z_in < 0.2:
@@ -184,7 +184,7 @@ def get_sfmsfit_slope_yint_file(slope, yint):
 
     slope_str = "%.2f" % slope
     yint_str = "%.2f" % yint 
-    output_file = ''.join(['/data1/hahn/central_quenching/sf_ms/', 
+    output_file = ''.join(['dat/central_quenching/sf_ms/', 
         'sf_ms_fit_slope', slope_str, '_yint', yint_str, '.hdf5']) 
 
     return output_file 
@@ -218,7 +218,7 @@ def build_groupcat_sf(Mrcut=18):
         column_data = getattr(centrals, column)[sf_gals]
         setattr(centrals_sfms, column, column_data) 
 
-    output_file = ''.join(['/data1/hahn/group_catalog/', 
+    output_file = ''.join(['dat/group_catalog/', 
         'massSFR_clf_groups_M', str(Mrcut), '_', str(masscut), '_D360.central.starforming.hdf5']) 
     centrals_sfms.writeout(columns=group_catalog_columns,
             input_file=output_file) 
@@ -243,7 +243,7 @@ def sf_centrals(Mrcut=18, clobber=False):
     elif Mrcut == 20: 
         masscut='10.2'
     
-    catalog_file = ''.join(['/data1/hahn/group_catalog/', 
+    catalog_file = ''.join(['dat/group_catalog/', 
         'massSFR_clf_groups_M', str(Mrcut), '_', str(masscut), '_D360.central.starforming.hdf5']) 
     if (os.path.isfile(catalog_file) == False) or (clobber == True): 
         build_groupcat_sf(Mrcut=Mrcut, central=True)
@@ -315,7 +315,7 @@ def get_bestfit_groupcat_sfms(Mrcut=18, clobber=False):
     '''
     fid_mass = 10.5         # fiducial mass 
 
-    save_file = ''.join(['/data1/hahn/central_quenching/sf_ms/'
+    save_file = ''.join(['dat/central_quenching/sf_ms/'
         'sf_ms_fit_starforming_groupcat.hdf5']) 
     
     if (os.path.isfile(save_file) == False) or (clobber == True): 
@@ -380,7 +380,7 @@ def build_groupcat_q(Mrcut=18):
         column_data = getattr(centrals, column)[sf_gals]
         setattr(centrals_sfms, column, column_data) 
 
-    output_file = ''.join(['/data1/hahn/group_catalog/', 
+    output_file = ''.join(['dat/group_catalog/', 
         'massSFR_clf_groups_M', str(Mrcut), '_', str(masscut), '_D360.central.quiescent.hdf5']) 
     centrals_sfms.writeout(columns=group_catalog_columns,
             input_file=output_file) 
@@ -405,7 +405,7 @@ def q_centrals(Mrcut=18, clobber=False):
     elif Mrcut == 20: 
         masscut='10.2'
     
-    catalog_file = ''.join(['/data1/hahn/group_catalog/', 
+    catalog_file = ''.join(['dat/group_catalog/', 
         'massSFR_clf_groups_M', str(Mrcut), '_', str(masscut), '_D360.central.quiescent.hdf5']) 
 
     if (os.path.isfile(catalog_file) == False) or (clobber == True): 
@@ -487,7 +487,7 @@ def get_bestfit_qgroupcat_ssfr(Mrcut=18, clobber=False):
     '''
     fid_mass = 10.5         # fiducial mass 
 
-    save_file = ''.join(['/data1/hahn/central_quenching/sf_ms/'
+    save_file = ''.join(['dat/central_quenching/sf_ms/'
         'ssfr_mass_fit_quiescent_groupcat.hdf5']) 
     
     if (os.path.isfile(save_file) == False) or (clobber == True): 
@@ -544,7 +544,7 @@ def get_bestfit_envcount_sfms(clobber=False):
     '''
     fid_mass = 10.5         # fiducial mass 
 
-    save_file = ''.join(['/data1/hahn/central_quenching/sf_ms/'
+    save_file = ''.join(['dat/central_quenching/sf_ms/'
         'sf_ms_fit_starforming_envcount.hdf5']) 
 
     if (os.path.isfile(save_file) == False) or (clobber == True): 

@@ -56,7 +56,7 @@ def build_centrals_snapshot():
         print i,'number of parents that have child',len(child[child >=0])
         print i,'number of child that have parent', len(parent[parent >=0]) 
        
-        subsham_cen_dir = '/data1/hahn/wetzel_tree/'
+        subsham_cen_dir = 'dat/wetzel_tree/'
         subsham_cen_file = 'subhalo_sham_centrals_snapshot'+str(i)+'.fits'
     #    subsham_cen.writeto(subsham_cen_dir+subsham_cen_file,clobber=1)
     #    output_file = open(subsham_cen_dir+subsham_cen_file, 'w') 

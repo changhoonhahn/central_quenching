@@ -37,7 +37,7 @@ class CenQue:
     def ImportSnap(self, nsnap): 
         ''' Import snapshot data from TreePM --> SHAM snapshots
         '''
-        snapshot_dir = '/data1/hahn/wetzel_tree/'
+        snapshot_dir = 'dat/wetzel_tree/'
         snapshot_file = ''.join([ snapshot_dir, 
             'subhalo_sham_centrals_snapshot', str(nsnap), '.fits' 
             ]) 
