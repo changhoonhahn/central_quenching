@@ -123,8 +123,8 @@ class CenQue:
                 continue 
     
             # get quiescent fraction for mass bin at z_snapshot 
-            mass_bin_qf = util.get_fq(mass_bins.mass_mid[i_m], self.zsnap, 
-                    lit=kwargs['fq']) 
+            mass_bin_qf = util.get_fquenching(mass_bins.mass_mid[i_m], self.zsnap, 
+                    yint=kwargs['fqing_yint'])
 
             # Ngal,quiescent in mass bin
             mass_bin_n_q = int( np.rint(mass_bin_qf * np.float(mass_bin_ngal)) ) 
@@ -511,8 +511,7 @@ def EvolveCenQue(origin_nsnap, final_nsnap, mass_bin=None, **kwargs):
             if mbin_ngal == 0:                  # if there are no galaxies within mass bin
                 continue 
             
-            mbin_qf = util.get_fq(mass_bins.mass_mid[i_m], child_cq.zsnap, 
-                lit=kwargs['fq']) 
+            mbin_qf = util.get_fquenching(mass_bins.mass_mid[i_m], child_cq.zsnap, yint=kwargs['fqing_yint'])
 
             #print 'z = ', child_cq.zsnap, ' M* = ', mass_bins.mass_mid[i_m], ' fq = ', mbin_qf
             
@@ -610,5 +609,5 @@ if __name__=='__main__':
     #EvolveCenQue(13, 1, fq='wetzel', tau='constant') 
     #EvolveCenQue(13, 1, fq='wetzel', tau='linear') 
                         
-    #build_cenque_importsnap(fq='wetzel', sfms_slope=0.7, sfms_yint=0.125) 
-    EvolveCenQue(13, 1, fq='wetzel', tau='instant')  #tau='linefit', tau_param=[-0.5, 0.4]) 
+    build_cenque_importsnap(fqing_yint=-5.0)
+    EvolveCenQue(13, 1, fqing_yint=-5.0, tau='instant')  #tau='linefit', tau_param=[-0.5, 0.4]) 

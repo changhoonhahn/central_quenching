@@ -120,6 +120,7 @@ def get_fquenching(Mstar, z_in, **kwargs):
     * *Quenching* fraction is *not* quiescent fraction
     * Based on Wetzel et al. Quiescent Fraction parameterization 
     * Redshift evolution is the same as Wetzel     
+    * As a first test use wetzel slope while varying yint 
 
     '''
     if 'slope' in kwargs.keys(): 
@@ -485,8 +486,19 @@ def mwrfits(fitstable, filename, columns=[], clobber=1):
 # CenQue file treatment ----------------------------------------------------------------------- 
 def cenque_file( **kwargs ): 
     ''' Given kwargs get CenQue file name
+    
+    Parameters (try to keep this up-to-date!)
+    ----------
+    nsnap : snapshot number 
+    file_type : "sf assign", "evol from"
+    tau : "discrete", "linefit", or tau flag
+    sfms_slope : slope of the SF Main Sequence
+    sfms_yint : yint of the SF Main Sequence 
 
-    MORE FILE TYPES WILL BE SPECIFIED
+    Notes
+    -----
+    * MORE FILE TYPES WILL BE SPECIFIED
+
     '''
 
     if 'input_file' in kwargs.keys(): 
@@ -505,28 +517,53 @@ def cenque_file( **kwargs ):
             if min( (kwargs['file_type']).find('sf'), (kwargs['file_type']).find('ass') ) > -1: 
                 # star-formation assign 
                 file_type_str = '_sfpropassign'
-            
-                file_type_str = ''.join(['_', kwargs['fq'], 'fq', file_type_str])
+                
+                # Quenching Fraction specifier 
+                if 'fqing_slope' in kwargs.keys(): 
+                    fqing_slope_str = str("%.2f" % kwargs['fqing_slope'])
+                else: 
+                    fqing_slope_str = str("%.2f" % 0.63)
+
+                if 'fqing_yint' in kwargs.keys(): 
+                    fqing_yint_str = str("%.2f" % kwargs['fqing_yint'])
+                else: 
+                    fqing_yint_str = str("%.2f" % -6.04) 
+
+                fqing_str = ''.join([fqing_slope_str, '_', fqing_yint_str, 'fqing']) 
+
+                # combine specifiers
+                file_type_str = ''.join(['_', fqing_str, file_type_str])
                 
             elif min( (kwargs['file_type']).find('evo'), (kwargs['file_type']).find('from') ) > -1: 
                 # evolved from nsnap
                 original_nsnap = int(((kwargs['file_type']).split('from'))[-1]) 
 
                 file_type_str = '_evol_from'+str(original_nsnap) 
-                
+               
+                # Tau specifier
                 if kwargs['tau'] == 'discrete': 
-                    file_type_str = ''.join(['_', 
-                        '_'.join( [str("%.1f" % t) for t in kwargs['tau_param']] ), 'tau_', 
-                        kwargs['fq'], 'fq', file_type_str])
-
+                    tau_str = '_'+'_'.join( [str("%.1f" % t) for t in kwargs['tau_param']] )+'tau'
                 elif kwargs['tau'] == 'linefit':
-                    file_type_str = ''.join(['_line', 
-                        '_'.join( [str("%.2f" % t) for t in kwargs['tau_param']] ), 'tau_', 
-                        kwargs['fq'], 'fq', file_type_str])
-
+                    tau_str = '_line'+'_'.join( [str("%.2f" % t) for t in kwargs['tau_param']] )+'tau'
                 else: 
-                    file_type_str = ''.join(['_', kwargs['tau'], 'tau_', 
-                        kwargs['fq'], 'fq', file_type_str])
+                    tau_str = '_'+kwargs['tau']+'tau'
+
+                # Quenching Fraction specifier 
+                if 'fqing_slope' in kwargs.keys(): 
+                    fqing_slope_str = str(kwargs['fqing_slope'])
+                else: 
+                    fqing_slope_str = str(0.63)
+
+                if 'fqing_yint' in kwargs.keys(): 
+                    fqing_yint_str = str(kwargs['fqing_yint'])
+                else: 
+                    fqing_yint_str = str(-6.04) 
+
+                fqing_str = '_'+fqing_slope_str+'_'+fqing_yint_str+'fqing'
+
+                # combine specifiers
+                file_type_str = ''.join([tau_str, fqing_str, file_type_str]) 
+
             else: 
                 raise NameError("File not specified") 
     
