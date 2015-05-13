@@ -134,7 +134,8 @@ def plot_cenque_ssfr_dist_evolution(Mrcut=18, **kwargs):
     # overplot SDSS group catalog sSFR dist
     central_ssfr = cq_group.central_catalog(Mrcut=Mrcut, clobber=True) 
     ssfr_fig = plot_cenque_ssfr_dist(central_ssfr, fig=ssfr_fig, label= 'Mrcut = '+str(Mrcut)) 
-    
+   
+    # sfms specifier
     if 'sfms_slope' in kwargs.keys(): 
         slope_str = str("%.2f" % kwargs['sfms_slope']) 
         yint_str = str("%.2f" % kwargs['sfms_yint']) 
@@ -142,20 +143,29 @@ def plot_cenque_ssfr_dist_evolution(Mrcut=18, **kwargs):
     else: 
         sfms_str = ''
 
-    if kwargs['tau'] == 'discrete': 
-        fig_file = ''.join(['figure/tinker/', 
-            'cenque_ssfr_evol_', '_'.join( [str("%.1f" % t) for t in kwargs['tau_param']] ), 
-            'tau_', kwargs['fq'], 'fq_Mrcut', str(Mrcut),'.png']) 
-
-    elif kwargs['tau'] == 'linefit':
-        fig_file = ''.join(['figure/tinker/', 
-            'cenque_ssfr_evol', sfms_str, 
-            '_'.join( [str("%.2f" % t) for t in kwargs['tau_param']] ) , 
-            'tau_', kwargs['fq'], 'fq_Mrcut', str(Mrcut),'.png']) 
+    # Quenching Fraction specifier 
+    if 'fqing_slope' in kwargs.keys(): 
+        fqing_slope_str = str(kwargs['fqing_slope'])
     else: 
-        fig_file = ''.join(['figure/tinker/', 
-            'cenque_ssfr_evol_', '_'.join([str(t) for t in kwargs['tau']]), 'tau_', 
-            kwargs['fq'], 'fq_Mrcut', str(Mrcut), sfms_str, '.png']) 
+        fqing_slope_str = str(0.63)
+
+    if 'fqing_yint' in kwargs.keys(): 
+        fqing_yint_str = str(kwargs['fqing_yint'])
+    else: 
+        fqing_yint_str = str(-6.04) 
+
+    fqing_str = ''.join([fqing_slope_str, '_', fqing_yint_str, 'fqing']) 
+
+    # tau specifier
+    if kwargs['tau'] == 'discrete': 
+        tau_str = '_'.join( [str("%.1f" % t) for t in kwargs['tau_param']] )+'tau'
+    elif kwargs['tau'] == 'linefit':
+        tau_str = '_'.join( [str("%.2f" % t) for t in kwargs['tau_param']] )+'tau'
+    else: 
+        tau_str = kwargs['tau']+'tau'
+
+    fig_file = ''.join(['figure/', 
+        'cenque_ssfr_evol_', tau_str, '_', fqing_str, '_Mrcut', str(Mrcut), '.png'])
     ssfr_fig.savefig(fig_file, bbox_inches='tight') 
     ssfr_fig.clear() 
 
@@ -622,6 +632,8 @@ if __name__=='__main__':
     #        sfms_slope=0.7, sfms_yint=0.125) 
     #plot_q_groupcat(Mrcut=18)
     #plot_cenque_ssfr_dist_evolution(nsnaps=[1], fq='wetzel', tau='instant') #tau='linefit', tau_param=[-0.5, 0.4])
+    
+    plot_cenque_ssfr_dist_evolution(Mrcut=18, fqing_yint=-5.0, tau='instant') 
 
     #plot_sfms_data(0.51, -0.22)
 
@@ -631,8 +643,8 @@ if __name__=='__main__':
     #plot_cenque_sf_mainseq()
 
     #fq_fig = plot_fq_evol_w_geha() 
-    fq_fig = plot_fq_evol()
-    fq_fig.savefig('figure/tinker/fq_evol_fig_lit.png', bbox_inches='tight')
+    #fq_fig = plot_fq_evol()
+    #fq_fig.savefig('figure/tinker/fq_evol_fig_lit.png', bbox_inches='tight')
     #
     #tau_fig = plot_quenching_efold() 
     #tau_fig.savefig('quenching_efold_fig.png', bbox_inches='tight')

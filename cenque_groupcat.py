@@ -32,7 +32,7 @@ def read_group_catalog_galdata(Mrcut=18):
 
     h = 0.7
     
-    file = ''.join(['/dat/group_catalog/', 
+    file = ''.join(['dat/group_catalog/', 
         'clf_groups_M', str(Mrcut), '_', str(masscut), '_D360.galdata_corr.fits']) 
 
     gal_data = util.mrdfits(file) 
@@ -64,7 +64,7 @@ def read_group_catalog_prob(Mrcut=18):
     elif Mrcut == 20: 
         masscut='10.2'
     
-    file = ''.join(['/dat/group_catalog/', 
+    file = ''.join(['dat/group_catalog/', 
         'clf_groups_M', str(Mrcut), '_', str(masscut), '_D360.prob.fits']) 
 
     prob_data = util.mrdfits(file)            # import probability file 
