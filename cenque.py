@@ -171,6 +171,7 @@ class CenQue:
                 #        mass_bins.mass_mid[i_m], self.zsnap, lit='primusfit') 
                 #[sf_avg_sfr, sf_sig_sfr] = util.get_sfr_mstar_z_flex(
                 #        mass_bins.mass_mid[i_m], self.zsnap, sfms_sfr_fit) 
+
                 [sf_avg_sfr, sf_sig_sfr] = util.get_sfr_mstar_z_bestfit(
                         mass_bins.mass_mid[i_m], self.zsnap, Mrcut=18) 
 
@@ -612,7 +613,8 @@ if __name__=='__main__':
     #EvolveCenQue(13, 1, fq='wetzel', tau='linear') 
                         
     #build_cenque_importsnap(fqing_yint=-5.0)
-    build_cenque_importsnap(fqing_yint=-5.84)
-    EvolveCenQue(13, 1, fqing_yint=-5.84, tau='instant')  #tau='linefit', tau_param=[-0.5, 0.4]) 
-    #EvolveCenQue(13, 1, fqing_yint=-5.84, tau='constant')
+    #build_cenque_importsnap(fqing_yint=-5.84)
+    #EvolveCenQue(13, 1, fqing_yint=-5.84, tau='instant')  
+    #tau='linefit', tau_param=[-0.5, 0.4]) 
+    EvolveCenQue(13, 1, fqing_yint=-5.84, tau='linefit', tau_param=[-0.4, 0.2])
     #EvolveCenQue(13, 1, fqing_yint=-5.84, tau='linear')

@@ -76,9 +76,14 @@ def plot_cenque_ssfr_dist(cenque, fig=None, **kwargs):
         else: 
             line_style = '-'
 
+        if 'lw' in kwargs: 
+            line_width = kwargs['lw'] 
+        else:
+            line_width = 4
+
         sub = fig.add_subplot(1, 4, i_mass+1)       # panel subplot 
         sub.plot(ssfr_bin_mid, ssfr_hist, 
-                color=line_color, lw=4, ls=line_style, label=ssfr_hist_label) 
+                color=line_color, lw=line_width, ls=line_style, label=ssfr_hist_label) 
 
         #sub.text(-12.0, 1.2, r'$N_{gal}='+str(ngal_bin)+'$')
         if new_plot == True:        # put mass labels in panels 
@@ -119,7 +124,7 @@ def plot_cenque_ssfr_dist_evolution(Mrcut=18, **kwargs):
     '''
     snap = cq.CenQue() 
     snap.readin(nsnap=13, file_type='sf assign', **kwargs)  # starting CenQue 
-    ssfr_fig = plot_cenque_ssfr_dist(snap)      # plot!
+    ssfr_fig = plot_cenque_ssfr_dist(snap, lw=2, line_style='--')      # plot!
     
     # determine which snapshots to plot 
     if 'nsnaps' in kwargs.keys():   
@@ -134,7 +139,7 @@ def plot_cenque_ssfr_dist_evolution(Mrcut=18, **kwargs):
         ssfr_fig = plot_cenque_ssfr_dist(next_snap, fig=ssfr_fig) 
     
     # overplot SDSS group catalog sSFR dist
-    central_ssfr = cq_group.central_catalog(Mrcut=Mrcut, clobber=True) 
+    central_ssfr = cq_group.central_catalog(Mrcut=Mrcut) 
     ssfr_fig = plot_cenque_ssfr_dist(central_ssfr, fig=ssfr_fig, label= 'Mrcut = '+str(Mrcut)) 
    
     # sfms specifier
@@ -363,33 +368,58 @@ def plot_fq_evol():
     subs[0].legend(loc='upper left') 
     return fig
 
-def plot_quenching_efold(): 
-    ''' plot fq evolution 
+def plot_quenching_efold(taus, tau_params): 
+    ''' Plot quenching e-fold (tau) as a function of M*
+
+    Parameters
+    ----------
+    taus : list of tau types 
+    tau_params : list of tau paramters
+
+    Notes
+    -----
+    * taus and tau_params have to be the same length 
+
     '''
+    if len(taus) != len(tau_params): 
+        return 'asdfasdaf'
+
     prettyplot()        # make pretty 
     pretty_colors = prettycolors() 
 
-    mass_bin = util.simple_mass_bin()                    # mass bin 
+    mass_bin = util.simple_mass_bin()       # mass bin 
        
-    tau_types = ['instant', 'constant', 'linear'] 
-    fig, subs = plt.subplots(1, len(tau_types), figsize=[15, 5]) 
+    fig, subs = plt.subplots(1, len(taus), figsize=[5*len(taus), 5]) 
     subs = subs.ravel() 
-    for i_tau, tau in enumerate(tau_types): 
-        # plot fq(Mass) 
-        tau_mass = util.get_quenching_efold(np.array(mass_bin.mass_mid), type=tau) 
+    
+    tau_str = ''
+    for i_tau, tau in enumerate(taus): 
+
+        tau_mass = util.get_quenching_efold(np.array(mass_bin.mass_mid), 
+                type=tau, param=tau_params[i_tau]) 
+
         subs[i_tau].plot(mass_bin.mass_mid, tau_mass, 
                 color=pretty_colors[5], lw=4) 
 
         subs[i_tau].set_title(tau) 
-
         subs[i_tau].set_xlim([9.0, 12.0])
         subs[i_tau].set_ylim([0.0, 1.0])
-
-        subs[i_tau].set_xlabel('Mass') 
         subs[i_tau].set_xlabel('Mass') 
 
-    subs[0].set_ylabel('Quenching e-fold') 
-    return fig
+        # tau specifier 
+        if tau == 'discrete': 
+            tau_str += '_'+'_'.join( [str("%.1f" % t) for t in tau_params[i_tau]] )
+        elif tau == 'linefit':
+            tau_str += '_line'+'_'.join( [str("%.2f" % t) for t in tau_params[i_tau]] )
+        else: 
+            tau_str += '_'+tau
+
+        tau_str += tau_str + 'tau'
+
+    subs[0].set_ylabel(r'Quenching e-fold $(\tau)$') 
+                
+    fig.savefig('figure/quenching_efold'+tau_str+'.png', bbox_inches='tight')
+    fig.clear() 
 
 def plot_group_cat_bigauss_bestfit(): 
     plot_sdss_group_cat_bestfit(Mrcut=18)
@@ -402,6 +432,7 @@ def plot_sfms_data(Mrcut=18):
 
     Parameters
     ----------
+    Mrcut : absolute magnitude to specify the group catalog 
 
     '''
     prettyplot()        # make pretty 
@@ -409,13 +440,20 @@ def plot_sfms_data(Mrcut=18):
 
     mass_bin = util.simple_mass_bin()       # mass bin 
     zbins = [ (0.0, 0.2), (0.2, 0.4), (0.4, 0.6), (0.6, 0.8)]  # zbin
-
+    
+    # figure with zbin panels 
     fig, subs = plt.subplots(1, len(zbins), figsize=[20, 5]) 
     subs = subs.ravel() 
 
     fits = [] 
     for i_z, zbin in enumerate(zbins): 
         
+        if i_z == 0:    # 2D histogram of SF centrals  
+
+            centrals = sfms.sf_centrals(Mrcut=Mrcut)    # SF centrals
+            subs[i_z].hist2d(centrals.mass, centrals.sfr, bins=[30, 50])
+        
+        # avg SFR of envcount SF galaxies 
         mass, avg_sfrs, var_sfrs = [], [], [] 
         for i_mass in range(len(mass_bin.mass_low)): 
 
@@ -430,29 +468,22 @@ def plot_sfms_data(Mrcut=18):
             mass.append(mass_bin.mass_mid[i_mass]) 
             avg_sfrs.append(avg_sfr)
             var_sfrs.append(var_sfr)
-        
-            
-        if i_z == 0:    # for SDSS panel 
-            #centrals = cq_group.central_catalog(Mrcut=Mrcut) 
-            #subs[i_z].hist2d(centrals.mass, centrals.sfr, bins=[30, 1000])
-            centrals = sfms.sf_centrals(Mrcut=Mrcut) 
-            subs[i_z].hist2d(centrals.mass, centrals.sfr, bins=[30, 50])
 
         subs[i_z].errorbar(mass, avg_sfrs, yerr=var_sfrs, 
                 lw=4, c=pretty_colors[1], label='Avg SFR (EnvCount)')
-
+    
+        # bestfit line for envcount SF-MS 
         if i_z == 0: 
-            # plot bestfit line for envcount SF-MS 
             param = sfms.get_bestfit_envcount_sfms()
             subs[i_z].plot(mass, param[0]*(np.array(mass)-10.5) + param[1], 
                     c=pretty_colors[2])
 
-            # Plot average SFR for SF Group Catalog 
+        # avg SFR for SF Group Catalog 
+        if i_z == 0:  
             mass, avg_sfrs, var_sfrs = [], [], [] 
             for i_mass in range(len(mass_bin.mass_low)): 
 
-                avg_sfr, var_sfr, ngal = sfms.get_sfr_mstar_z_groupcat(
-                        mass_bin.mass_mid[i_mass], Mrcut=Mrcut)
+                avg_sfr, var_sfr, ngal = sfms.get_sfr_mstar_z_groupcat(mass_bin.mass_mid[i_mass], Mrcut=Mrcut)
 
                 if ngal < 10: 
                     continue    # skip mass bin if there aren't many galaxies
@@ -466,10 +497,11 @@ def plot_sfms_data(Mrcut=18):
             subs[i_z].errorbar(mass, avg_sfrs, yerr=var_sfrs, 
                     lw=4, c=pretty_colors[3], label='Avg SFR (GroupCat)')
 
+        # bestfit line for SF Group Catalog 
         bestfit_sfr = [] 
         for m in mass: 
-            blah = util.get_sfr_mstar_z_bestfit(m, 0.5*(zbin[0]+zbin[1]), clobber=True)
-            bestfit_sfr.append(blah[0]) 
+            sfcen_bestfit = util.get_sfr_mstar_z_bestfit(m, 0.5*(zbin[0]+zbin[1]), clobber=True)
+            bestfit_sfr.append(sfcen_bestfit[0]) 
 
         subs[i_z].plot(mass, bestfit_sfr, c=pretty_colors[3])
         
@@ -677,17 +709,24 @@ if __name__=='__main__':
     #plot_cenque_ssfr_dist_evolution(Mrcut=19, fqing_yint=-5.84, tau='instant') 
     #plot_cenque_ssfr_dist_evolution(Mrcut=18, fqing_yint=-5.84, tau='constant') 
     #plot_cenque_ssfr_dist_evolution(Mrcut=18, fqing_yint=-5.84, tau='linear') 
+    #cq.EvolveCenQue(13, 1, fqing_yint=-5.84, tau='linefit', tau_param=[-0.15, 0.17])
+    plot_cenque_ssfr_dist_evolution(Mrcut=20, fqing_yint=-5.84, tau='linefit', tau_param=[-0.15, 0.17])
+    tau_fig = plot_quenching_efold(['linear', 'linefit'], [[], [-0.15, 0.17]]) 
 
     #plot_ssfms_groupcat(Mrcut=18)
     #plot_ssfms_groupcat(Mrcut=19)
     #plot_ssfms_groupcat(Mrcut=20)
+    #
+    #plot_sfms_groupcat(Mrcut=18)
+    #plot_sfms_groupcat(Mrcut=19)
+    #plot_sfms_groupcat(Mrcut=20)
     
-    plot_sfms_data()
+    #plot_sfms_data()
     #plot_cenque_sf_mainseq()
 
     #fq_fig = plot_fq_evol_w_geha() 
     #fq_fig = plot_fq_evol()
     #fq_fig.savefig('figure/tinker/fq_evol_fig_lit.png', bbox_inches='tight')
-    #
+
     #tau_fig = plot_quenching_efold() 
-    #tau_fig.savefig('quenching_efold_fig.png', bbox_inches='tight')
+    #tau_fig.savefig('figure/quenching_efold_fig.png', bbox_inches='tight')

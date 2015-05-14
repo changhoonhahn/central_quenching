@@ -297,13 +297,13 @@ def get_sfr_mstar_z_groupcat(m_star, Mrcut=18, clobber=False):
     
     bin_sfr = sf_data.sfr[bin_index]
     if len(sf_data.sfr[bin_index]) > 30: 
-        print 'Ngal = ', len(sf_data.sfr[bin_index])
+        #print 'Ngal = ', len(sf_data.sfr[bin_index])
         med_sfr = np.median(bin_sfr)
         avg_sfr = np.average(bin_sfr)
         var_sfr = np.average( (bin_sfr - avg_sfr)**2 ) 
             
-        print mass_low, mass_high, '-', med_sfr, avg_sfr, var_sfr, np.min(sf_data.sfr[bin_index]), np.max(sf_data.sfr[bin_index])
-    
+        #print mass_low, mass_high, '-', med_sfr, avg_sfr, var_sfr, np.min(sf_data.sfr[bin_index]), np.max(sf_data.sfr[bin_index])
+        
         for iter in range(3): 
             sfr_range = (bin_sfr > med_sfr-3.0*var_sfr) & (bin_sfr < med_sfr+3.0*var_sfr)
             
@@ -311,10 +311,9 @@ def get_sfr_mstar_z_groupcat(m_star, Mrcut=18, clobber=False):
                 med_sfr = np.median(bin_sfr[sfr_range]) 
                 avg_sfr = np.average(bin_sfr[sfr_range]) 
                 var_sfr = np.average( (bin_sfr[sfr_range] - avg_sfr)**2 ) 
-                print mass_low, mass_high, '-', med_sfr, avg_sfr, var_sfr, np.min(sf_data.sfr[bin_index]), np.max(sf_data.sfr[bin_index])
+                #print mass_low, mass_high, '-', med_sfr, avg_sfr, var_sfr, np.min(sf_data.sfr[bin_index]), np.max(sf_data.sfr[bin_index])
             else: 
                 pass
-        
         var_sfr = np.average( (bin_sfr - avg_sfr)**2 ) 
     else: 
         med_sfr = -999.
@@ -324,7 +323,7 @@ def get_sfr_mstar_z_groupcat(m_star, Mrcut=18, clobber=False):
     return [med_sfr, var_sfr, n_gal] 
 
 def get_bestfit_groupcat_sfms(Mrcut=18, clobber=False):
-    ''' Returns parameters for the best-fit line of the Star-forming SDSS Group Catalog (SF-MS)
+    ''' Returns parameters for the best-fit line of the Star-forming SDSS Group Catalog (SF-MS) SFR vs Mass
 
     Parameters 
     ----------
@@ -368,13 +367,16 @@ def get_bestfit_groupcat_sfms(Mrcut=18, clobber=False):
         grp.create_dataset('zmid', data=[0.1]) 
         grp.create_dataset('slope', data=[bestfit.params[0]]) 
         grp.create_dataset('yint', data=[bestfit.params[1]]) 
-        
+       
+        f.close() 
         return [bestfit.params[0], bestfit.params[1]]
     else: 
         # if file already exists then just access the numbers from file 
         f = h5py.File(save_file, 'r') 
+        slope, yint = f['slope_yint/slope'][:], f['slope_yint/yint'][:]
+        f.close() 
 
-        return [f['slope_yint/slope'][:], f['slope_yint/yint'][:]] 
+        return [slope, yint] 
 
 def build_groupcat_q(Mrcut=18): 
     ''' Build Q population for the SDSS group catalog for group catalog with specified Mrcut 

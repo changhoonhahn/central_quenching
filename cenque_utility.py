@@ -320,14 +320,14 @@ def get_sfr_mstar_z_bestfit(mstar, z_in, Mrcut=18, clobber=False):
     * Slope and SDSS y-int determined from SF Main Sequence of Group Catalog 
     * Fiducial Mass = 10.5
     * Assumptions: 
-        * 
+        * The overall shifts in SFR observed in the iSEDfit sample is equivalent to that of the group catalog  
 
     '''
     fid_mass = 10.5
 
     # Best-fit slope and y-int of SF SDSS Group Catalog 
-    groupcat_fit_param = sfms.get_bestfit_groupcat_sfms(Mrcut=Mrcut)
-    
+    groupcat_fit_param = sfms.get_bestfit_groupcat_sfms(Mrcut=Mrcut, clobber=clobber)
+
     # Best-fit slope and y-int of SF EnvCount
     envcount_fit_param = sfms.get_bestfit_envcount_sfms()
     zmids, slopes, yints = sfms.get_sfmsfit_sfr(
