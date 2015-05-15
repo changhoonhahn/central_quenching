@@ -35,7 +35,7 @@ def plot_cenque_ssfr_dist(cenque, fig=None, **kwargs):
 
     # mass bins of the panel        ( hardcoded ) 
     panel_mass_bins = [ 
-            [9.7, 10.2], [10.2, 10.7], [10.7, 11.2], [11.2, 11.7]
+            [9.7, 10.1], [10.1, 10.5], [10.5, 10.9], [10.9, 11.3]
             ]
     
     for i_mass, panel_mass in enumerate(panel_mass_bins):       # loop through each panel 
@@ -196,6 +196,108 @@ def plot_cenque_ssfr_dist_evolution_match2isedfit(Mrcut=18, **kwargs):
     ssfr_fig.savefig(fig_file, bbox_inches='tight') 
     ssfr_fig.clear() 
 
+def plot_cenque_quenching_ssfr_dist(nsnap, **kwargs): 
+    ''' Plot sSFR distribution of snapshot nsnap, with 'quenching' population highlighted  
+
+    Parameters
+    ----------
+    nsnap : snapshot #
+
+    '''
+    prettyplot()                        #make things pretty 
+    pretty_colors = prettycolors() 
+    
+    fig = plt.figure(1, figsize=(25,8))
+    fig.subplots_adjust(hspace=0., wspace=0.)
+
+    # mass bins of the panel        ( hardcoded ) 
+    panel_mass_bins = [ 
+            [9.7, 10.1], [10.1, 10.5], [10.5, 10.9], [10.9, 11.3]
+            ]
+    
+    # import snapshot 
+    cenque = cq.CenQue() 
+    cenque.readin(nsnap=nsnap, file_type='evol from 13', **kwargs) 
+
+    for i_mass, panel_mass in enumerate(panel_mass_bins):       # loop through each panel 
+
+        mass_limit = (cenque.mass >= panel_mass[0]) & (cenque.mass < panel_mass[1])
+    
+        quenching_tau = (cenque.tau > 0.0) 
+        else_tau = (cenque.tau < 0.0) 
+        
+        sub = fig.add_subplot(1,4, i_mass+1)
+    
+        # stacked histogram 
+        sub.hist([cenque.ssfr[mass_limit & quenching_tau], cenque.ssfr[mass_limit & else_tau]], 
+                25, stacked=True, normed=True) 
+
+        sub.text(-10.75, 1.2, r'$N_{quenching}/N_{bin} = '+\
+                str('%.2f' % (np.float(len(cenque.ssfr[mass_limit & quenching_tau]))/np.float(len(cenque.ssfr[mass_limit]))))+'$') 
+
+        if 'label' in kwargs: 
+            ssfr_hist_label = kwargs['label']
+        else: 
+            try: 
+                cenque.zsnap
+            except AttributeError: 
+                ssfr_hist_label = 'Centrals'     # redshift lable 
+            else: 
+                ssfr_hist_label = r'$z='+str(cenque.zsnap)+'$'     # redshift lable 
+    
+        plt.text(-10.75, 1.4, 
+                r'$\mathtt{log \; M_{*} = ['+str(panel_mass[0])+', '+str(panel_mass[1])+']}$', 
+                fontsize=24)
+
+        # set axes limits
+        sub.set_xlim([-13.0, -7.0])
+        sub.set_ylim([0.0, 1.6])
+        # set y-axes labels
+        if i_mass == 0: 
+            sub.set_ylabel(r'$P(log \; SSFR)$') 
+        elif i_mass in [1, 2]:
+            sub.set_yticklabels([])
+            sub.set_xlabel(r'$log \; SSFR \;[yr^{-1}]$') 
+        else: 
+            sub.set_yticklabels([])
+                
+            fig_leg = sub.legend(loc='lower right', prop={'size':'12'})        # legends 
+
+    # sfms specifier
+    if 'sfms_slope' in kwargs.keys(): 
+        slope_str = str("%.2f" % kwargs['sfms_slope']) 
+        yint_str = str("%.2f" % kwargs['sfms_yint']) 
+        sfms_str = '_sfms_slope'+slope_str+'_yint'+yint_str
+    else: 
+        sfms_str = ''
+
+    # Quenching Fraction specifier 
+    if 'fqing_slope' in kwargs.keys(): 
+        fqing_slope_str = str(kwargs['fqing_slope'])
+    else: 
+        fqing_slope_str = str(0.63)
+
+    if 'fqing_yint' in kwargs.keys(): 
+        fqing_yint_str = str(kwargs['fqing_yint'])
+    else: 
+        fqing_yint_str = str(-6.04) 
+
+    fqing_str = ''.join([fqing_slope_str, '_', fqing_yint_str, 'fqing']) 
+
+    # tau specifier
+    if kwargs['tau'] == 'discrete': 
+        tau_str = '_'.join( [str("%.1f" % t) for t in kwargs['tau_param']] )+'tau'
+    elif kwargs['tau'] == 'linefit':
+        tau_str = '_'.join( [str("%.2f" % t) for t in kwargs['tau_param']] )+'tau'
+    else: 
+        tau_str = kwargs['tau']+'tau'
+
+    fig_file = ''.join(['figure/', 
+        'cenque_ssfr_evol_', tau_str, '_', fqing_str, '_nsnap', str(nsnap), 
+        '_quenching_component.png'])
+    fig.savefig(fig_file, bbox_inches='tight') 
+    fig.clear() 
+
 def plot_sdss_group_cat(): 
     ''' plot ssfr distribution for SDSS group catalogs
     '''
@@ -238,7 +340,7 @@ def plot_sdss_group_cat_bestfit(Mrcut=19):
     output = cq_group.double_gaussian_fit(central_ssfr) 
     
     panel_mass_bins = [
-            [10.0, 10.5], [10.5, 11.0], [11.0, 11.5]
+            [10.1, 10.5], [10.5, 10.9], [10.9, 11.3]
             ]
 
     for i_mass, panel_mass in enumerate(panel_mass_bins):       # loop through each panel 
@@ -688,6 +790,43 @@ def plot_q_groupcat(Mrcut=18):
     fig.savefig(fig_name, bbox_inches='tight')
     fig.clear()
 
+# Group Catalog ------------------------------
+def plot_groupcat_zdist(): 
+    ''' Plot redshift distribution of all three group catalogs 
+    
+    '''
+    prettyplot()                        #make things pretty 
+    pretty_colors = prettycolors() 
+
+    fig = plt.figure(1)
+    sub = fig.add_subplot(111)
+    
+    # loop through redshift distribution
+    for i_mr, mrcut in enumerate([18, 19, 20]): 
+
+        # read group catalog 
+        central = cq_group.central_catalog(Mrcut=mrcut) 
+        central_z = central.z    # redshifts 
+        median_z = np.median(central_z)
+        
+        z_hist, z_bin_edges = np.histogram(central_z, range=[0.0, 0.2], bins=40, normed=True)
+        
+        z_bin_low = z_bin_edges[:-1]
+        z_bin_high = z_bin_edges[1:]
+        z_bin_mid = [ 0.5*(z_bin_low[i] + z_bin_high[i]) for i in range(len(z_bin_low)) ] 
+
+        sub.plot(z_bin_mid, z_hist, 
+                lw=4, c= pretty_colors[i_mr], label=r'$\mathtt{M_r = -'+str(mrcut)+'}$')
+        sub.text(median_z, 50-i_mr*5, 'Median z ='+str('%.2f' % median_z)) 
+
+    sub.set_xlim([0.0, 0.15]) 
+    sub.set_xlabel(r'$z$ (Redshift)') 
+    sub.legend(loc='upper right') 
+
+    fig_file = 'figure/groupcat_zdist.png'
+    fig.savefig(fig_file, bbox_inches='tight')
+
+
 if __name__=='__main__': 
     #plot_group_cat_bigauss_bestfit()
     #plot_sdss_group_cat() 
@@ -710,8 +849,13 @@ if __name__=='__main__':
     #plot_cenque_ssfr_dist_evolution(Mrcut=18, fqing_yint=-5.84, tau='constant') 
     #plot_cenque_ssfr_dist_evolution(Mrcut=18, fqing_yint=-5.84, tau='linear') 
     #cq.EvolveCenQue(13, 1, fqing_yint=-5.84, tau='linefit', tau_param=[-0.15, 0.17])
-    plot_cenque_ssfr_dist_evolution(Mrcut=20, fqing_yint=-5.84, tau='linefit', tau_param=[-0.15, 0.17])
-    tau_fig = plot_quenching_efold(['linear', 'linefit'], [[], [-0.15, 0.17]]) 
+    #plot_groupcat_zdist()
+
+    plot_cenque_quenching_ssfr_dist(1, fqing_yint=-5.84, tau='linear')
+    plot_cenque_quenching_ssfr_dist(1, fqing_yint=-5.84, tau='constant')
+    #plot_cenque_quenching_ssfr_dist(1, fqing_yint=-5.84, tau='linefit', tau_param=[-0.15, 0.17])
+    #plot_cenque_ssfr_dist_evolution(Mrcut=20, fqing_yint=-5.84, tau='linefit', tau_param=[-0.15, 0.17])
+    #tau_fig = plot_quenching_efold(['linear', 'linefit'], [[], [-0.15, 0.17]]) 
 
     #plot_ssfms_groupcat(Mrcut=18)
     #plot_ssfms_groupcat(Mrcut=19)
