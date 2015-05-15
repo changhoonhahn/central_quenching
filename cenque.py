@@ -124,8 +124,9 @@ class CenQue:
                 continue 
     
             # get quiescent fraction for mass bin at z_snapshot 
-            mass_bin_qf = util.get_fquenching(mass_bins.mass_mid[i_m], self.zsnap, 
-                    yint=kwargs['fqing_yint'])
+            #mass_bin_qf = util.get_fquenching(mass_bins.mass_mid[i_m], self.zsnap, 
+            #        yint=kwargs['fqing_yint'])
+            mass_bin_qf = util.get_fq(mass_bins.mass_mid[i_m], self.zsnap, lit='wetzel') 
 
             # Ngal,quiescent in mass bin
             mass_bin_n_q = int( np.rint(mass_bin_qf * np.float(mass_bin_ngal)) ) 
@@ -511,12 +512,15 @@ def EvolveCenQue(origin_nsnap, final_nsnap, mass_bin=None, **kwargs):
             mass_bin_index = child_cq.get_index(mass_bin_bool) 
         
             mbin_ngal = len(child_cq.mass[mass_bin_bool])       # Ngal in mass bin 
-            if mbin_ngal == 0:                  # if there are no galaxies within mass bin
+
+            if mbin_ngal == 0:              
+                # if there are no galaxies within mass bin
                 continue 
             
-            mbin_qf = util.get_fquenching(mass_bins.mass_mid[i_m], child_cq.zsnap, yint=kwargs['fqing_yint'])
+            #mbin_qf = util.get_fquenching(mass_bins.mass_mid[i_m], child_cq.zsnap, yint=kwargs['fqing_yint'])
+            mbin_qf = util.get_fq(mass_bins.mass_mid[i_m], self.zsnap, lit='wetzel') 
 
-            #print 'z = ', child_cq.zsnap, ' M* = ', mass_bins.mass_mid[i_m], ' fq = ', mbin_qf
+            print 'z = ', child_cq.zsnap, ' M* = ', mass_bins.mass_mid[i_m], ' fq = ', mbin_qf
             
             mbin_exp_n_q = int( np.rint(mbin_qf * np.float(mbin_ngal)) )    # Ngal,Q_expected
 
@@ -527,7 +531,7 @@ def EvolveCenQue(origin_nsnap, final_nsnap, mass_bin=None, **kwargs):
             child_gal_type = child_cq.gal_type[mass_bin_bool] 
 
             ngal_2quench = mbin_exp_n_q - len(child_gal_type[child_gal_type == 'quiescent'])  
-            #print ngal_2quench, ' SF galaxies will be quenched'
+            print ngal_2quench, ' SF galaxies will be quenched'
             if ngal_2quench <= 0: 
                 #print ngal_2quench
                 continue 
@@ -567,6 +571,7 @@ def EvolveCenQue(origin_nsnap, final_nsnap, mass_bin=None, **kwargs):
             tau_quench = np.log10( np.exp( 
                 -(child_cq.t_cosmic - parent_cq.t_cosmic) / child_cq.tau[quench_index]
                 ))      # SFR quenching amount  
+            print tau_quench
 
             child_cq.sfr[quench_index] = child_cq.parent_sfr[quench_index] + tau_quench 
             child_cq.ssfr[quench_index] = child_cq.sfr[quench_index] - child_cq.mass[quench_index]
@@ -587,11 +592,11 @@ def EvolveCenQue(origin_nsnap, final_nsnap, mass_bin=None, **kwargs):
         child_cq.ssfr[over_quenched] = child_cq.q_ssfr[over_quenched]
         child_cq.tau[over_quenched] = -999.0            # done quenching 
 
-        #if child_cq.nsnap == final_nsnap: 
-        child_cq.writeout(nsnap=child_cq.nsnap, file_type='evol from '+str(origin_nsnap), 
-                columns = ['mass', 'sfr', 'ssfr', 'gal_type', 'tau', 'q_ssfr', 
-                    'parent_sfr', 'parent_mass', 'parent', 'child', 'ilk', 'snap_index'], 
-                **kwargs)  
+        if child_cq.nsnap == final_nsnap: 
+            child_cq.writeout(nsnap=child_cq.nsnap, file_type='evol from '+str(origin_nsnap), 
+                    columns = ['mass', 'sfr', 'ssfr', 'gal_type', 'tau', 'q_ssfr', 
+                        'parent_sfr', 'parent_mass', 'parent', 'child', 'ilk', 'snap_index'], 
+                    **kwargs)  
 
         parent_cq = child_cq
         #print 'Quiescent Fraction = ', np.float(len(parent_cq.gal_type[parent_cq.gal_type == 'quiescent']))/np.float(len(parent_cq.gal_type)) 
@@ -613,8 +618,8 @@ if __name__=='__main__':
     #EvolveCenQue(13, 1, fq='wetzel', tau='linear') 
                         
     #build_cenque_importsnap(fqing_yint=-5.0)
-    #build_cenque_importsnap(fqing_yint=-5.84)
+    build_cenque_importsnap(fqing_yint=-5.84)
     #EvolveCenQue(13, 1, fqing_yint=-5.84, tau='instant')  
     #tau='linefit', tau_param=[-0.5, 0.4]) 
-    EvolveCenQue(13, 1, fqing_yint=-5.84, tau='linefit', tau_param=[-0.4, 0.2])
-    #EvolveCenQue(13, 1, fqing_yint=-5.84, tau='linear')
+    #EvolveCenQue(13, 1, fqing_yint=-5.84, tau='linefit', tau_param=[-0.4, 0.2])
+    EvolveCenQue(13, 1, fqing_yint=-5.84, tau='linear')

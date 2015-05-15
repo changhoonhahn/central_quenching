@@ -28,8 +28,14 @@ class fq:
         self.fq = None      # quiescent fraction 
 
 def get_fq(Mstar, z_in, lit='cosmosinterp'): 
-    ''' get quiescent fraction from literature
+    ''' Return quiescent fraction from selected literature
+
+    Parameters
+    ----------
+    Mstar : stellar mass
+    z_in : redshift 
     '''
+
     if lit == 'cosmosinterp': 
         zbins = [0.36, 0.66, 0.88] 
 

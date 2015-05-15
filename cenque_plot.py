@@ -851,8 +851,10 @@ if __name__=='__main__':
     #cq.EvolveCenQue(13, 1, fqing_yint=-5.84, tau='linefit', tau_param=[-0.15, 0.17])
     #plot_groupcat_zdist()
 
-    plot_cenque_quenching_ssfr_dist(1, fqing_yint=-5.84, tau='linear')
-    plot_cenque_quenching_ssfr_dist(1, fqing_yint=-5.84, tau='constant')
+    plot_cenque_quenching_ssfr_dist(12, fqing_yint=-5.84, tau='linear')
+    plot_cenque_quenching_ssfr_dist(11, fqing_yint=-5.84, tau='linear')
+    plot_cenque_quenching_ssfr_dist(10, fqing_yint=-5.84, tau='linear')
+    #plot_cenque_quenching_ssfr_dist(1, fqing_yint=-5.84, tau='constant')
     #plot_cenque_quenching_ssfr_dist(1, fqing_yint=-5.84, tau='linefit', tau_param=[-0.15, 0.17])
     #plot_cenque_ssfr_dist_evolution(Mrcut=20, fqing_yint=-5.84, tau='linefit', tau_param=[-0.15, 0.17])
     #tau_fig = plot_quenching_efold(['linear', 'linefit'], [[], [-0.15, 0.17]]) 
