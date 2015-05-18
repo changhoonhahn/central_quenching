@@ -207,7 +207,7 @@ def plot_cenque_quenching_ssfr_dist(nsnap, **kwargs):
     prettyplot()                        #make things pretty 
     pretty_colors = prettycolors() 
     
-    fig = plt.figure(1, figsize=(25,8))
+    fig = plt.figure(figsize=(25,8))
     fig.subplots_adjust(hspace=0., wspace=0.)
 
     # mass bins of the panel        ( hardcoded ) 
@@ -469,6 +469,161 @@ def plot_fq_evol():
     subs[0].set_ylabel('Quiescent Fraction') 
     subs[0].legend(loc='upper left') 
     return fig
+
+def plot_snapshot_fqobs_evol(nsnaps=[1,2,3,4,5,6,7,8,9,10,11,12],fq_type='wetzel', **kwargs): 
+    ''' Plot the observed quiescent fraction of snapshots
+
+    Parameters
+    ----------
+    nsnaps : list of snapshots
+    fqtype : type of queiscent fraction  
+    '''
+    prettyplot()        # make pretty 
+    pretty_colors = prettycolors() 
+
+    # snapshot redshifts
+    zbin = np.loadtxt('snapshot_table.dat', unpack=True, usecols=[2])
+    zbin = zbin[nsnaps]
+    #zbin = [0.1*np.float(i) for i in range(1,10)]   # zbin 
+
+    mass_bins = util.simple_mass_bin()                    # mass bin 
+       
+    fig, subs = plt.subplots(1,2, figsize=[10, 5]) 
+    subs = subs.ravel() 
+
+    snap = cq.CenQue() 
+    snap.readin(nsnap=13, file_type='sf assign', **kwargs)  # starting CenQue 
+
+    fq_mass, fq = [], [] 
+    for i_m in range(mass_bins.nbins): 
+        mass_bin_low = round(mass_bins.mass_low[i_m], 2)        # for floating point errors
+        mass_bin_mid = round(mass_bins.mass_mid[i_m], 2)
+        mass_bin_high = round(mass_bins.mass_high[i_m], 2) 
+
+        # boolean list for mass range
+        mass_bin_bool = (snap.mass > mass_bin_low) & (snap.mass <= mass_bin_high)
+        
+        if np.sum(mass_bin_bool) == 0: 
+            continue 
+
+        sfqs = util.sfq_classify( snap.mass[mass_bin_bool], snap.sfr[mass_bin_bool], snap.zsnap ) 
+        ngal = np.float(len(sfqs))
+        ngal_q = np.float(np.sum(sfqs == 'quiescent')) 
+        fq_mass.append(mass_bin_mid) 
+        fq.append(ngal_q/ngal) 
+    
+    subs[0].plot(fq_mass, fq, color='black', ls='--', lw=4, label='z= '+str(snap.zsnap)) 
+    
+    for i_nsnap in nsnaps: 
+        snap = cq.CenQue() 
+        snap.readin(nsnap=i_nsnap, file_type='evol from 13', **kwargs) 
+
+        fq_mass, fq = [], [] 
+
+        for i_m in range(mass_bins.nbins): 
+            mass_bin_low = round(mass_bins.mass_low[i_m], 2)        # for floating point errors
+            mass_bin_mid = round(mass_bins.mass_mid[i_m], 2)
+            mass_bin_high = round(mass_bins.mass_high[i_m], 2) 
+
+            # boolean list for mass range
+            mass_bin_bool = (snap.mass > mass_bin_low) & (snap.mass <= mass_bin_high)
+            
+            if np.sum(mass_bin_bool) == 0: 
+                continue 
+
+            sfqs = util.sfq_classify( snap.mass[mass_bin_bool], snap.sfr[mass_bin_bool], snap.zsnap ) 
+            ngal = np.float(len(sfqs))
+            ngal_q = np.float(np.sum(sfqs == 'quiescent')) 
+            fq_mass.append(mass_bin_mid) 
+            fq.append(ngal_q/ngal) 
+        
+        subs[0].plot(fq_mass, fq, color=pretty_colors[i_nsnap-1], lw=4, label='z= '+str(snap.zsnap)) 
+    
+    subs[0].set_title('Snapshots')
+    subs[0].set_xlim([9.0, 12.0])
+    subs[0].set_ylim([0.0, 1.0])
+    subs[0].set_xlabel('Mass') 
+    for i_z, z in enumerate(zbin): 
+
+        # plot fq(Mass) 
+        fq_mass = [util.get_fq(mass_bins.mass_mid[i], z, lit=fq_type) 
+                for i in range(len(mass_bins.mass_mid))]
+        subs[1].plot(mass_bins.mass_mid, fq_mass, 
+                color=pretty_colors[i_z], lw=4, label='z = '+str(z) ) 
+    
+    subs[1].set_title(fq_type) 
+
+    subs[1].set_xlim([9.0, 12.0])
+    subs[1].set_ylim([0.0, 1.0])
+
+    subs[1].set_xlabel('Mass') 
+
+    subs[0].set_ylabel('Quiescent Fraction') 
+
+    fig_file = 'figure/fq_obs_snapshot.png'
+    fig.savefig(fig_file, bbox_inches='tight')
+    fig.clear()
+
+def plot_snapshot_fqobs(nsnap, fq_type='wetzel', **kwargs): 
+    ''' Plot the observed quiescent fraction of a snapshot with parameterized fQ
+
+    Parameters
+    ----------
+    nsnap : (int) snapshot #
+    fqtype : type of queiscent fraction  
+
+    '''
+    prettyplot()        # make pretty 
+    pretty_colors = prettycolors() 
+
+    # snapshot redshifts
+    zbin = np.loadtxt('snapshot_table.dat', unpack=True, usecols=[2])
+    zbin = zbin[nsnap]
+
+    mass_bins = util.simple_mass_bin()                    # mass bin 
+       
+    fig = plt.figure(1, figsize=[5, 5]) 
+    subs = fig.add_subplot(111)
+
+    snap = cq.CenQue() 
+    snap.readin(nsnap=nsnap, file_type='evol from 13', **kwargs) 
+
+    fq_mass, fq = [], [] 
+
+    for i_m in range(mass_bins.nbins): 
+        mass_bin_low = round(mass_bins.mass_low[i_m], 2)        # for floating point errors
+        mass_bin_mid = round(mass_bins.mass_mid[i_m], 2)
+        mass_bin_high = round(mass_bins.mass_high[i_m], 2) 
+
+        # boolean list for mass range
+        mass_bin_bool = (snap.mass > mass_bin_low) & (snap.mass <= mass_bin_high)
+        
+        if np.sum(mass_bin_bool) == 0: 
+            continue 
+
+        sfqs = util.sfq_classify( snap.mass[mass_bin_bool], snap.sfr[mass_bin_bool], snap.zsnap ) 
+        ngal = np.float(len(sfqs))
+        ngal_q = np.float(np.sum(sfqs == 'quiescent')) 
+        fq_mass.append(mass_bin_mid) 
+        fq.append(ngal_q/ngal) 
+    
+    subs.plot(fq_mass, fq, color=pretty_colors[3], lw=4, label='Snapshot '+str(snap.nsnap)) 
+    
+    # parameterized fq 
+    fq_mass = [util.get_fq(mass_bins.mass_mid[i], zbin, lit=fq_type) for i in range(len(mass_bins.mass_mid))]
+    subs.plot(mass_bins.mass_mid, fq_mass, 
+            color='black', lw=4, ls='--', label='Wetzel; z = '+str(zbin) ) 
+    
+    subs.set_title('Snapshots')
+    subs.set_xlim([9.0, 12.0])
+    subs.set_ylim([0.0, 1.0])
+    subs.set_xlabel('Mass') 
+    subs.set_ylabel('Quiescent Fraction') 
+    subs.legend(loc='upper left') 
+
+    fig_file = 'figure/fq_obs_snapshot'+str(nsnap)+'.png'
+    fig.savefig(fig_file, bbox_inches='tight')
+    fig.clear()
 
 def plot_quenching_efold(taus, tau_params): 
     ''' Plot quenching e-fold (tau) as a function of M*
@@ -826,6 +981,72 @@ def plot_groupcat_zdist():
     fig_file = 'figure/groupcat_zdist.png'
     fig.savefig(fig_file, bbox_inches='tight')
 
+def plot_groupcat_obs_fq(Mrcut=18):
+    ''' Plot observed f_q using the SDSS Group Catalog and sSFR SF/Q classification 
+
+    Parameters
+    ----------
+    Mrcut : Absolute magnitude cutoff specifier for group catalog 
+
+    Notes
+    ----- 
+    * This is to make sure that the SF/Q classification is consistent with the Andrew Wetzel's f_Q parameterization 
+    '''
+    prettyplot()                        #make things pretty 
+    pretty_colors = prettycolors() 
+    
+    # read group catalog 
+    central = cq_group.central_catalog(Mrcut=Mrcut) 
+    central_z = central.z    # redshifts 
+    median_z = np.median(central_z)
+   
+    fq_mass, fq = [], [] 
+
+    mass_bins = util.simple_mass_bin() 
+    for i_m in range(mass_bins.nbins): 
+
+        mass_bin_low = round(mass_bins.mass_low[i_m], 2)        # for floating point errors
+        mass_bin_mid = round(mass_bins.mass_mid[i_m], 2)
+        mass_bin_high = round(mass_bins.mass_high[i_m], 2) 
+
+        # boolean list for mass range
+        mass_bin_bool = (central.mass > mass_bin_low) & (central.mass <= mass_bin_high)
+        
+        if np.sum(mass_bin_bool) < 10: 
+            continue 
+
+        sfqs = util.sfq_classify( central.mass[mass_bin_bool], central.sfr[mass_bin_bool], median_z ) 
+        ngal = np.float(len(sfqs))
+        ngal_q = np.float(np.sum(sfqs == 'quiescent')) 
+        fq_mass.append(mass_bin_mid) 
+        fq.append(ngal_q/ngal) 
+    
+    fig = plt.figure(1, figsize=[8,8])
+    sub = fig.add_subplot(111)
+
+    # snapshot redshifts
+    zbin = np.loadtxt('snapshot_table.dat', unpack=True, usecols=[2])
+    close_z = min(range(len(zbin)), key=lambda i: abs(zbin[i] - median_z))
+    zbin = [ zbin[close_z - 1], zbin[close_z], zbin[close_z + 1] ]
+
+    for i_z, z in enumerate(zbin): 
+
+        # plot fq(Mass) 
+        fq_fit = [util.get_fq(mass_bins.mass_mid[i], z, lit='wetzel') 
+                for i in range(len(mass_bins.mass_mid))]
+        sub.plot(mass_bins.mass_mid, fq_fit, 
+                color=pretty_colors[i_z], lw=4, ls='--', label='z = '+str(z) ) 
+    
+    sub.plot(fq_mass, fq, color='black', lw=6, label=r'SDSS Group Catalog; z = '+str(median_z))
+    sub.set_xlim([9.0, 12.0])
+    sub.set_ylim([0.0, 1.0])
+    sub.set_xlabel('Mass') 
+    sub.set_ylabel('Quiescent Fraction') 
+    sub.legend(loc='upper left') 
+
+    fig_name = 'figure/fq_sdss_groupcat_mrcut'+str(Mrcut)+'_sfrclass.png'
+    fig.savefig(fig_name, bbox_inches='tight') 
+    fig.clear() 
 
 if __name__=='__main__': 
     #plot_group_cat_bigauss_bestfit()
@@ -842,7 +1063,7 @@ if __name__=='__main__':
     #plot_cenque_ssfr_dist_evolution(Mrcut=20, fq='wetzel', tau='linefit', tau_param=[-0.5, 0.4], 
     #        sfms_slope=0.7, sfms_yint=0.125) 
     #plot_q_groupcat(Mrcut=18)
-    #plot_cenque_ssfr_dist_evolution(nsnaps=[1], fq='wetzel', tau='instant') #tau='linefit', tau_param=[-0.5, 0.4])
+    #plot_cenque_ssfr_dist_evolution(nsnaps=np.arange(13,1,1), fq='wetzel', tau='instant') #tau='linefit', tau_param=[-0.5, 0.4])
     
     #plot_cenque_ssfr_dist_evolution(Mrcut=18, fqing_yint=-5.84, tau='instant') 
     #plot_cenque_ssfr_dist_evolution(Mrcut=19, fqing_yint=-5.84, tau='instant') 
@@ -851,12 +1072,39 @@ if __name__=='__main__':
     #cq.EvolveCenQue(13, 1, fqing_yint=-5.84, tau='linefit', tau_param=[-0.15, 0.17])
     #plot_groupcat_zdist()
 
-    plot_cenque_quenching_ssfr_dist(12, fqing_yint=-5.84, tau='linear')
-    plot_cenque_quenching_ssfr_dist(11, fqing_yint=-5.84, tau='linear')
-    plot_cenque_quenching_ssfr_dist(10, fqing_yint=-5.84, tau='linear')
+    #plot_cenque_quenching_ssfr_dist(10, fqing_yint=-5.84, tau='linear')
     #plot_cenque_quenching_ssfr_dist(1, fqing_yint=-5.84, tau='constant')
     #plot_cenque_quenching_ssfr_dist(1, fqing_yint=-5.84, tau='linefit', tau_param=[-0.15, 0.17])
-    #plot_cenque_ssfr_dist_evolution(Mrcut=20, fqing_yint=-5.84, tau='linefit', tau_param=[-0.15, 0.17])
+    #plot_groupcat_obs_fq(Mrcut=18)
+    #plot_groupcat_obs_fq(Mrcut=19)
+    #plot_groupcat_obs_fq(Mrcut=20)
+    #plot_cenque_ssfr_dist_evolution(nsnaps=[1,2,3,4,5,6,7,8,9, 10, 11,12], Mrcut=18, tau='linear')
+    plot_cenque_quenching_ssfr_dist(12, tau='linear')
+    plot_cenque_quenching_ssfr_dist(11, tau='linear')
+    plot_cenque_quenching_ssfr_dist(10, tau='linear')
+    plot_cenque_quenching_ssfr_dist(9, tau='linear')
+    plot_cenque_quenching_ssfr_dist(8, tau='linear')
+    plot_cenque_quenching_ssfr_dist(7, tau='linear')
+    plot_cenque_quenching_ssfr_dist(6, tau='linear')
+    plot_cenque_quenching_ssfr_dist(5, tau='linear')
+    plot_cenque_quenching_ssfr_dist(4, tau='linear')
+    plot_cenque_quenching_ssfr_dist(3, tau='linear')
+    plot_cenque_quenching_ssfr_dist(2, tau='linear')
+    plot_cenque_quenching_ssfr_dist(1, tau='linear')
+
+    #plot_snapshot_fqobs_evol(nsnaps=[1,2,3,4,5,6,7,8,9,10,11,12], fq_type='wetzel', tau='linear')
+    plot_snapshot_fqobs(12, fq_type='wetzel', tau='linear')
+    plot_snapshot_fqobs(11, fq_type='wetzel', tau='linear')
+    plot_snapshot_fqobs(10, fq_type='wetzel', tau='linear')
+    plot_snapshot_fqobs(9, fq_type='wetzel', tau='linear')
+    plot_snapshot_fqobs(8, fq_type='wetzel', tau='linear')
+    plot_snapshot_fqobs(7, fq_type='wetzel', tau='linear')
+    plot_snapshot_fqobs(6, fq_type='wetzel', tau='linear')
+    plot_snapshot_fqobs(5, fq_type='wetzel', tau='linear')
+    plot_snapshot_fqobs(4, fq_type='wetzel', tau='linear')
+    plot_snapshot_fqobs(3, fq_type='wetzel', tau='linear')
+    plot_snapshot_fqobs(2, fq_type='wetzel', tau='linear')
+    plot_snapshot_fqobs(1, fq_type='wetzel', tau='linear')
     #tau_fig = plot_quenching_efold(['linear', 'linefit'], [[], [-0.15, 0.17]]) 
 
     #plot_ssfms_groupcat(Mrcut=18)

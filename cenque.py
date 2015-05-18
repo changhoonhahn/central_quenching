@@ -119,7 +119,7 @@ class CenQue:
             # indices of galaxies within mass range
             mass_bin_index = np.array(range(len(self.mass)))[mass_bin_bool] 
         
-            mass_bin_ngal = len(self.mass[mass_bin_bool])       # Ngal in mass bin 
+            mass_bin_ngal = np.sum(mass_bin_bool)   # Ngal in mass bin 
             if mass_bin_ngal == 0:                  # if there are no galaxies within mass bin
                 continue 
     
@@ -184,7 +184,7 @@ class CenQue:
 
         # check for SFR/SSFR assign fails
         assign_fail = (self.sfr == -999.0) | (self.ssfr == -999.0)
-        if len(self.sfr[assign_fail]) > 0: 
+        if np.sum(assign_fail) > 0: 
             raise NameError('asdfasdfasdfasdf')
 
     def readin(self, **kwargs): 
@@ -372,6 +372,14 @@ class CenQue:
 
 def EvolveCenQue(origin_nsnap, final_nsnap, mass_bin=None, **kwargs): 
     ''' Evolve SF properties from origin_nsnap to final_nsnap 
+    
+    Parameters
+    ----------
+
+    Notes
+    -----
+    * Quenching of SF galaxies now involve quenching-efold *and* overall SF MS SFR decrease
+
     '''
 
     if mass_bin is None:            # mass bins
@@ -432,34 +440,9 @@ def EvolveCenQue(origin_nsnap, final_nsnap, mass_bin=None, **kwargs):
         
         # children inherit galaxy type and store parent SFR and mass 
         (child_cq.gal_type)[child_indx] = [(parent_cq.gal_type)[i] for i in parent_indx]
-        #print len(child_cq.gal_type[child_cq.gal_type == '']), ' out of ',\
-        #        len(child_cq.gal_type), ' child galaxies are orphans' 
         (child_cq.parent_sfr)[child_indx] = [(parent_cq.sfr)[i] for i in parent_indx]
         (child_cq.parent_mass)[child_indx] = [(parent_cq.mass)[i] for i in parent_indx]
         
-        try: 
-            parent_cq.tau
-        except AttributeError:
-            pass
-        else: 
-            # children inherit tau 
-            (child_cq.tau)[child_indx] = [(parent_cq.tau)[i] for i in parent_indx]
-            has_tau = (child_cq.tau)[child_indx] != -999.0               # no tau 
-            still_quenching_indx = np.array(child_indx)[has_tau]
-            
-            # for galaxies with tau, keep them quenching!
-            tau_quench = np.log10( np.exp( 
-                -(child_cq.t_cosmic - parent_cq.t_cosmic) / child_cq.tau[still_quenching_indx]
-                ))                                              # SFR quenching amount  
-            child_cq.sfr[still_quenching_indx] = \
-                    child_cq.parent_sfr[still_quenching_indx] + tau_quench 
-            child_cq.ssfr[still_quenching_indx] = \
-                    child_cq.sfr[still_quenching_indx] - child_cq.mass[still_quenching_indx]
-            #print child_cq.gal_type[still_quenching_indx]
-            
-            # children inherit final quenched SSFR 
-            (child_cq.q_ssfr)[child_indx] = [(parent_cq.q_ssfr)[i] for i in parent_indx]
-
         # Star-forming Children ----------------------------------------
         sf_child = (child_cq.gal_type[child_indx] == 'star-forming')
         sf_child_indx = np.array(child_indx)[sf_child]                  # index stuff
@@ -488,8 +471,38 @@ def EvolveCenQue(origin_nsnap, final_nsnap, mass_bin=None, **kwargs):
         child_cq.sfr[sf_child_indx] = child_cq.parent_sfr[sf_child_indx] + dSFR   
         child_cq.ssfr[sf_child_indx] = child_cq.sfr[sf_child_indx] - child_cq.mass[sf_child_indx]
 
+        # Quenching Children ------------------------------------------------        
+        try: 
+            parent_cq.tau
+        except AttributeError:
+            pass
+        else: 
+            # children inherit parent tau 
+            (child_cq.tau)[child_indx] = [(parent_cq.tau)[i] for i in parent_indx]
+            has_tau = (child_cq.tau)[child_indx] > 0.0  # has tau 
+            still_quenching_indx = np.array(child_indx)[has_tau]
+            still_quenching_parent_indx = np.array(parent_indx)[has_tau]
+            
+            # for galaxies with tau, keep them quenching!
+            tau_quench = np.log10( np.exp( 
+                -(child_cq.t_cosmic - parent_cq.t_cosmic) / child_cq.tau[still_quenching_indx]
+                ))                                              # SFR quenching amount  
+
+            c_sfr, c_sig_sfr = util.get_sfr_mstar_z_bestfit(
+                    child_cq.mass[still_quenching_indx], child_cq.zsnap, Mrcut=18)
+            p_sfr, p_sig_sfr = util.get_sfr_mstar_z_bestfit(
+                    child_cq.parent_mass[still_quenching_indx], parent_cq.zsnap, Mrcut=18) 
+
+            child_cq.sfr[still_quenching_indx] = \
+                    child_cq.parent_sfr[still_quenching_indx] + tau_quench 
+            child_cq.ssfr[still_quenching_indx] = \
+                    child_cq.sfr[still_quenching_indx] - child_cq.mass[still_quenching_indx]
+            
+            # children inherit final quenched SSFR 
+            (child_cq.q_ssfr)[child_indx] = [(parent_cq.q_ssfr)[i] for i in parent_indx]
+
         # Quiescent Children --------------------------------------------
-        q_child = (child_cq.gal_type[child_indx] == 'quiescent') 
+        q_child = (child_cq.gal_type[child_indx] == 'quiescent') & (child_cq.tau[child_indx] == -999.0) # not quenching
         q_child_indx = np.array(child_indx)[q_child]
         q_child_parent_indx = np.array(parent_indx)[q_child]
 
@@ -498,64 +511,109 @@ def EvolveCenQue(origin_nsnap, final_nsnap, mass_bin=None, **kwargs):
         child_cq.sfr[q_child_indx] = child_cq.ssfr[q_child_indx] + \
                 child_cq.mass[q_child_indx]
        
-        # loop through mass bin and evolved active children with parents to match 
-        # mass bin fq
         for i_m in range(mass_bins.nbins):              
             
             # boolean list for mass range
             mass_bin_bool = (child_cq.mass > mass_bins.mass_low[i_m]) & \
                     (child_cq.mass <= mass_bins.mass_high[i_m]) & \
                     (child_cq.gal_type != '') 
-            #print mass_bins.mass_low[i_m], ' - ', mass_bins.mass_high[i_m]
+            print mass_bins.mass_low[i_m], ' - ', mass_bins.mass_high[i_m]
 
             # indices of galaxies within mass range
             mass_bin_index = child_cq.get_index(mass_bin_bool) 
         
-            mbin_ngal = len(child_cq.mass[mass_bin_bool])       # Ngal in mass bin 
+            mbin_ngal = np.sum(mass_bin_bool)   # Ngal in mass bin 
 
             if mbin_ngal == 0:              
                 # if there are no galaxies within mass bin
+                print 'No Galaxies in ', mass_bins.mass_low[i_m], ' - ', mass_bins.mass_high[i_m]
                 continue 
             
-            #mbin_qf = util.get_fquenching(mass_bins.mass_mid[i_m], child_cq.zsnap, yint=kwargs['fqing_yint'])
-            mbin_qf = util.get_fq(mass_bins.mass_mid[i_m], self.zsnap, lit='wetzel') 
+            # observed quiescent fraction at M* and z
+            mbin_qf = util.get_fq(mass_bins.mass_mid[i_m], child_cq.zsnap, lit='wetzel') 
 
-            print 'z = ', child_cq.zsnap, ' M* = ', mass_bins.mass_mid[i_m], ' fq = ', mbin_qf
+            print 'nsnap = ', child_cq.nsnap, ' z = ', child_cq.zsnap, ' M* = ', mass_bins.mass_mid[i_m], ' fq = ', mbin_qf
             
-            mbin_exp_n_q = int( np.rint(mbin_qf * np.float(mbin_ngal)) )    # Ngal,Q_expected
+            # Number of expected quiescent galaxies (Ngal,Q_exp)
+            mbin_exp_n_q = int( np.rint(mbin_qf * np.float(mbin_ngal)) )    
 
             if mbin_ngal < mbin_exp_n_q: 
+                # if for some reason expected number of quiescent galaxies
+                # exceed the number of galaxies in the bin, all of them are 
+                # quiescent
                 mbin_exp_n_q = mbin_ngal 
             
-            # number of SF galaxies that need to be quenched 
             child_gal_type = child_cq.gal_type[mass_bin_bool] 
+            mbin_sf_ngal = np.sum(child_gal_type == 'star-forming') 
+            mbin_q_ngal = np.sum(child_gal_type == 'quiescent')  
 
-            ngal_2quench = mbin_exp_n_q - len(child_gal_type[child_gal_type == 'quiescent'])  
-            print ngal_2quench, ' SF galaxies will be quenched'
+            # number of SF galaxies that need to be quenched 
+            ngal_2quench = mbin_exp_n_q - mbin_q_ngal 
+
+            print 'sf', mbin_sf_ngal, 'q', mbin_q_ngal
+            print mbin_exp_n_q, ' expected quiescent galaxies' 
+            print 'current fq = ', np.float(mbin_q_ngal)/np.float(mbin_ngal)
+            print ngal_2quench, ' SF galaxies need to be quenched'
+
             if ngal_2quench <= 0: 
-                #print ngal_2quench
+                # quenching, overshot in previous snapshot  
+                # move onto next mass bin 
+                print 'Quenching overshot in previous snapshot' 
                 continue 
             
-            # randomly sample mass_bin_n_q galaxies from the mass bin 
+            # Star-forming children 
             mbin_sf_index = child_cq.get_index( 
                     [ mass_bin_bool & (child_cq.gal_type == 'star-forming')] 
                     ) 
-
-            #print ngal_2quench, ' galaxies to quench'
-            #print len(child_gal_type[child_gal_type == 'star-forming']), len(child_gal_type[child_gal_type == 'quiescent'])
-            #print len(child_gal_type[child_gal_type == 'star-forming']) + len(child_gal_type[child_gal_type == 'quiescent']), mbin_ngal
-            #print mbin_exp_n_q, ' expected quiescent galaxies' 
-            if len(child_gal_type[child_gal_type == 'star-forming']) < ngal_2quench: 
-                print ngal_2quench, ' galaxies to quench'
-                print len(child_gal_type[child_gal_type == 'star-forming']), len(child_gal_type[child_gal_type == 'quiescent'])
-                print len(child_gal_type[child_gal_type == 'star-forming']) + len(child_gal_type[child_gal_type == 'quiescent']), mbin_ngal
-                print mbin_exp_n_q, ' expected quiescent galaxies' 
-                raise NameError("asdfadfasdf") 
+                
+            # number of SF galaxies to quench will be determined by first determining how many galaxies will be quenched
+            # if the entire SF population was quenched, taking the ratio of that number over the 'mbin_exp_n_q'. 
+            # we use that factor as the "quenching fraction" (the fraction of SF galaxies that will be quenched for this mass
+            # bin and redshift) 
+            if 'tau' in kwargs.keys(): 
+                if 'tau_param' in kwargs.keys(): 
+                    taus = util.get_quenching_efold(
+                            child_cq.parent_mass[mbin_sf_index], 
+                            type=kwargs['tau'], param=kwargs['tau_param'])
+                else: 
+                    taus = util.get_quenching_efold(
+                            child_cq.parent_mass[mbin_sf_index], 
+                            type=kwargs['tau'])
             else: 
+                raise TypeError('specify quenching e-fold: tau = instant, constant, linear') 
+            
+            tau_quench = np.log10( np.exp( 
+                -(child_cq.t_cosmic - parent_cq.t_cosmic) / taus 
+                ))      
+            #print child_cq.parent_sfr[mbin_sf_index] + tau_quench - child_cq.mass[mbin_sf_index]
+            print min(child_cq.sfr[mbin_sf_index] + tau_quench - child_cq.mass[mbin_sf_index])
+            print max(child_cq.sfr[mbin_sf_index] + tau_quench - child_cq.mass[mbin_sf_index])
+
+            sfqs = util.sfq_classify(child_cq.mass[mbin_sf_index], child_cq.sfr[mbin_sf_index] + tau_quench, child_cq.zsnap)
+            ngal_totalq = np.float(np.sum(sfqs == 'quiescent'))
+            print min(child_cq.sfr[mbin_sf_index[sfqs == 'quiescent']] + tau_quench[sfqs == 'quiescent'] - child_cq.mass[mbin_sf_index[sfqs == 'quiescent']])
+            print max(child_cq.sfr[mbin_sf_index[sfqs == 'quiescent']] + tau_quench[sfqs == 'quiescent'] - child_cq.mass[mbin_sf_index[sfqs == 'quiescent']])
+    
+            if ngal_totalq == 0: 
+                raise NameError("What the fuck") 
+
+            quenching_fraction = np.float(ngal_2quench)/ngal_totalq
+            print 'ngal_totalq', ngal_totalq
+            print 'quenching fraction ', quenching_fraction
+            
+            if quenching_fraction > 1.0: 
+                #raise NameError('asdfasdfasdf')
+                #quench_index = mbin_sf_index
+                print 'QUENCHING FRACTION TOO LARGE ******************************************************************'
                 quench_index = random.sample(mbin_sf_index, ngal_2quench) 
+            else: 
+                quench_index = random.sample(mbin_sf_index, int( np.rint(quenching_fraction * np.float(mbin_sf_ngal) ) ) )
+            
+            #quench_index = random.sample(mbin_sf_index, ngal_2quench) 
             
             child_cq.gal_type[quench_index] = 'quiescent'  # boom quenched 
-
+            
+            # assign quenching e-folds for quenching galaxies
             if 'tau' in kwargs.keys(): 
                 if 'tau_param' in kwargs.keys(): 
                     child_cq.tau[quench_index] = util.get_quenching_efold(
@@ -567,20 +625,22 @@ def EvolveCenQue(origin_nsnap, final_nsnap, mass_bin=None, **kwargs):
                             type=kwargs['tau'])
             else: 
                 raise TypeError('specify quenching e-fold: tau = instant, constant, linear') 
-
+    
+            # SFR quenching amount
             tau_quench = np.log10( np.exp( 
                 -(child_cq.t_cosmic - parent_cq.t_cosmic) / child_cq.tau[quench_index]
-                ))      # SFR quenching amount  
-            print tau_quench
+                ))      
+
 
             child_cq.sfr[quench_index] = child_cq.parent_sfr[quench_index] + tau_quench 
             child_cq.ssfr[quench_index] = child_cq.sfr[quench_index] - child_cq.mass[quench_index]
+
             q_ssfr_mean = util.get_q_ssfr_mean(child_cq.mass[quench_index]) 
-            child_cq.q_ssfr[quench_index] = 0.18 * np.random.randn(ngal_2quench) + q_ssfr_mean 
+            child_cq.q_ssfr[quench_index] = 0.18 * np.random.randn(len(quench_index)) + q_ssfr_mean 
         
         # deal with orphans
-        #print len(child_cq.gal_type[child_cq.gal_type == '']), ' child galaxies are orphans' 
 
+        print len(child_cq.gal_type[child_cq.gal_type == '']), ' child galaxies are orphans' 
         child_cq.AssignSFR(child_cq.nsnap, **kwargs) 
 
         if len(child_cq.gal_type[child_cq.gal_type == '']) != 0:
@@ -592,11 +652,11 @@ def EvolveCenQue(origin_nsnap, final_nsnap, mass_bin=None, **kwargs):
         child_cq.ssfr[over_quenched] = child_cq.q_ssfr[over_quenched]
         child_cq.tau[over_quenched] = -999.0            # done quenching 
 
-        if child_cq.nsnap == final_nsnap: 
-            child_cq.writeout(nsnap=child_cq.nsnap, file_type='evol from '+str(origin_nsnap), 
-                    columns = ['mass', 'sfr', 'ssfr', 'gal_type', 'tau', 'q_ssfr', 
-                        'parent_sfr', 'parent_mass', 'parent', 'child', 'ilk', 'snap_index'], 
-                    **kwargs)  
+        #if child_cq.nsnap == final_nsnap: 
+        child_cq.writeout(nsnap=child_cq.nsnap, file_type='evol from '+str(origin_nsnap), 
+                columns = ['mass', 'sfr', 'ssfr', 'gal_type', 'tau', 'q_ssfr', 
+                    'parent_sfr', 'parent_mass', 'parent', 'child', 'ilk', 'snap_index'], 
+                **kwargs)  
 
         parent_cq = child_cq
         #print 'Quiescent Fraction = ', np.float(len(parent_cq.gal_type[parent_cq.gal_type == 'quiescent']))/np.float(len(parent_cq.gal_type)) 
@@ -618,8 +678,8 @@ if __name__=='__main__':
     #EvolveCenQue(13, 1, fq='wetzel', tau='linear') 
                         
     #build_cenque_importsnap(fqing_yint=-5.0)
-    build_cenque_importsnap(fqing_yint=-5.84)
+    #build_cenque_importsnap()
     #EvolveCenQue(13, 1, fqing_yint=-5.84, tau='instant')  
     #tau='linefit', tau_param=[-0.5, 0.4]) 
     #EvolveCenQue(13, 1, fqing_yint=-5.84, tau='linefit', tau_param=[-0.4, 0.2])
-    EvolveCenQue(13, 1, fqing_yint=-5.84, tau='linear')
+    EvolveCenQue(13, 1, tau='linear')

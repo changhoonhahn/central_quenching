@@ -72,7 +72,7 @@ def get_fq(Mstar, z_in, lit='cosmosinterp'):
             alpha = -2.2
         elif (Mstar >= 10.5) & (Mstar < 11.0): 
             alpha = -2.0
-        elif (Mstar >= 11.0) & (Mstar < 11.5): 
+        elif (Mstar >= 11.0) & (Mstar <= 11.5): 
             alpha = -1.3
         else: 
             raise NameError('Mstar is out of range')
@@ -210,9 +210,9 @@ def simple_mass_bin():
     ------
     mass_bin class that contains mass bin information
     '''
-    simple_mass_binsize = 0.1
+    simple_mass_binsize = 0.2
     simple_mass_bin = mass_bin()
-    simple_mass_bin.mass_low = [ 9.0 + np.float(i)*simple_mass_binsize for i in range(25) ]
+    simple_mass_bin.mass_low = [ 9.0 + np.float(i)*simple_mass_binsize for i in range(13) ]
     simple_mass_bin.mass_high = [ simple_mass_bin.mass_low[i] + simple_mass_binsize
             for i in range(len(simple_mass_bin.mass_low)) ]
     simple_mass_bin.mass_mid = [
@@ -346,6 +346,55 @@ def get_sfr_mstar_z_bestfit(mstar, z_in, Mrcut=18, clobber=False):
     avg_SFR = groupcat_fit_param[0] * (mstar - fid_mass) + SFR_amp
         
     return [avg_SFR, 0.3] 
+
+def sfq_classify(mstar, sfr, z_in, Mrcut=18, clobber=False):
+    ''' Return SF or Q classification given M* and SFR 
+
+    Parameters
+    ----------
+    mstar : Stellar mass of galaxy (array)
+    sfr : Star-formation rate of galaxies (array)
+    z_in : Redshift 
+    --Mrcut : Absolute magnitude cut that specified the group catalog --
+
+    Returns
+    -------
+    [average SFR, standard deviation SFR]
+
+    Notes
+    -----
+    * Best-fit SFMS y-int offsets for redshift bins determined from EnvCount project 
+    * Slope and SDSS y-int determined from SF Main Sequence of Group Catalog 
+    * Fiducial Mass = 10.5
+    * Assumptions: 
+        * The overall shifts in SFR observed in the iSEDfit sample is equivalent to that of the group catalog  
+
+    '''
+    
+    #fid_mass = 10.5
+
+    ## Best-fit slope and y-int of SF SDSS Group Catalog 
+    #groupcat_fit_param = sfms.get_bestfit_groupcat_sfms(Mrcut=Mrcut, clobber=clobber)
+
+    ## Best-fit slope and y-int of SF EnvCount
+    #envcount_fit_param = sfms.get_bestfit_envcount_sfms()
+    #zmids, slopes, yints = sfms.get_sfmsfit_sfr(
+    #        (envcount_fit_param[0]).item(), (envcount_fit_param[1]).item(), 
+    #        clobber=clobber)
+    #    
+    #d_yints = np.interp(z_in, zmids, yints) - yints[0] 
+    #SFR_amp = groupcat_fit_param[1] + d_yints
+
+    #SFR_cut = groupcat_fit_param[0] * (mstar - fid_mass) + SFR_amp - 1.0
+    ssfr_cut = -11.7 + 0.98*z_in - 0.25*(mstar-10.25)
+    sfr_cut = ssfr_cut + mstar 
+
+    sfq = np.empty(len(mstar), dtype=(str,16))
+    sf_index = sfr > sfr_cut 
+    sfq[sf_index] = 'star-forming'
+    q_index = sfr <= sfr_cut
+    sfq[q_index] = 'quiescent'
+    return sfq 
 
 def line(x, p): 
     return p[0]*x + p[1]
