@@ -559,7 +559,11 @@ def EvolveCenQue(origin_nsnap, final_nsnap, mass_bin=None, **kwargs):
                 # quenching, overshot in previous snapshot  
                 # move onto next mass bin 
                 print 'Quenching overshot in previous snapshot' 
-                continue 
+                pass
+                #continue 
+
+            if mbin_sf_ngal == 0: 
+                continue
             
             # Star-forming children 
             mbin_sf_index = child_cq.get_index( 
@@ -586,6 +590,7 @@ def EvolveCenQue(origin_nsnap, final_nsnap, mass_bin=None, **kwargs):
                 -(child_cq.t_cosmic - parent_cq.t_cosmic) / taus 
                 ))      
             #print child_cq.parent_sfr[mbin_sf_index] + tau_quench - child_cq.mass[mbin_sf_index]
+            print tau_quench
             print min(child_cq.sfr[mbin_sf_index] + tau_quench - child_cq.mass[mbin_sf_index])
             print max(child_cq.sfr[mbin_sf_index] + tau_quench - child_cq.mass[mbin_sf_index])
 
@@ -597,11 +602,16 @@ def EvolveCenQue(origin_nsnap, final_nsnap, mass_bin=None, **kwargs):
             if ngal_totalq == 0: 
                 raise NameError("What the fuck") 
 
-            quenching_fraction = np.float(ngal_2quench)/ngal_totalq
+            #quenching_fraction = np.float(ngal_2quench)/ngal_totalq
+            quenching_fraction = 0.1 + 0.066 * (mass_bins.mass_mid[i_m] - 11.0)
+            if quenching_fraction < 0.0: 
+                quenching_fraction = 0.0
             print 'ngal_totalq', ngal_totalq
             print 'quenching fraction ', quenching_fraction
+            if quenching_fraction == 0.0: 
+                continue
             
-            if quenching_fraction > 1.0: 
+            if quenching_fraction > 0.4: 
                 #raise NameError('asdfasdfasdf')
                 #quench_index = mbin_sf_index
                 print 'QUENCHING FRACTION TOO LARGE ******************************************************************'
