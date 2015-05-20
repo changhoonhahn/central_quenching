@@ -604,6 +604,7 @@ def EvolveCenQue(origin_nsnap, final_nsnap, mass_bin=None, **kwargs):
 
             #quenching_fraction = np.float(ngal_2quench)/ngal_totalq
             quenching_fraction = 0.1 + 0.066 * (mass_bins.mass_mid[i_m] - 11.0)
+            quenching_fraction = 
             if quenching_fraction < 0.0: 
                 quenching_fraction = 0.0
             print 'ngal_totalq', ngal_totalq
