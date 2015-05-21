@@ -175,6 +175,7 @@ def plot_cenque_ssfr_dist_evolution(Mrcut=18, **kwargs):
         'cenque_ssfr_evol_', tau_str, '_', fqing_str, '_Mrcut', str(Mrcut), '.png'])
     ssfr_fig.savefig(fig_file, bbox_inches='tight') 
     ssfr_fig.clear() 
+    plt.close(ssfr_fig)
 
 def plot_cenque_ssfr_dist_evolution_match2isedfit(Mrcut=18, **kwargs): 
     snap = cq.CenQue() 
@@ -301,6 +302,7 @@ def plot_cenque_quenching_ssfr_dist(nsnap, **kwargs):
         '_quenching_component.png'])
     fig.savefig(fig_file, bbox_inches='tight') 
     fig.clear() 
+    plt.close(fig)
 
 def plot_sdss_group_cat(): 
     ''' plot ssfr distribution for SDSS group catalogs
@@ -413,7 +415,7 @@ def plot_cenque_sf_mainseq():
 
 # quiescent fraction -----------------------------------
 def plot_fq_evol(): 
-    ''' Plot fq evolution 
+    ''' Plot fq evolution comparison
     '''
 
     # snapshot redshifts
@@ -423,9 +425,6 @@ def plot_fq_evol():
 
     mass_bin = util.simple_mass_bin()                    # mass bin 
        
-    fig, subs = plt.subplots(1,4, figsize=[20, 5]) 
-    subs = subs.ravel() 
-
     prettyplot()        # make pretty 
     pretty_colors = prettycolors() 
     
@@ -434,7 +433,11 @@ def plot_fq_evol():
     mod_tink_file = ''.join(['dat/central_quenching/literature/modified_tinker_fq.dat']) 
     mod_tink_mass, mod_tink_fq = np.loadtxt(mod_tink_file, unpack=True, usecols=[0,1])   
 
-    fq_types = ['cosmosinterp', 'cosmosfit', 'wetzel'] 
+    fq_types = ['cosmosinterp', 'wetzel', 'wetzelsmooth'] 
+    
+    fig, subs = plt.subplots(1, len(fq_types), figsize=[len(fq_types)*5, 5]) 
+    subs = subs.ravel() 
+
     for i_fq, fq_type in enumerate(fq_types): 
         for i_z, z in enumerate(zbin): 
 
@@ -454,27 +457,13 @@ def plot_fq_evol():
 
         subs[i_fq].set_xlabel('Mass') 
 
-    for i_z, z in enumerate(zbin): 
-
-        # plot fq(Mass) 
-        fq_mass = [util.get_fq_alpha(mass_bin.mass_mid[i], z, -1.5) 
-                for i in range(len(mass_bin.mass_mid))]
-        subs[3].plot(mass_bin.mass_mid, fq_mass, 
-                color=pretty_colors[i_z], lw=4, label='z = '+str(z) ) 
-    
-
-    subs[3].set_title('Evolved from z = 0.88') 
-
-    subs[3].set_xlim([9.0, 12.0])
-    subs[3].set_ylim([0.0, 1.0])
-
-    subs[3].set_xlabel('Mass') 
-
     subs[0].set_ylabel('Quiescent Fraction') 
     subs[0].legend(loc='upper left') 
-    return fig
+    fig_name = ''.join(['figure/fq_evol_comp_', '_'.join(fq_types), '.png'])
+    fig.savefig(fig_name, bbox_inches='tight')
+    fig.clear() 
 
-def plot_snapshot_fqobs_evol(nsnaps=[1,2,3,4,5,6,7,8,9,10,11,12],fq_type='wetzel', **kwargs): 
+def plot_snapshot_fqobs_evol(nsnaps=[1,2,3,4,5,6,7,8,9,10,11,12],fq_type='wetzelsmooth', **kwargs): 
     ''' Plot the observed quiescent fraction of snapshots
 
     Parameters
@@ -567,6 +556,7 @@ def plot_snapshot_fqobs_evol(nsnaps=[1,2,3,4,5,6,7,8,9,10,11,12],fq_type='wetzel
     fig_file = 'figure/fq_obs_snapshot.png'
     fig.savefig(fig_file, bbox_inches='tight')
     fig.clear()
+    plt.close(fig)
 
 def plot_snapshot_fqobs(nsnap, fq_type='wetzel', **kwargs): 
     ''' Plot the observed quiescent fraction of a snapshot with parameterized fQ
@@ -586,7 +576,7 @@ def plot_snapshot_fqobs(nsnap, fq_type='wetzel', **kwargs):
 
     mass_bins = util.simple_mass_bin()                    # mass bin 
        
-    fig = plt.figure(1, figsize=[5, 5]) 
+    fig = plt.figure(figsize=[5, 5]) 
     subs = fig.add_subplot(111)
 
     snap = cq.CenQue() 
@@ -617,8 +607,7 @@ def plot_snapshot_fqobs(nsnap, fq_type='wetzel', **kwargs):
     fq_mass = [util.get_fq(mass_bins.mass_mid[i], zbin, lit=fq_type) for i in range(len(mass_bins.mass_mid))]
     subs.plot(mass_bins.mass_mid, fq_mass, 
             color='black', lw=4, ls='--', label='Wetzel; z = '+str(zbin) ) 
-    
-    subs.set_title('Snapshots')
+
     subs.set_xlim([9.0, 12.0])
     subs.set_ylim([0.0, 1.0])
     subs.set_xlabel('Mass') 
@@ -628,6 +617,7 @@ def plot_snapshot_fqobs(nsnap, fq_type='wetzel', **kwargs):
     fig_file = 'figure/fq_obs_snapshot'+str(nsnap)+'.png'
     fig.savefig(fig_file, bbox_inches='tight')
     fig.clear()
+    plt.close(fig)
 
 def plot_quenching_efold(taus, tau_params): 
     ''' Plot quenching e-fold (tau) as a function of M*
@@ -1082,62 +1072,16 @@ if __name__=='__main__':
     #plot_groupcat_obs_fq(Mrcut=18)
     #plot_groupcat_obs_fq(Mrcut=19)
     #plot_groupcat_obs_fq(Mrcut=20)
+   
     plot_cenque_ssfr_dist_evolution(nsnaps=[1], Mrcut=18, tau='linear')
-    #plot_cenque_quenching_ssfr_dist(12, tau='linear')
-    #plot_cenque_quenching_ssfr_dist(11, tau='linear')
-    #plot_cenque_quenching_ssfr_dist(10, tau='linear')
-    #plot_cenque_quenching_ssfr_dist(9,  tau='linear')
-    #plot_cenque_quenching_ssfr_dist(8,  tau='linear')
-    #plot_cenque_quenching_ssfr_dist(7,  tau='linear')
-    #plot_cenque_quenching_ssfr_dist(6,  tau='linear')
-    #plot_cenque_quenching_ssfr_dist(5,  tau='linear')
-    #plot_cenque_quenching_ssfr_dist(4,  tau='linear')
-    #plot_cenque_quenching_ssfr_dist(3,  tau='linear')
-    #plot_cenque_quenching_ssfr_dist(2,  tau='linear')
-    #plot_cenque_quenching_ssfr_dist(1,  tau='linear')
+    tau_str = 'linear'
+    for i in range(1,13): 
+        plot_cenque_quenching_ssfr_dist(i, tau=tau_str)
 
-    #plot_cenque_quenching_ssfr_dist(12, tau='instant')
-    #plot_cenque_quenching_ssfr_dist(11, tau='instant')
-    #plot_cenque_quenching_ssfr_dist(10, tau='instant')
-    #plot_cenque_quenching_ssfr_dist(9,  tau='instant')
-    #plot_cenque_quenching_ssfr_dist(8,  tau='instant')
-    #plot_cenque_quenching_ssfr_dist(7,  tau='instant')
-    #plot_cenque_quenching_ssfr_dist(6,  tau='instant')
-    #plot_cenque_quenching_ssfr_dist(5,  tau='instant')
-    #plot_cenque_quenching_ssfr_dist(4,  tau='instant')
-    #plot_cenque_quenching_ssfr_dist(3,  tau='instant')
-    #plot_cenque_quenching_ssfr_dist(2,  tau='instant')
-    #plot_cenque_quenching_ssfr_dist(1,  tau='instant')
+    plot_snapshot_fqobs_evol(nsnaps=[1,2,3,4,5,6,7,8,9,10,11,12], fq_type='wetzelsmooth', tau='linear')
+    for i in range(1,13): 
+        plot_snapshot_fqobs(i, fq_type='wetzelsmooth', tau='linear')
 
-    #plot_snapshot_fqobs_evol(nsnaps=[1,2,3,4,5,6,7,8,9,10,11,12], fq_type='wetzel', tau='linear')
-    #plot_snapshot_fqobs_evol(nsnaps=[1,2,3,4,5,6,7,8,9,10,11,12], fq_type='wetzel', tau='instant')
-    '''
-    plot_snapshot_fqobs(12, fq_type='wetzel', tau='linear')
-    plot_snapshot_fqobs(11, fq_type='wetzel', tau='linear')
-    plot_snapshot_fqobs(10, fq_type='wetzel', tau='linear')
-    plot_snapshot_fqobs(9, fq_type='wetzel',  tau='linear')
-    plot_snapshot_fqobs(8, fq_type='wetzel',  tau='linear')
-    plot_snapshot_fqobs(7, fq_type='wetzel',  tau='linear')
-    plot_snapshot_fqobs(6, fq_type='wetzel',  tau='linear')
-    plot_snapshot_fqobs(5, fq_type='wetzel',  tau='linear')
-    plot_snapshot_fqobs(4, fq_type='wetzel',  tau='linear')
-    plot_snapshot_fqobs(3, fq_type='wetzel',  tau='linear')
-    plot_snapshot_fqobs(2, fq_type='wetzel',  tau='linear')
-    plot_snapshot_fqobs(1, fq_type='wetzel',  tau='linear')
-    '''
-
-    #plot_snapshot_fqobs(12, fq_type='wetzel', tau='instant')
-    #plot_snapshot_fqobs(11, fq_type='wetzel', tau='instant')
-    #plot_snapshot_fqobs(10, fq_type='wetzel', tau='instant')
-    #plot_snapshot_fqobs(9, fq_type='wetzel',  tau='instant')
-    #plot_snapshot_fqobs(8, fq_type='wetzel',  tau='instant')
-    #plot_snapshot_fqobs(7, fq_type='wetzel',  tau='instant')
-    #plot_snapshot_fqobs(6, fq_type='wetzel',  tau='instant')
-    #plot_snapshot_fqobs(5, fq_type='wetzel',  tau='instant')
-    #plot_snapshot_fqobs(4, fq_type='wetzel',  tau='instant')
-    #plot_snapshot_fqobs(3, fq_type='wetzel',  tau='instant')
-    #plot_snapshot_fqobs(2, fq_type='wetzel',  tau='instant')
-    #plot_snapshot_fqobs(1, fq_type='wetzel',  tau='instant')
     ##tau_fig = plot_quenching_efold(['linear', 'linefit'], [[], [-0.15, 0.17]]) 
 
     #plot_ssfms_groupcat(Mrcut=18)
@@ -1152,8 +1096,7 @@ if __name__=='__main__':
     #plot_cenque_sf_mainseq()
 
     #fq_fig = plot_fq_evol_w_geha() 
-    #fq_fig = plot_fq_evol()
-    #fq_fig.savefig('figure/tinker/fq_evol_fig_lit.png', bbox_inches='tight')
+    #plot_fq_evol()
 
     #tau_fig = plot_quenching_efold() 
     #tau_fig.savefig('figure/quenching_efold_fig.png', bbox_inches='tight')

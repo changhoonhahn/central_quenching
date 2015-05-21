@@ -126,7 +126,7 @@ class CenQue:
             # get quiescent fraction for mass bin at z_snapshot 
             #mass_bin_qf = util.get_fquenching(mass_bins.mass_mid[i_m], self.zsnap, 
             #        yint=kwargs['fqing_yint'])
-            mass_bin_qf = util.get_fq(mass_bins.mass_mid[i_m], self.zsnap, lit='wetzel') 
+            mass_bin_qf = util.get_fq(mass_bins.mass_mid[i_m], self.zsnap, lit='wetzelsmooth') 
 
             # Ngal,quiescent in mass bin
             mass_bin_n_q = int( np.rint(mass_bin_qf * np.float(mass_bin_ngal)) ) 
@@ -510,7 +510,9 @@ def EvolveCenQue(origin_nsnap, final_nsnap, mass_bin=None, **kwargs):
         child_cq.ssfr[q_child_indx] = parent_cq.ssfr[q_child_parent_indx]
         child_cq.sfr[q_child_indx] = child_cq.ssfr[q_child_indx] + \
                 child_cq.mass[q_child_indx]
-       
+        
+        quenching_fractions = [] 
+        quenching_fractionss = [] 
         for i_m in range(mass_bins.nbins):              
             
             # boolean list for mass range
@@ -530,7 +532,7 @@ def EvolveCenQue(origin_nsnap, final_nsnap, mass_bin=None, **kwargs):
                 continue 
             
             # observed quiescent fraction at M* and z
-            mbin_qf = util.get_fq(mass_bins.mass_mid[i_m], child_cq.zsnap, lit='wetzel') 
+            mbin_qf = util.get_fq(mass_bins.mass_mid[i_m], child_cq.zsnap, lit='wetzelsmooth') 
 
             print 'nsnap = ', child_cq.nsnap, ' z = ', child_cq.zsnap, ' M* = ', mass_bins.mass_mid[i_m], ' fq = ', mbin_qf
             
@@ -590,35 +592,64 @@ def EvolveCenQue(origin_nsnap, final_nsnap, mass_bin=None, **kwargs):
                 -(child_cq.t_cosmic - parent_cq.t_cosmic) / taus 
                 ))      
             #print child_cq.parent_sfr[mbin_sf_index] + tau_quench - child_cq.mass[mbin_sf_index]
-            print tau_quench
-            print min(child_cq.sfr[mbin_sf_index] + tau_quench - child_cq.mass[mbin_sf_index])
-            print max(child_cq.sfr[mbin_sf_index] + tau_quench - child_cq.mass[mbin_sf_index])
+            #print tau_quench
+            #print min(child_cq.sfr[mbin_sf_index] + tau_quench - child_cq.mass[mbin_sf_index])
+            #print max(child_cq.sfr[mbin_sf_index] + tau_quench - child_cq.mass[mbin_sf_index])
 
             sfqs = util.sfq_classify(child_cq.mass[mbin_sf_index], child_cq.sfr[mbin_sf_index] + tau_quench, child_cq.zsnap)
             ngal_totalq = np.float(np.sum(sfqs == 'quiescent'))
-            print min(child_cq.sfr[mbin_sf_index[sfqs == 'quiescent']] + tau_quench[sfqs == 'quiescent'] - child_cq.mass[mbin_sf_index[sfqs == 'quiescent']])
-            print max(child_cq.sfr[mbin_sf_index[sfqs == 'quiescent']] + tau_quench[sfqs == 'quiescent'] - child_cq.mass[mbin_sf_index[sfqs == 'quiescent']])
+            #print min(child_cq.sfr[mbin_sf_index[sfqs == 'quiescent']] + tau_quench[sfqs == 'quiescent'] - child_cq.mass[mbin_sf_index[sfqs == 'quiescent']])
+            #print max(child_cq.sfr[mbin_sf_index[sfqs == 'quiescent']] + tau_quench[sfqs == 'quiescent'] - child_cq.mass[mbin_sf_index[sfqs == 'quiescent']])
     
             if ngal_totalq == 0: 
                 raise NameError("What the fuck") 
-
+            #print 'ngal_totalq', ngal_totalq
+            
+            '''
             #quenching_fraction = np.float(ngal_2quench)/ngal_totalq
-            quenching_fraction = 0.1 + 0.066 * (mass_bins.mass_mid[i_m] - 11.0)
-            quenching_fraction = 
+            if mass_bins.mass_mid[i_m] < 9.5: 
+                alpha = 0.5 
+            elif (mass_bins.mass_mid[i_m] >= 9.5) & (mass_bins.mass_mid[i_m] < 10.0): 
+                alpha = 0.5
+            elif (mass_bins.mass_mid[i_m] >= 10.0) & (mass_bins.mass_mid[i_m] < 10.5): 
+                alpha = 0.75
+            elif (mass_bins.mass_mid[i_m] >= 10.5) & (mass_bins.mass_mid[i_m] < 11.0): 
+                alpha = 0.75 
+            elif (mass_bins.mass_mid[i_m] >= 11.0) & (mass_bins.mass_mid[i_m] < 11.5): 
+                alpha = 2.0
+            elif (mass_bins.mass_mid[i_m] < 11.5): 
+                alpha = 2.0 
+            '''
+            alpha = 1.0
+            quenching_fraction = 0.05 * (mass_bins.mass_mid[i_m] - 9.5) * (1.8 - child_cq.zsnap)**alpha 
+            quenching_fractions.append(quenching_fraction)
+
+            quenching_fraction = np.float(ngal_2quench)/np.float(ngal_totalq)
+            quenching_fractionss.append(quenching_fraction)
+
+            if mass_bins.mass_mid[i_m] < 10.75: 
+                alpha = 1.0
+                quenching_fraction = 0.05 * (mass_bins.mass_mid[i_m] - 9.5) * (1.8 - child_cq.zsnap)**alpha 
+            else: 
+                quenching_fraction = np.float(ngal_2quench)/np.float(ngal_totalq)
+                quenching_fractionss.append(quenching_fraction)
+
             if quenching_fraction < 0.0: 
                 quenching_fraction = 0.0
-            print 'ngal_totalq', ngal_totalq
-            print 'quenching fraction ', quenching_fraction
+            elif quenching_fraction > 1.0: 
+                quenching_fraction = 1.0
+            #print 'quenching fraction ', quenching_fraction
             if quenching_fraction == 0.0: 
                 continue
             
-            if quenching_fraction > 0.4: 
-                #raise NameError('asdfasdfasdf')
-                #quench_index = mbin_sf_index
-                print 'QUENCHING FRACTION TOO LARGE ******************************************************************'
-                quench_index = random.sample(mbin_sf_index, ngal_2quench) 
-            else: 
-                quench_index = random.sample(mbin_sf_index, int( np.rint(quenching_fraction * np.float(mbin_sf_ngal) ) ) )
+
+            #if quenching_fraction > 1.0: 
+            #    #raise NameError('asdfasdfasdf')
+            #    #quench_index = mbin_sf_index
+            #    print 'QUENCHING FRACTION TOO LARGE ******************************************************************'
+            #    quench_index = random.sample(mbin_sf_index, ngal_2quench) 
+            #else: 
+            quench_index = random.sample(mbin_sf_index, int( np.rint(quenching_fraction * np.float(mbin_sf_ngal) ) ) )
             
             #quench_index = random.sample(mbin_sf_index, ngal_2quench) 
             
@@ -642,13 +673,15 @@ def EvolveCenQue(origin_nsnap, final_nsnap, mass_bin=None, **kwargs):
                 -(child_cq.t_cosmic - parent_cq.t_cosmic) / child_cq.tau[quench_index]
                 ))      
 
-
             child_cq.sfr[quench_index] = child_cq.parent_sfr[quench_index] + tau_quench 
             child_cq.ssfr[quench_index] = child_cq.sfr[quench_index] - child_cq.mass[quench_index]
 
             q_ssfr_mean = util.get_q_ssfr_mean(child_cq.mass[quench_index]) 
             child_cq.q_ssfr[quench_index] = 0.18 * np.random.randn(len(quench_index)) + q_ssfr_mean 
         
+        print child_cq.zsnap
+        print quenching_fractions
+        print quenching_fractionss
         # deal with orphans
 
         print len(child_cq.gal_type[child_cq.gal_type == '']), ' child galaxies are orphans' 

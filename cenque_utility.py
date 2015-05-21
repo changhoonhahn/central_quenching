@@ -84,6 +84,20 @@ def get_fq(Mstar, z_in, lit='cosmosinterp'):
             output = 1.0 
 
         return output 
+    
+    elif lit == 'wetzelsmooth': 
+
+        qf_z0 = -6.04 + 0.63*Mstar
+        alpha = -1.5
+
+        output = qf_z0 * ( 1.0 + z_in )**alpha 
+        if output < 0.0: 
+            output = 0.0
+        elif output > 1.0: 
+            output = 1.0 
+
+        return output 
+
     else: 
         raise NameError('Not yet coded') 
 
