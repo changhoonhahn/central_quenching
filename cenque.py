@@ -626,13 +626,16 @@ def EvolveCenQue(origin_nsnap, final_nsnap, mass_bin=None, **kwargs):
 
             quenching_fraction = np.float(ngal_2quench)/np.float(ngal_totalq)
             quenching_fractionss.append(quenching_fraction)
+            
+            alpha = 1.0
+            fqing1 = 0.05 * (mass_bins.mass_mid[i_m] - 9.5) * (1.8 - child_cq.zsnap)**alpha 
+                
+            fqing2 = np.float(ngal_2quench)/np.float(ngal_totalq)
 
-            if mass_bins.mass_mid[i_m] < 10.75: 
-                alpha = 1.0
-                quenching_fraction = 0.05 * (mass_bins.mass_mid[i_m] - 9.5) * (1.8 - child_cq.zsnap)**alpha 
+            if (mass_bins.mass_mid[i_m] < 11.0) and (fqing2 > fqing1): 
+                quenching_fraction = fqing1
             else: 
-                quenching_fraction = np.float(ngal_2quench)/np.float(ngal_totalq)
-                quenching_fractionss.append(quenching_fraction)
+                quenching_fraction = fqing2
 
             if quenching_fraction < 0.0: 
                 quenching_fraction = 0.0
@@ -680,6 +683,7 @@ def EvolveCenQue(origin_nsnap, final_nsnap, mass_bin=None, **kwargs):
             child_cq.q_ssfr[quench_index] = 0.18 * np.random.randn(len(quench_index)) + q_ssfr_mean 
         
         print child_cq.zsnap
+        print mass_bins.mass_mid
         print quenching_fractions
         print quenching_fractionss
         # deal with orphans
@@ -712,6 +716,7 @@ def build_cenque_importsnap(**kwargs):
         snap = CenQue() 
         snap.AssignSFR(i_snap, **kwargs) 
         snap.writeout(nsnap=i_snap, file_type='sf assign', **kwargs)
+
         #snap.ImportSnap(nsnap=i_snap)
         #snap.writeout(nsnap=i_snap)
 
@@ -722,7 +727,7 @@ if __name__=='__main__':
     #EvolveCenQue(13, 1, fq='wetzel', tau='linear') 
                         
     #build_cenque_importsnap(fqing_yint=-5.0)
-    #build_cenque_importsnap()
+    build_cenque_importsnap()
     #EvolveCenQue(13, 1, fqing_yint=-5.84, tau='instant')  
     #tau='linefit', tau_param=[-0.5, 0.4]) 
     #EvolveCenQue(13, 1, fqing_yint=-5.84, tau='linefit', tau_param=[-0.4, 0.2])

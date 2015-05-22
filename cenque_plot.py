@@ -84,6 +84,14 @@ def plot_cenque_ssfr_dist(cenque, fig=None, **kwargs):
         sub = fig.add_subplot(1, 4, i_mass+1)       # panel subplot 
         sub.plot(ssfr_bin_mid, ssfr_hist, 
                 color=line_color, lw=line_width, ls=line_style, label=ssfr_hist_label) 
+    
+        if cenque.zsnap: 
+            ssfr_cut = -11.3 + 0.76*(cenque.zsnap - 0.05) - 0.44 * (panel_mass[0] - 10.5)
+            sub.vlines( ssfr_cut, 0.0, 2.0, colors='black', linestyles='dashed')
+            ssfr_cut = -11.3 + 0.76*(cenque.zsnap - 0.05) - 0.44 * ( 0.5*(panel_mass[0]+panel_mass[1]) - 10.5)
+            sub.vlines( ssfr_cut, 0.0, 2.0, colors='black', linestyles='solid')
+            ssfr_cut = -11.3 + 0.76*(cenque.zsnap - 0.05) - 0.44 * (panel_mass[1] - 10.5)
+            sub.vlines( ssfr_cut, 0.0, 2.0, colors='black', linestyles='dashed')
 
         #sub.text(-12.0, 1.2, r'$N_{gal}='+str(ngal_bin)+'$')
         if new_plot == True:        # put mass labels in panels 
@@ -141,7 +149,8 @@ def plot_cenque_ssfr_dist_evolution(Mrcut=18, **kwargs):
     # overplot SDSS group catalog sSFR dist
     central_ssfr = cq_group.central_catalog(Mrcut=Mrcut) 
     ssfr_fig = plot_cenque_ssfr_dist(central_ssfr, fig=ssfr_fig, label= 'Mrcut = '+str(Mrcut)) 
-   
+    
+    # file name ----------------------------------------------------------------------------
     # sfms specifier
     if 'sfms_slope' in kwargs.keys(): 
         slope_str = str("%.2f" % kwargs['sfms_slope']) 
@@ -460,6 +469,67 @@ def plot_fq_evol():
     subs[0].set_ylabel('Quiescent Fraction') 
     subs[0].legend(loc='upper left') 
     fig_name = ''.join(['figure/fq_evol_comp_', '_'.join(fq_types), '.png'])
+    fig.savefig(fig_name, bbox_inches='tight')
+    fig.clear() 
+
+def plot_fq_geha_groupcat(Mrcut=18): 
+    '''
+    Plot comparison of Modified Tinker Catalog fq from Geha and SDSS group catalog 
+
+    '''
+    mass_bin = util.simple_mass_bin()                    # mass bin 
+       
+    prettyplot()        # make pretty 
+    pretty_colors = prettycolors() 
+    
+    # load literature data 
+    # modified tinker
+    mod_tink_file = ''.join(['dat/central_quenching/literature/modified_tinker_fq.dat']) 
+    mod_tink_mass, mod_tink_fq = np.loadtxt(mod_tink_file, unpack=True, usecols=[0,1])   
+    
+    # read group catalog 
+    central = cq_group.central_catalog(Mrcut=Mrcut) 
+    central_z = central.z    # redshifts 
+    median_z = np.median(central_z)
+   
+    fq_mass, fq = [], [] 
+
+    mass_bins = util.simple_mass_bin() 
+    for i_m in range(mass_bins.nbins): 
+
+        mass_bin_low = round(mass_bins.mass_low[i_m], 2)        # for floating point errors
+        mass_bin_mid = round(mass_bins.mass_mid[i_m], 2)
+        mass_bin_high = round(mass_bins.mass_high[i_m], 2) 
+
+        # boolean list for mass range
+        mass_bin_bool = (central.mass > mass_bin_low) & (central.mass <= mass_bin_high)
+        
+        if np.sum(mass_bin_bool) < 10: 
+            continue 
+
+        sfqs = util.sfq_classify( central.mass[mass_bin_bool], central.sfr[mass_bin_bool], median_z ) 
+        ngal = np.float(len(sfqs))
+        ngal_q = np.float(np.sum(sfqs == 'quiescent')) 
+        fq_mass.append(mass_bin_mid) 
+        fq.append(ngal_q/ngal) 
+
+    fig = plt.figure(figsize=[5, 5]) 
+    sub = fig.add_subplot(111)
+
+    sub.plot(mod_tink_mass, mod_tink_fq, 
+        color='black', lw=6, ls='--', label='Modified Tinker Group' ) 
+    
+    sub.plot(fq_mass, fq, 
+            color='black', lw=6, label=r'SDSS Group Catalog; z = '+str(median_z))
+
+    sub.set_xlim([9.0, 12.0])
+    sub.set_ylim([0.0, 1.0])
+
+    sub.set_xlabel('Mass') 
+    sub.set_ylabel('Quiescent Fraction') 
+    sub.legend(loc='upper left') 
+
+    fig_name = ''.join(['figure/fq_evol_groupcat', str(Mrcut), '_geha_comp.png'])
     fig.savefig(fig_name, bbox_inches='tight')
     fig.clear() 
 
@@ -1026,7 +1096,7 @@ def plot_groupcat_obs_fq(Mrcut=18):
     for i_z, z in enumerate(zbin): 
 
         # plot fq(Mass) 
-        fq_fit = [util.get_fq(mass_bins.mass_mid[i], z, lit='wetzel') 
+        fq_fit = [util.get_fq(mass_bins.mass_mid[i], z, lit='wetzelsmooth') 
                 for i in range(len(mass_bins.mass_mid))]
         sub.plot(mass_bins.mass_mid, fq_fit, 
                 color=pretty_colors[i_z], lw=4, ls='--', label='z = '+str(z) ) 
@@ -1069,10 +1139,15 @@ if __name__=='__main__':
     #plot_cenque_quenching_ssfr_dist(10, fqing_yint=-5.84, tau='linear')
     #plot_cenque_quenching_ssfr_dist(1, fqing_yint=-5.84, tau='constant')
     #plot_cenque_quenching_ssfr_dist(1, fqing_yint=-5.84, tau='linefit', tau_param=[-0.15, 0.17])
-    #plot_groupcat_obs_fq(Mrcut=18)
-    #plot_groupcat_obs_fq(Mrcut=19)
-    #plot_groupcat_obs_fq(Mrcut=20)
-   
+    plot_groupcat_obs_fq(Mrcut=18)
+    plot_groupcat_obs_fq(Mrcut=19)
+    plot_groupcat_obs_fq(Mrcut=20)
+    #plot_fq_geha_groupcat(Mrcut=18) 
+    #plot_fq_geha_groupcat(Mrcut=19) 
+    #plot_fq_geha_groupcat(Mrcut=20) 
+    
+    plot_cenque_ssfr_dist_evolution(nsnaps=[1], Mrcut=20, tau='linear')
+    plot_cenque_ssfr_dist_evolution(nsnaps=[1], Mrcut=19, tau='linear')
     plot_cenque_ssfr_dist_evolution(nsnaps=[1], Mrcut=18, tau='linear')
     tau_str = 'linear'
     for i in range(1,13): 
