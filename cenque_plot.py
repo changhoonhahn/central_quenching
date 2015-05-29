@@ -86,11 +86,11 @@ def plot_cenque_ssfr_dist(cenque, fig=None, **kwargs):
                 color=line_color, lw=line_width, ls=line_style, label=ssfr_hist_label) 
     
         if cenque.zsnap: 
-            ssfr_cut = -11.3 + 0.76*(cenque.zsnap - 0.05) - 0.44 * (panel_mass[0] - 10.5)
+            ssfr_cut = -11.15 + 0.76*(cenque.zsnap - 0.05) - 0.35 * (panel_mass[0] - 10.5)
             sub.vlines( ssfr_cut, 0.0, 2.0, colors='black', linestyles='dashed')
-            ssfr_cut = -11.3 + 0.76*(cenque.zsnap - 0.05) - 0.44 * ( 0.5*(panel_mass[0]+panel_mass[1]) - 10.5)
+            ssfr_cut = -11.15 + 0.76*(cenque.zsnap - 0.05) - 0.35 * ( 0.5*(panel_mass[0]+panel_mass[1]) - 10.5)
             sub.vlines( ssfr_cut, 0.0, 2.0, colors='black', linestyles='solid')
-            ssfr_cut = -11.3 + 0.76*(cenque.zsnap - 0.05) - 0.44 * (panel_mass[1] - 10.5)
+            ssfr_cut = -11.15 + 0.76*(cenque.zsnap - 0.05) - 0.35 * (panel_mass[1] - 10.5)
             sub.vlines( ssfr_cut, 0.0, 2.0, colors='black', linestyles='dashed')
 
         #sub.text(-12.0, 1.2, r'$N_{gal}='+str(ngal_bin)+'$')
@@ -473,14 +473,23 @@ def plot_fq_evol():
     fig.clear() 
 
 def plot_fq_geha_groupcat(Mrcut=18): 
-    '''
-    Plot comparison of Modified Tinker Catalog fq from Geha and SDSS group catalog 
+    ''' Plot comparison of Modified Tinker Catalog fq from Geha and SDSS group catalog 
+
+    Notes
+    -----
+    * Mrcut should only be = 18 because the modified tinker catalog is constructed from Mrcut=-18 with z <= 0.06. 
+    * SDSS Group Catalog fQ is calculated based on SFR-M* cut. 
+    * Geha Modified Tinker catalog fQ is calculated based on EW Halpha and Dn4000. 
+    * Should they match?  
 
     '''
     mass_bin = util.simple_mass_bin()                    # mass bin 
        
     prettyplot()        # make pretty 
     pretty_colors = prettycolors() 
+
+    if Mrcut != 18: 
+        print 'Mrcut should only be = 18 because the modified tinker catalog is constructed from Mrcut=-18 with z <= 0.06.'
     
     # load literature data 
     # modified tinker
@@ -513,7 +522,7 @@ def plot_fq_geha_groupcat(Mrcut=18):
         fq_mass.append(mass_bin_mid) 
         fq.append(ngal_q/ngal) 
 
-    fig = plt.figure(figsize=[5, 5]) 
+    fig = plt.figure(figsize=[8, 8]) 
     sub = fig.add_subplot(111)
 
     sub.plot(mod_tink_mass, mod_tink_fq, 
@@ -1139,16 +1148,17 @@ if __name__=='__main__':
     #plot_cenque_quenching_ssfr_dist(10, fqing_yint=-5.84, tau='linear')
     #plot_cenque_quenching_ssfr_dist(1, fqing_yint=-5.84, tau='constant')
     #plot_cenque_quenching_ssfr_dist(1, fqing_yint=-5.84, tau='linefit', tau_param=[-0.15, 0.17])
-    plot_groupcat_obs_fq(Mrcut=18)
-    plot_groupcat_obs_fq(Mrcut=19)
-    plot_groupcat_obs_fq(Mrcut=20)
+    #plot_groupcat_obs_fq(Mrcut=18)
+    #plot_groupcat_obs_fq(Mrcut=19)
+    #plot_groupcat_obs_fq(Mrcut=20)
+
     #plot_fq_geha_groupcat(Mrcut=18) 
-    #plot_fq_geha_groupcat(Mrcut=19) 
-    #plot_fq_geha_groupcat(Mrcut=20) 
-    
-    plot_cenque_ssfr_dist_evolution(nsnaps=[1], Mrcut=20, tau='linear')
+   
+    plot_cenque_ssfr_dist_evolution(nsnaps=[2], Mrcut=20, tau='linear')
     plot_cenque_ssfr_dist_evolution(nsnaps=[1], Mrcut=19, tau='linear')
     plot_cenque_ssfr_dist_evolution(nsnaps=[1], Mrcut=18, tau='linear')
+    
+    '''
     tau_str = 'linear'
     for i in range(1,13): 
         plot_cenque_quenching_ssfr_dist(i, tau=tau_str)
@@ -1156,7 +1166,7 @@ if __name__=='__main__':
     plot_snapshot_fqobs_evol(nsnaps=[1,2,3,4,5,6,7,8,9,10,11,12], fq_type='wetzelsmooth', tau='linear')
     for i in range(1,13): 
         plot_snapshot_fqobs(i, fq_type='wetzelsmooth', tau='linear')
-
+    '''
     ##tau_fig = plot_quenching_efold(['linear', 'linefit'], [[], [-0.15, 0.17]]) 
 
     #plot_ssfms_groupcat(Mrcut=18)

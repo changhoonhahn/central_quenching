@@ -402,7 +402,7 @@ def sfq_classify(mstar, sfr, z_in, Mrcut=18, clobber=False):
 
     #SFR_cut = groupcat_fit_param[0] * (mstar - fid_mass) + SFR_amp - 1.0
     #ssfr_cut = -11.35 + 0.76*(z_in-0.05) - 0.49*(mstar-10.5)
-    ssfr_cut = -11.3 + 0.76*(z_in-0.05) - 0.44*(mstar-10.5)
+    ssfr_cut = -11.15 + 0.76*(z_in-0.05) - 0.35*(mstar-10.5)
     sfr_cut = ssfr_cut + mstar 
 
     sfq = np.empty(len(mstar), dtype=(str,16))
