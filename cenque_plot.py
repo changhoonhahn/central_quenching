@@ -744,7 +744,7 @@ def plot_quenching_efold(taus, tau_params):
         else: 
             tau_str += '_'+tau
 
-        tau_str += tau_str + 'tau'
+        tau_str += 'tau'
 
     subs[0].set_ylabel(r'Quenching e-fold $(\tau)$') 
                 
@@ -1154,20 +1154,22 @@ if __name__=='__main__':
 
     #plot_fq_geha_groupcat(Mrcut=18) 
    
-    plot_cenque_ssfr_dist_evolution(nsnaps=[2], Mrcut=20, tau='linear')
-    plot_cenque_ssfr_dist_evolution(nsnaps=[1], Mrcut=19, tau='linear')
-    plot_cenque_ssfr_dist_evolution(nsnaps=[1], Mrcut=18, tau='linear')
+    #plot_cenque_ssfr_dist_evolution(nsnaps=[2], Mrcut=20, tau='linear')
+    #plot_cenque_ssfr_dist_evolution(nsnaps=[1], Mrcut=19, tau='linear')
+    #plot_cenque_ssfr_dist_evolution(nsnaps=[1], Mrcut=18, tau='linear')
     
-    '''
-    tau_str = 'linear'
-    for i in range(1,13): 
-        plot_cenque_quenching_ssfr_dist(i, tau=tau_str)
+    #plot_quenching_efold(['linear', 'linefit', 'linefit'], [[], [-0.4, 0.2], [-0.5, 0.3]]) 
 
-    plot_snapshot_fqobs_evol(nsnaps=[1,2,3,4,5,6,7,8,9,10,11,12], fq_type='wetzelsmooth', tau='linear')
+    plot_cenque_ssfr_dist_evolution(nsnaps=[2], Mrcut=20, tau='linefit', tau_param=[-0.6, 0.3])
+    plot_cenque_ssfr_dist_evolution(nsnaps=[1], Mrcut=19, tau='linefit', tau_param=[-0.6, 0.3])
+    plot_cenque_ssfr_dist_evolution(nsnaps=[1], Mrcut=18, tau='linefit', tau_param=[-0.6, 0.3])
+    
     for i in range(1,13): 
-        plot_snapshot_fqobs(i, fq_type='wetzelsmooth', tau='linear')
-    '''
-    ##tau_fig = plot_quenching_efold(['linear', 'linefit'], [[], [-0.15, 0.17]]) 
+        plot_cenque_quenching_ssfr_dist(i, tau='linefit', tau_param=[-0.6, 0.3])
+
+    plot_snapshot_fqobs_evol(nsnaps=[1,2,3,4,5,6,7,8,9,10,11,12], fq_type='wetzelsmooth', tau='linefit', tau_param=[-0.6, 0.3])
+    for i in range(1,13): 
+        plot_snapshot_fqobs(i, fq_type='wetzelsmooth', tau='linefit', tau_param=[-0.6, 0.3])
 
     #plot_ssfms_groupcat(Mrcut=18)
     #plot_ssfms_groupcat(Mrcut=19)

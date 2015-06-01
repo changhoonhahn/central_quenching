@@ -466,8 +466,9 @@ def get_quenching_efold(mstar, type='constant', param=None):
     elif type == 'linefit': 
         # param will give slope and yint of pivoted tau line 
         
-        tau = param[0] * (mstar - 10.5) + param[1]
-        tau[ tau < 0.05 ] = 0.05
+        tau = param[0] * (mstar - 11.0) + param[1]
+        #tau = param[0] * (mstar - 10.5) + param[1]  # this was the previous tau linefit (changed on 6/1/2015)
+        tau[ tau < 0.1 ] = 0.1
 
     else: 
         raise NotImplementedError('asdf')
