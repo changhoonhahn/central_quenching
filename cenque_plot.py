@@ -631,8 +631,30 @@ def plot_snapshot_fqobs_evol(nsnaps=[1,2,3,4,5,6,7,8,9,10,11,12],fq_type='wetzel
     subs[1].set_xlabel('Mass') 
 
     subs[0].set_ylabel('Quiescent Fraction') 
+    
+    # Quenching Fraction specifier 
+    if 'fqing_slope' in kwargs.keys(): 
+        fqing_slope_str = str(kwargs['fqing_slope'])
+    else: 
+        fqing_slope_str = str(0.63)
 
-    fig_file = 'figure/fq_obs_snapshot.png'
+    if 'fqing_yint' in kwargs.keys(): 
+        fqing_yint_str = str(kwargs['fqing_yint'])
+    else: 
+        fqing_yint_str = str(-6.04) 
+
+    fqing_str = ''.join([fqing_slope_str, '_', fqing_yint_str, 'fqing']) 
+
+    # tau specifier
+    if kwargs['tau'] == 'discrete': 
+        tau_str = '_'.join( [str("%.1f" % t) for t in kwargs['tau_param']] )+'tau'
+    elif kwargs['tau'] == 'linefit':
+        tau_str = '_'.join( [str("%.2f" % t) for t in kwargs['tau_param']] )+'tau'
+    else: 
+        tau_str = kwargs['tau']+'tau'
+
+    fig_file = ''.join(['figure/', 
+        'fq_obs_snapshots_', tau_str, '_', fqing_str, '.png'])
     fig.savefig(fig_file, bbox_inches='tight')
     fig.clear()
     plt.close(fig)
@@ -693,7 +715,29 @@ def plot_snapshot_fqobs(nsnap, fq_type='wetzel', **kwargs):
     subs.set_ylabel('Quiescent Fraction') 
     subs.legend(loc='upper left') 
 
-    fig_file = 'figure/fq_obs_snapshot'+str(nsnap)+'.png'
+    # Quenching Fraction specifier 
+    if 'fqing_slope' in kwargs.keys(): 
+        fqing_slope_str = str(kwargs['fqing_slope'])
+    else: 
+        fqing_slope_str = str(0.63)
+
+    if 'fqing_yint' in kwargs.keys(): 
+        fqing_yint_str = str(kwargs['fqing_yint'])
+    else: 
+        fqing_yint_str = str(-6.04) 
+
+    fqing_str = ''.join([fqing_slope_str, '_', fqing_yint_str, 'fqing']) 
+
+    # tau specifier
+    if kwargs['tau'] == 'discrete': 
+        tau_str = '_'.join( [str("%.1f" % t) for t in kwargs['tau_param']] )+'tau'
+    elif kwargs['tau'] == 'linefit':
+        tau_str = '_'.join( [str("%.2f" % t) for t in kwargs['tau_param']] )+'tau'
+    else: 
+        tau_str = kwargs['tau']+'tau'
+
+    fig_file = ''.join(['figure/', 
+        'fq_obs_snapshot', str(nsnap), '_', tau_str, '_', fqing_str, '.png'])
     fig.savefig(fig_file, bbox_inches='tight')
     fig.clear()
     plt.close(fig)
@@ -1158,19 +1202,20 @@ if __name__=='__main__':
     #plot_cenque_ssfr_dist_evolution(nsnaps=[1], Mrcut=19, tau='linear')
     #plot_cenque_ssfr_dist_evolution(nsnaps=[1], Mrcut=18, tau='linear')
     
-    #plot_quenching_efold(['linear', 'linefit', 'linefit'], [[], [-0.4, 0.2], [-0.5, 0.3]]) 
-
-    plot_cenque_ssfr_dist_evolution(nsnaps=[2], Mrcut=20, tau='linefit', tau_param=[-0.6, 0.3])
-    plot_cenque_ssfr_dist_evolution(nsnaps=[1], Mrcut=19, tau='linefit', tau_param=[-0.6, 0.3])
-    plot_cenque_ssfr_dist_evolution(nsnaps=[1], Mrcut=18, tau='linefit', tau_param=[-0.6, 0.3])
+    #plot_quenching_efold(['linear', 'linefit', 'linefit'], [[], [-0.6, 0.3], [-0.6, 0.4]]) 
     
-    for i in range(1,13): 
-        plot_cenque_quenching_ssfr_dist(i, tau='linefit', tau_param=[-0.6, 0.3])
+    tau_str = 'linefit'
+    tau_param_str = [-0.6, 0.4]
+    plot_cenque_ssfr_dist_evolution(nsnaps=[2], Mrcut=20, tau=tau_str, tau_param=tau_param_str)
+    plot_cenque_ssfr_dist_evolution(nsnaps=[1], Mrcut=19, tau=tau_str, tau_param=tau_param_str)
+    plot_cenque_ssfr_dist_evolution(nsnaps=[1], Mrcut=18, tau=tau_str, tau_param=tau_param_str)
+    
+    #for i in range(1,13): 
+    #    plot_cenque_quenching_ssfr_dist(i, tau='linefit', tau_param=[-0.6, 0.3])
 
-    plot_snapshot_fqobs_evol(nsnaps=[1,2,3,4,5,6,7,8,9,10,11,12], fq_type='wetzelsmooth', tau='linefit', tau_param=[-0.6, 0.3])
+    plot_snapshot_fqobs_evol(nsnaps=[1,2,3,4,5,6,7,8,9,10,11,12], fq_type='wetzelsmooth', tau=tau_str, tau_param=tau_param_str)
     for i in range(1,13): 
-        plot_snapshot_fqobs(i, fq_type='wetzelsmooth', tau='linefit', tau_param=[-0.6, 0.3])
-
+        plot_snapshot_fqobs(i, fq_type='wetzelsmooth', tau=tau_str, tau_param=tau_param_str)
     #plot_ssfms_groupcat(Mrcut=18)
     #plot_ssfms_groupcat(Mrcut=19)
     #plot_ssfms_groupcat(Mrcut=20)
