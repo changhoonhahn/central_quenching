@@ -1205,13 +1205,13 @@ if __name__=='__main__':
     #plot_quenching_efold(['linear', 'linefit', 'linefit'], [[], [-0.6, 0.3], [-0.6, 0.4]]) 
     
     tau_str = 'linefit'
-    tau_param_str = [-0.6, 0.4]
+    tau_param_str = [-0.65, 0.4]
     plot_cenque_ssfr_dist_evolution(nsnaps=[2], Mrcut=20, tau=tau_str, tau_param=tau_param_str)
     plot_cenque_ssfr_dist_evolution(nsnaps=[1], Mrcut=19, tau=tau_str, tau_param=tau_param_str)
     plot_cenque_ssfr_dist_evolution(nsnaps=[1], Mrcut=18, tau=tau_str, tau_param=tau_param_str)
     
-    #for i in range(1,13): 
-    #    plot_cenque_quenching_ssfr_dist(i, tau='linefit', tau_param=[-0.6, 0.3])
+    for i in range(1,13): 
+        plot_cenque_quenching_ssfr_dist(i, tau=tau_str, tau_param=tau_param_str)
 
     plot_snapshot_fqobs_evol(nsnaps=[1,2,3,4,5,6,7,8,9,10,11,12], fq_type='wetzelsmooth', tau=tau_str, tau_param=tau_param_str)
     for i in range(1,13): 

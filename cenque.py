@@ -621,18 +621,18 @@ def EvolveCenQue(origin_nsnap, final_nsnap, mass_bin=None, **kwargs):
                 alpha = 2.0 
             '''
             alpha = 3.0
-            quenching_fraction = 0.05 * (mass_bins.mass_mid[i_m] - 9.5) * (1.8 - child_cq.zsnap)**alpha 
+            quenching_fraction = 0.1 * (mass_bins.mass_mid[i_m] - 9.5) * (1.8 - child_cq.zsnap)**alpha + 0.05 
             quenching_fractions.append(quenching_fraction)
 
             quenching_fraction = np.float(ngal_2quench)/np.float(ngal_totalq)
             quenching_fractionss.append(quenching_fraction)
             
             alpha = 3.0
-            fqing1 = 0.05 * (mass_bins.mass_mid[i_m] - 9.5) * (1.8 - child_cq.zsnap)**alpha 
+            fqing1 = 0.1 * (mass_bins.mass_mid[i_m] - 9.5) * (1.8 - child_cq.zsnap)**alpha + 0.05
                 
             fqing2 = np.float(ngal_2quench)/np.float(ngal_totalq)
 
-            if (mass_bins.mass_mid[i_m] < 10.75) and (fqing2 > fqing1): 
+            if (mass_bins.mass_mid[i_m] < 10.75): # and (fqing2 > fqing1): 
                 quenching_fraction = fqing1
             else: 
                 quenching_fraction = fqing2
@@ -730,4 +730,4 @@ if __name__=='__main__':
     #EvolveCenQue(13, 1, fqing_yint=-5.84, tau='instant')  
     #tau='linefit', tau_param=[-0.5, 0.4]) 
     #EvolveCenQue(13, 1, fqing_yint=-5.84, tau='linefit', tau_param=[-0.4, 0.2])
-    EvolveCenQue(13, 1, tau='linefit', tau_param=[-0.6, 0.4])
+    EvolveCenQue(13, 1, tau='linefit', tau_param=[-0.65, 0.4])
