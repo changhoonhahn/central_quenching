@@ -189,6 +189,25 @@ def get_sfmsfit_slope_yint_file(slope, yint):
 
     return output_file 
 
+def sf_duty_test(): 
+    ''' Test of Star-Formation duty cycle
+
+    '''
+    n_snaps, z_snap, t_snap, t_wid = np.loadtxt('snapshot_table.dat', 
+            unpack=True, usecols=[0, 2, 3, 4])
+
+    t_snaps = t_snap[n_snaps < 13]
+    print t_snaps
+
+
+    sfr_amp = 0.3 * np.random.randn(1000)   # amplitude
+    sfr_w = 2.0 * np.pi  # frequency
+    sfr_d = 2.0 * np.pi * np.random.uniform(1000)
+
+    sfr_t = lambda t: sfr_amp * np.sin( sfr_w * t - sfr_d )
+    
+    for t in t_snaps: 
+
 # Group catalog SF-MS ----------------
 def build_groupcat_sf(Mrcut=18): 
     ''' Build SF population for the SDSS group catalog for group catalog with specified Mrcut 
@@ -608,13 +627,14 @@ def get_bestfit_envcount_sfms(clobber=False):
         return [f['slope_yint/slope'][:], f['slope_yint/yint'][:]] 
 
 if __name__=='__main__':
-    print get_bestfit_groupcat_sfms(Mrcut=18, clobber=True) 
-    print get_bestfit_groupcat_sfms(Mrcut=19, clobber=True) 
-    print get_bestfit_groupcat_sfms(Mrcut=20, clobber=True) 
+    sf_duty_test()
+    #print get_bestfit_groupcat_sfms(Mrcut=18, clobber=True) 
+    #print get_bestfit_groupcat_sfms(Mrcut=19, clobber=True) 
+    #print get_bestfit_groupcat_sfms(Mrcut=20, clobber=True) 
     #build_groupcat_sf(Mrcut=18)
     #build_groupcat_sf(Mrcut=19)
     #build_groupcat_sf(Mrcut=20)
 
     # SDSS group catalog best fit 
     #groupcat_slope, groupcat_yint = sdss_groupcat_sfms_bestfit()
-    print get_sfmsfit_sfr(groupcat_slope, groupcat_yint)
+    #print get_sfmsfit_sfr(groupcat_slope, groupcat_yint)

@@ -27,8 +27,8 @@ def plot_cenque_ssfr_dist(cenque, fig=None, **kwargs):
     pretty_colors = prettycolors() 
     
     if fig == None: 
-        fig = plt.figure(1, figsize=(25,8))
-        fig.subplots_adjust(hspace=0., wspace=0.)
+        fig = plt.figure(1, figsize=(35,8))
+        #fig.subplots_adjust(hspace=0., wspace=0.)
         new_plot = True
     else: 
         new_plot = False
@@ -81,10 +81,11 @@ def plot_cenque_ssfr_dist(cenque, fig=None, **kwargs):
         else:
             line_width = 4
 
-        sub = fig.add_subplot(1, 4, i_mass+1)       # panel subplot 
+        sub = fig.add_subplot(1, 5, i_mass+1)       # panel subplot 
         sub.plot(ssfr_bin_mid, ssfr_hist, 
                 color=line_color, lw=line_width, ls=line_style, label=ssfr_hist_label) 
-    
+   
+        '''
         if cenque.zsnap: 
             ssfr_cut = -11.15 + 0.76*(cenque.zsnap - 0.05) - 0.35 * (panel_mass[0] - 10.5)
             sub.vlines( ssfr_cut, 0.0, 2.0, colors='black', linestyles='dashed')
@@ -92,10 +93,10 @@ def plot_cenque_ssfr_dist(cenque, fig=None, **kwargs):
             sub.vlines( ssfr_cut, 0.0, 2.0, colors='black', linestyles='solid')
             ssfr_cut = -11.15 + 0.76*(cenque.zsnap - 0.05) - 0.35 * (panel_mass[1] - 10.5)
             sub.vlines( ssfr_cut, 0.0, 2.0, colors='black', linestyles='dashed')
-
+        '''
         #sub.text(-12.0, 1.2, r'$N_{gal}='+str(ngal_bin)+'$')
         if new_plot == True:        # put mass labels in panels 
-            plt.text(-10.75, 1.4, 
+            plt.text(-11.25, 1.4, 
                     r'$\mathtt{log \; M_{*} = ['+str(panel_mass[0])+', '+str(panel_mass[1])+']}$', 
                     fontsize=24)
 
@@ -104,10 +105,10 @@ def plot_cenque_ssfr_dist(cenque, fig=None, **kwargs):
         sub.set_ylim([0.0, 1.6])
         # set y-axes labels
         if i_mass == 0: 
-            sub.set_ylabel(r'$P(log \; SSFR)$') 
+            sub.set_ylabel(r'$\mathtt{P(log \; SSFR)}$') 
         elif i_mass in [1, 2]:
             sub.set_yticklabels([])
-            sub.set_xlabel(r'$log \; SSFR \;[yr^{-1}]$') 
+            sub.set_xlabel(r'$\mathtt{log \; SSFR \;[yr^{-1}]}$') 
         else: 
             sub.set_yticklabels([])
                 
@@ -116,8 +117,32 @@ def plot_cenque_ssfr_dist(cenque, fig=None, **kwargs):
             except UnboundLocalError: 
                 pass
             
-            fig_leg = sub.legend(loc='lower right', prop={'size':'12'})        # legends 
+            fig_leg = sub.legend(loc='lower right', prop={'size':'24'})        # legends 
+    
+    if 'tau' in kwargs.keys(): 
+        sub = fig.add_subplot(1, 5, 5)       # tau panel 
 
+        mass_bin = util.simple_mass_bin()       # mass bin 
+        
+        # satellite quenching fraction 
+        tau_mass = util.get_quenching_efold(np.array(mass_bin.mass_mid), 
+                type='linear') 
+
+        sub.plot(mass_bin.mass_mid, tau_mass, color='black', lw=4, ls='--',
+                label=r'$\tau_\mathtt{satellite}$') 
+        
+        # central quenching fraction 
+        tau_mass = util.get_quenching_efold(np.array(mass_bin.mass_mid), 
+                type=kwargs['tau'], param=kwargs['tau_param']) 
+
+        sub.plot(mass_bin.mass_mid, tau_mass, color=pretty_colors[5], lw=4) 
+        
+        sub.set_xlim([9.0, 12.0])
+        sub.set_ylim([0.0, 1.0])
+        sub.set_xlabel('Mass') 
+        sub.set_ylabel(r'Quenching e-Fold time $\tau$') 
+        sub.yaxis.set_label_position('right')
+        sub.legend(loc='lower left', prop={'size':'24'}) 
     return fig   
 
 def plot_cenque_ssfr_dist_evolution(Mrcut=18, **kwargs): 
@@ -132,7 +157,7 @@ def plot_cenque_ssfr_dist_evolution(Mrcut=18, **kwargs):
     '''
     snap = cq.CenQue() 
     snap.readin(nsnap=13, file_type='sf assign', **kwargs)  # starting CenQue 
-    ssfr_fig = plot_cenque_ssfr_dist(snap, lw=2, line_style='--')      # plot!
+    #ssfr_fig = plot_cenque_ssfr_dist(snap, lw=2, line_style='--')      # plot!
     
     # determine which snapshots to plot 
     if 'nsnaps' in kwargs.keys():   
@@ -144,11 +169,12 @@ def plot_cenque_ssfr_dist_evolution(Mrcut=18, **kwargs):
         next_snap = cq.CenQue() 
         next_snap.readin(nsnap=i_nsnap, file_type='evol from 13', **kwargs) 
         
-        ssfr_fig = plot_cenque_ssfr_dist(next_snap, fig=ssfr_fig) 
+        #ssfr_fig = plot_cenque_ssfr_dist(next_snap, fig=ssfr_fig) 
+        ssfr_fig = plot_cenque_ssfr_dist(next_snap)#, fig=ssfr_fig) 
     
     # overplot SDSS group catalog sSFR dist
     central_ssfr = cq_group.central_catalog(Mrcut=Mrcut) 
-    ssfr_fig = plot_cenque_ssfr_dist(central_ssfr, fig=ssfr_fig, label= 'Mrcut = '+str(Mrcut)) 
+    ssfr_fig = plot_cenque_ssfr_dist(central_ssfr, fig=ssfr_fig, label= r'$M_\mathtt{r,cut} = '+str(Mrcut)+'$', **kwargs) 
     
     # file name ----------------------------------------------------------------------------
     # sfms specifier
@@ -1202,20 +1228,22 @@ if __name__=='__main__':
     #plot_cenque_ssfr_dist_evolution(nsnaps=[1], Mrcut=19, tau='linear')
     #plot_cenque_ssfr_dist_evolution(nsnaps=[1], Mrcut=18, tau='linear')
     
-    #plot_quenching_efold(['linear', 'linefit', 'linefit'], [[], [-0.6, 0.3], [-0.6, 0.4]]) 
+    #plot_quenching_efold(['linear', 'linefit', 'linefit'], [[], [-0.6, 0.3], [-0.7, 0.4]]) 
     
     tau_str = 'linefit'
-    tau_param_str = [-0.65, 0.4]
+    tau_param_str = [-0.7, 0.4]
     plot_cenque_ssfr_dist_evolution(nsnaps=[2], Mrcut=20, tau=tau_str, tau_param=tau_param_str)
     plot_cenque_ssfr_dist_evolution(nsnaps=[1], Mrcut=19, tau=tau_str, tau_param=tau_param_str)
     plot_cenque_ssfr_dist_evolution(nsnaps=[1], Mrcut=18, tau=tau_str, tau_param=tau_param_str)
     
+    '''
     for i in range(1,13): 
         plot_cenque_quenching_ssfr_dist(i, tau=tau_str, tau_param=tau_param_str)
 
     plot_snapshot_fqobs_evol(nsnaps=[1,2,3,4,5,6,7,8,9,10,11,12], fq_type='wetzelsmooth', tau=tau_str, tau_param=tau_param_str)
     for i in range(1,13): 
         plot_snapshot_fqobs(i, fq_type='wetzelsmooth', tau=tau_str, tau_param=tau_param_str)
+    '''
     #plot_ssfms_groupcat(Mrcut=18)
     #plot_ssfms_groupcat(Mrcut=19)
     #plot_ssfms_groupcat(Mrcut=20)
