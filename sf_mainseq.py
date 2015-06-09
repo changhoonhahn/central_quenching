@@ -12,6 +12,7 @@ import matplotlib.pyplot as plt
 import os 
 import mpfit
 import h5py
+from scipy import signal
 
 # --- Local ---
 import cenque as cq
@@ -193,20 +194,55 @@ def sf_duty_test():
     ''' Test of Star-Formation duty cycle
 
     '''
+    prettyplot()
+    pretty_colors = prettycolors()
+
     n_snaps, z_snap, t_snap, t_wid = np.loadtxt('snapshot_table.dat', 
             unpack=True, usecols=[0, 2, 3, 4])
 
     t_snaps = t_snap[n_snaps < 13]
-    print t_snaps
+    nsnaps = n_snaps[n_snaps < 13]
 
+    sfr_gauss = 0.3 * np.random.randn(10000)   # SFR gaussian with 0.3 dex sigma 
+    sfr_w = (2.0 * np.pi)/np.random.uniform(0.1, 0.5, 10000)  # frequency
+    sfr_d = np.random.uniform(0.0, 1.0, 10000)
+    sfr_amp = sfr_gauss / np.sin( sfr_d ) 
+    sfr_t = lambda t: sfr_amp * np.sin( sfr_w * (t - t_snap[n_snaps == 12]) - sfr_d )
 
-    sfr_amp = 0.3 * np.random.randn(1000)   # amplitude
-    sfr_w = 2.0 * np.pi  # frequency
-    sfr_d = 2.0 * np.pi * np.random.uniform(1000)
-
-    sfr_t = lambda t: sfr_amp * np.sin( sfr_w * t - sfr_d )
+    #sfr_A = 0.3 * np.random.randn(10000)
+    #sfr_t = lambda t: sfr_A * signal.sawtooth(sfr_w * (t - t_snap[n_snaps == 12] + sfr_d), width=0.5)
+    #sfr_t = lambda t: sfr_a * (t - t_snap[n_snaps == 12] + sfr_b) % sfr_A
+    #sfr_t = lambda t: sfr_gauss + 0.3
     
-    for t in t_snaps: 
+    fig = plt.figure(1, figsize = (10,10))
+    sub = fig.add_subplot(111)
+    for i_t, t in enumerate(t_snaps): 
+        sfr_hist, sfr_bin_edges = np.histogram(sfr_t(t), range=[-1.0, 1.0], bins=100)
+        sfr_bin_low = sfr_bin_edges[:-1]
+        sfr_bin_high = sfr_bin_edges[1:]
+        sfr_bin_mid = [ 0.5*(sfr_bin_low[i] + sfr_bin_high[i]) 
+                for i in range(len(sfr_bin_low)) ] 
+    
+        sub.plot(sfr_bin_mid, sfr_hist, color=pretty_colors[i_t+1], lw=2, label='Snapshot '+str(n_snaps[i_t]))
+    
+    sfr_hist, sfr_bin_edges = np.histogram(0.3 * np.random.randn(10000), 
+            range=[-1.0, 1.0], bins=100)
+    sub.plot(sfr_bin_mid, sfr_hist, 
+            color='black', lw=4, ls='--', label='Gaussian')
+    sub.set_xlim([-1.0, 1.0])
+    sub.set_xlabel('SFR - average SFR') 
+    sub.legend(loc='upper right') 
+
+    fig2 = plt.figure(2, figsize=(10,10))
+    sub = fig2.add_subplot(111)
+
+    for i in range(1,11): 
+        sub.plot(np.arange(t_snap[n_snaps==12], 15., 0.01), [ sfr_t(t)[i] for t in np.arange(t_snap[n_snaps==12], 15., 0.01) ], 
+                color=pretty_colors[i+1]) 
+    sub.set_xlim([6.8, 9.0])
+    sub.set_ylabel('SFR - average SFR') 
+    sub.set_xlabel('cosmic time (Gyr)') 
+    plt.show() 
 
 # Group catalog SF-MS ----------------
 def build_groupcat_sf(Mrcut=18): 
