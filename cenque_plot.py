@@ -138,7 +138,8 @@ def plot_cenque_ssfr_dist(cenque, fig=None, **kwargs):
         sub.plot(mass_bin.mass_mid, tau_mass, color=pretty_colors[5], lw=4) 
         
         sub.set_xlim([9.0, 12.0])
-        sub.set_ylim([0.0, 1.0])
+        sub.set_ylim([0.05, 2.0])
+        sub.set_yscale('log') 
         sub.set_xlabel('Mass') 
         sub.set_ylabel(r'Quenching e-Fold time $\tau$') 
         sub.yaxis.set_label_position('right')

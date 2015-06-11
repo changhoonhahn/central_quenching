@@ -465,10 +465,10 @@ def EvolveCenQue(origin_nsnap, final_nsnap, mass_bin=None, **kwargs):
     
         ''' SFR evolution is assumed to be equal to the overall change in SFR  
         '''
-        dSFR = child_sfr - parent_sfr
+        dSFRt = child_sfr - parent_sfr          # overall change in SFR
         
         # evolve sf children SFR
-        child_cq.sfr[sf_child_indx] = child_cq.parent_sfr[sf_child_indx] + dSFR   
+        child_cq.sfr[sf_child_indx] = child_cq.parent_sfr[sf_child_indx] + dSFRt
         child_cq.ssfr[sf_child_indx] = child_cq.sfr[sf_child_indx] - child_cq.mass[sf_child_indx]
 
         # Quenching Children ------------------------------------------------        
