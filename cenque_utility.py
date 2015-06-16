@@ -11,6 +11,8 @@ import pyfits as fits
 import matplotlib.pyplot as plt
 import os 
 import mpfit
+from scipy import signal
+from scipy import interpolate
 
 # ---- Local -----
 import cenque as cq 
@@ -497,6 +499,119 @@ def get_q_ssfr_mean(masses, Mrcut=18):
 
     #q_ssfr = np.array([ (-0.7 * mass) - 4.625 for mass in masses ])  
     return q_ssfr 
+
+# integrated mass ---------------------------------------------
+def sfr_squarewave(mass, tcosmic, **sfr_param): 
+    ''' SFR determined by square function 
+
+    Parameters
+    ----------
+    mass : stellar mass 
+    tcosmic : cosmic time 
+    sfr_param : SFR parameters  (amplitude, phase, and frequency) 
+
+    Notes
+    -----
+    * Arbitrary sfr_param will be fed to produce random SFRs
+    * 
+
+    '''
+    sfr_A = sfr_param['amp']
+    sfr_d = sfr_param['phase']
+    sfr_w = sfr_param['freq']
+
+    if sfr_w not float: 
+        if len(sfr_w) != len(mass): 
+            break 
+   
+    dSFR = sfr_A * signal.square(sfr_w * (tcosmic - 6.9048 + sfr_d))    # 
+     
+    z_cosmic = get_zsnap(tcosmic) 
+
+    sfr, sig_sfr = get_sfr_mstar_z_bestfit( mass, z_cosmic, Mrcut=18)
+
+    return sfr + dSFR
+
+def integrated_mass_rk4(sfr, mass, t0, tf, f_retain=0.6, **sfr_param): 
+    ''' Integrated stellar mass using RK4 integration
+    
+    Parameters
+    ----------
+    sfr : SFR python function (for example sfr_squarewave)
+    mass : initial stellar mass  
+    t0 : initial cosmic time 
+    tf : final cosmic time
+    f_retain : fraction of stellar mass not lost from SNe and winds from Wetzel Paper
+    sfr_param : parameters of the SFR function 
+
+    '''
+
+    delt = 0.025 # Gyr
+    iter = np.round( (tf-t0)/delt )
+    delt = (tf - t0)/np.float(iter) 
+    
+    t_n_1 = t0 
+    SFR_n_1 = sfr(mass, t0, **sfr_param)
+    M_n_1 = mass
+    
+    for i in range(iter): 
+        t_n = t_n_1 + delt
+
+        k1 = f_retain * (10.0 ** SFR_n_1)
+        k2 = f_retain * (10.0 ** (
+            SFR_n_1 + sfr(np.log10(10.0**M_n_1 + delt/2.0 * k1), t_n_1 + delt/2.0, **sfr_param) - sfr(M_n_1, t_n_1, **sfr_param)))
+        k3 = f_retain * (10.0 ** (
+            SFR_n_1 + sfr(np.log10(10.0**M_n_1 + delt/2.0 * k2), t_n_1 + delt/2.0, **sfr_param) - sfr(M_n_1, t_n_1, **sfr_param)))
+        k4 = f_retain * (10.0 ** (
+            SFR_n_1 + sfr(np.log10(10.0**M_n_1 + delt * k3), t_n_1 + delt) - sfr(M_n_1, t_n_1, **sfr_param)))
+
+        M_n = np.log10(10.0 ** M_n_1 + 1.0/6.0 * delt * (k1 + 2.0*k2 + 2.0*k3 + k4)) 
+
+        M_n_1 = M_n
+        SFR_n_1 = sfr(M_n, t_n, **sfr_param)
+        t_n_1 = t_n
+    
+    return M_n
+
+# z_snap <--> t_snap ---------------------------------------------
+
+def get_zsnap(tcosmic): 
+    ''' Given cosmic time return redshift using spline interpolation of snapshot table 
+
+    Parameters
+    ----------
+    tcosmic : cosmic time 
+
+    Notes
+    -----
+    * Only worry is that it may take too long
+    '''
+
+    # read in snapshot table file 
+    z, t = np.loadtxt('snapshot_table.dat', unpack=True, usecols=[2, 3]) 
+
+    z_of_t = interpolate.interp1d(z, t) 
+
+    return z_of_t(tcosmic) 
+
+def get_tsnap(redshift): 
+    ''' Given redshift, return cosmic time using spline interpolation of snapshot table
+
+    Parameters
+    ----------
+    redshift : redshift 
+
+    Notes
+    -----
+    * Only worry is that it may take too long
+
+    '''
+    # read in snapshot table file 
+    z, t = np.loadtxt('snapshot_table.dat', unpack=True, usecols=[2, 3]) 
+
+    t_of_z = interpolate.interp1d(t, z) 
+
+    return t_of_z(redshift) 
 
 # fits file treatment -----------------------------------------------------------------------
 class FitsTable:

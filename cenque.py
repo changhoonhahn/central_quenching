@@ -51,6 +51,7 @@ class CenQue:
         self.ilk = snapshot.ilk
         self.snap_index = snapshot.index
         self.pos = snapshot.index 
+        self.halo_mass = snapshot.mass_halo 
 
         # get snapshot redshift/cosmic time data using Andrew's table
         n_snaps, z_snap, t_snap, t_wid = np.loadtxt('snapshot_table.dat', 
@@ -403,7 +404,7 @@ def EvolveCenQue(origin_nsnap, final_nsnap, mass_bin=None, **kwargs):
 
     for i_step in range(0, origin_nsnap - final_nsnap):    # evolve snapshot by snapshot 
 
-        i_snap = origin_nsnap - i_step          # current Nsnap 
+        i_snap = origin_nsnap - i_step  # current Nsnap 
         child_snap = i_snap-1
 
         child_cq = CenQue() 
