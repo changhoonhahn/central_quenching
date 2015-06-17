@@ -427,6 +427,7 @@ def EvolveCenQue(origin_nsnap, final_nsnap, mass_bin=None, **kwargs):
         child_cq.tau = np.array([-999. for i in range(n_child)]) 
         child_cq.parent_sfr = np.array([-999. for i in range(n_child)]) 
         child_cq.parent_mass = np.array([-999. for i in range(n_child)]) 
+        child_cq.halo_mass = np.array([-999. for i in range(n_child)]) 
 
         # parent children match
         # assign indices into dictionaries and then get dictionary values
@@ -443,6 +444,7 @@ def EvolveCenQue(origin_nsnap, final_nsnap, mass_bin=None, **kwargs):
         (child_cq.gal_type)[child_indx] = [(parent_cq.gal_type)[i] for i in parent_indx]
         (child_cq.parent_sfr)[child_indx] = [(parent_cq.sfr)[i] for i in parent_indx]
         (child_cq.parent_mass)[child_indx] = [(parent_cq.mass)[i] for i in parent_indx]
+        (child_cq.halo_mass)[child_indx] = [(parent_cq.halo_mass)[i] for i in parent_indx]
         
         # Star-forming Children ----------------------------------------
         sf_child = (child_cq.gal_type[child_indx] == 'star-forming')
