@@ -12,7 +12,7 @@ import random
 import h5py
 
 #---- Local ----
-import cenque_utility_old as util
+import cenque_utility as util
 import sf_mainseq as sfms
 
 class CenQue: 
@@ -28,6 +28,7 @@ class CenQue:
         self.snap_index = None
         self.pos = None     # position 
         self.gal_type = None    # quiescent/star-forming 
+        self.halo_mass = None 
 
         self.nsnap = None       # n_snapshot 
         self.zsnap = None           # z_snapshot
@@ -36,6 +37,22 @@ class CenQue:
 
     def ImportSnap(self, nsnap): 
         ''' Import snapshot data from TreePM --> SHAM snapshots
+        '''
+
+        snapshot_file = ''.join(['dat/wetzel_tree/', 
+            'subhalo_sham_centrals_snapshot', str(nsnap), '.hdf5']) 
+        f = h5py.File(snapshot_file, 'r')       # read in h5py file 
+        grp = f['cenque_data'] 
+
+        self.mass = grp['mass'][:] 
+        self.parent = grp['parent'][:]
+        self.child = grp['child'][:]
+        self.ilk = grp['ilk'][:]
+        self.snap_index = grp['index'][:]
+        self.pos = grp['pos'][:]
+        self.halo_mass = grp['mass_halo'][:]
+            
+        # Old code that reads in fits rather than hdf5 files 
         '''
         snapshot_dir = 'dat/wetzel_tree/'
         snapshot_file = ''.join([ snapshot_dir, 
@@ -50,8 +67,9 @@ class CenQue:
         self.parent = snapshot.parent
         self.ilk = snapshot.ilk
         self.snap_index = snapshot.index
-        self.pos = snapshot.index 
+        self.pos = snapshot.pos
         self.halo_mass = snapshot.mass_halo 
+        '''
 
         # get snapshot redshift/cosmic time data using Andrew's table
         n_snaps, z_snap, t_snap, t_wid = np.loadtxt('snapshot_table.dat', 
@@ -69,9 +87,25 @@ class CenQue:
         based on quiescent fraction. 
         Then based on the assigned galaxy type 
         assign SSFR & SFR to the stellar masses
+        
+        Parameters
+        ----------
+        self : data class
+        origin_nsnap : # of snapshot  
+        mass_bin : mass bin for SFR assignment
+        sfr : 'sfr_avg' or 'sfr_func'
+
+        Notes
+        -----
+        * kwargs['sfr_avg'] : SFR assignment sampled about the SF-MS average SFR with 
+        randomly sampled SFR residual 
+            
+        * kwargs['sfr_func'] : SFR assignment sampled about the SF-MS average SFR and an 
+            arbitrary sampling of amplitude, phase, and frequency 
+
         '''
         # if AssignSFR is called 
-        if self.mass is None:                   # snapshot not yet imported
+        if self.mass is None:           # snapshot not yet imported
             # import snapshot 
             self.ImportSnap(origin_nsnap) 
         else: 
@@ -101,14 +135,28 @@ class CenQue:
 
             # only keep galaxies within the min and max mass
             self.sample_select(mass_child_limit, 
-                    columns = ['mass', 'parent', 'child', 'ilk', 'snap_index'])          
+                    columns = ['mass', 'halo_mass', 'parent', 'child', 'ilk', 'snap_index'])          
 
         if self.gal_type is None:         
             self.gal_type = np.array(['' for i in range(len(self.mass))], dtype='|S16') 
             self.sfr = np.array([-999. for i in range(len(self.mass))]) 
             self.ssfr = np.array([-999. for i in range(len(self.mass))]) 
+    
+            # SFR parameters
+            if kwargs['sfr'] == 'sfr_func': 
+                # periodic SFR 
+                self.sfr_amp = np.array([-999. for i in range(len(self.mass))])
+                self.sfr_freq = np.array([-999. for i in range(len(self.mass))])
+                self.sfr_phase = np.array([-999. for i in range(len(self.mass))])
 
-        for i_m in range(mass_bins.nbins):              # loop through mass bins and assign SFRs
+            elif kwargs['sfr'] == 'sfr_avg': 
+                self.sfr_resid = np.array([-999. for i in range(len(self.mass))])
+                
+            else: 
+                raise NotImplementedError('asdlkfj') 
+
+        # loop through mass bins and assign SFRs ---------------------------------------------
+        for i_m in range(mass_bins.nbins):              
         
             mass_bin_low = round(mass_bins.mass_low[i_m], 2)        # for floating point errors
             mass_bin_high = round(mass_bins.mass_high[i_m], 2) 
@@ -166,20 +214,38 @@ class CenQue:
                     mass_bin_sf_index = mass_bin_index
                 
                 self.gal_type[mass_bin_sf_index] = 'star-forming'   # label galaxy type 
-                '''
-                get average and scatter of SF main sequence 
-                '''
-                #[sf_avg_sfr, sf_sig_sfr] = util.get_sfr_mstar_z(
-                #        mass_bins.mass_mid[i_m], self.zsnap, lit='primusfit') 
-                #[sf_avg_sfr, sf_sig_sfr] = util.get_sfr_mstar_z_flex(
-                #        mass_bins.mass_mid[i_m], self.zsnap, sfms_sfr_fit) 
+            
+                if kwargs['sfr'] == 'sfr_avg': 
+                    #get average and scatter of SF main sequence 
+                    [sf_avg_sfr, sf_sig_sfr] = util.get_sfr_mstar_z_bestfit(
+                            mass_bins.mass_mid[i_m], self.zsnap, Mrcut=18) 
 
-                [sf_avg_sfr, sf_sig_sfr] = util.get_sfr_mstar_z_bestfit(
-                        mass_bins.mass_mid[i_m], self.zsnap, Mrcut=18) 
+                    #print 'SF Average(SFR) = ', sf_avg_sfr, ' sigma_SFR = ', sf_sig_sfr
+                    self.sfr[mass_bin_sf_index] = sf_sig_sfr * np.random.randn(mass_bin_n_sf) + sf_avg_sfr 
 
-                #print 'SF Average(SFR) = ', sf_avg_sfr, ' sigma_SFR = ', sf_sig_sfr
+                elif kwargs['sfr'] == 'sfr_func': 
+                    # Fluctuating SFR with random amplitude, frequency, and phase 
 
-                self.sfr[mass_bin_sf_index] = sf_sig_sfr * np.random.randn(mass_bin_n_sf) + sf_avg_sfr 
+                    # average and 1sigma of SF-MS 
+                    [sf_avg_sfr, sf_sig_sfr] = util.get_sfr_mstar_z_bestfit(
+                            mass_bins.mass_mid[i_m], self.zsnap, Mrcut=18) 
+
+                    # sfr amplitude, frequency and phase respectively 
+                    self.sfr_amp[mass_bin_sf_index] = \
+                            sf_sig_sfr * np.random.randn(mass_bin_n_sf) 
+                    self.sfr_freq[mass_bin_sf_index] = \
+                            (2.0 * np.pi)/np.random.uniform(0.01, 0.1, mass_bin_n_sf)  
+                    self.sfr_phase[mass_bin_sf_index] = \
+                            np.random.uniform(0.0, 1.0, mass_bin_n_sf)
+                    
+                    self.sfr[mass_bin_sf_index] = util.sfr_squarewave(
+                            self.mass[mass_bin_sf_index], self.t_cosmic, 
+                            amp = self.sfr_amp[mass_bin_sf_index], 
+                            freq = self.sfr_freq[mass_bin_sf_index], 
+                            phase = self.sfr_phase[mass_bin_sf_index])
+                else: 
+                    raise NotImplementedError('asdfkjlkjasdf') 
+
                 self.ssfr[mass_bin_sf_index] = \
                         self.sfr[mass_bin_sf_index] - self.mass[mass_bin_sf_index]
 
@@ -211,62 +277,6 @@ class CenQue:
         for i_col, column in enumerate(grp.keys()): 
             setattr(self, column, grp[column][:])
         f.close() 
-        '''
-        with open(input_file, 'r') as f:
-            for i, line in enumerate(f): 
-                if i == 0: 
-                    header_data = line.split(',') 
-                    header_column = ['nsnap', 'zsnap', 't_cosmic', 't_step'] 
-
-                    for i_head, head in enumerate(header_column): 
-                        if head == 'nsnap': 
-                            header_datum = int((header_data[i_head]).split('=')[1])
-                        else: 
-                            header_datum = float((header_data[i_head]).split('=')[1])
-
-                        # save snapshot information from header 
-                        setattr(self, head, header_datum)       
-                elif i == 1: 
-                    data_columns = map(str.strip, (line.strip()).split(','))
-                else: 
-                    break 
-
-        col_name = [] 
-        col_fmt = [] 
-        for i_col, column in enumerate(data_columns): 
-            if column in ('mass', 'sfr', 'ssfr', 'tau', 
-                    'parent_sfr', 'parent_mass', 'q_ssfr'):                       # floats 
-                col_name.append('flt'+str(i_col))
-                col_fmt.append('float64')
-            elif column in ('parent', 'child', 'ilk', 'snap_index'):    # ints
-                col_name.append('int'+str(i_col))
-                col_fmt.append('int64')
-            elif column in ('gal_type'):                                # strings
-                col_name.append('str'+str(i_col))
-                col_fmt.append('|S16')
-            else: 
-                raise NameError('Something went wrong here') 
-
-        dtypes = [(col_name[i], col_fmt[i]) for i in range(len(col_name))]
-        
-        data = np.genfromtxt(input_file, skiprows=2, delimiter=',', 
-                unpack=True, usecols=range(len(data_columns)), dtype=dtypes)
-
-        #data_float = np.genfromtxt(input_file, skiprows=2, delimiter=',', 
-        #        unpack=True, usecols=flt_cols) 
-        #data_string = np.genfromtxt(input_file, skiprows=2, delimiter=',', 
-        #        unpack=True, usecols=str_cols, dtype='|S16') 
-        #data_int = np.genfromtxt(input_file, skiprows=2, delimiter=',', 
-        #        unpack=True, usecols=int_cols, dtype='int64') 
-
-        # care taken to keep order
-        for i_col, column in enumerate(data_columns): 
-            
-            if column in ('gal_type'): 
-                setattr(self, column, map(str.strip, data[col_name[i_col]])) 
-            else: 
-                setattr(self, column, data[col_name[i_col]]) 
-        '''
 
     def writeout(self, **kwargs): 
         ''' simply outputs specified columns to file
@@ -276,16 +286,25 @@ class CenQue:
         f = h5py.File(output_file, 'w')         # hdf5 file format (open file) 
         grp = f.create_group('cenque_data')     # create group 
     
+        # set output columns 
         if self.sfr is None: 
-            # output columns 
-            columns = ['mass', 'parent', 'child', 'ilk', 'snap_index']
-        elif 'columns' in kwargs.keys(): 
+            # basic 
+            columns = ['mass', 'halo_mass', 'parent', 'child', 'ilk', 'snap_index']
+        elif 'columns' in kwargs.keys():
+            # if columns are specified 
             columns = kwargs['columns']
-        else:       # if SFR/SSFR have been assigned
-            # output columns 
-            columns = ['mass', 'sfr', 'ssfr', 'gal_type', 
-                    'parent', 'child', 'ilk', 'snap_index']
-            
+        else:       
+            # if SFR/SSFR have been assigned
+            if kwargs['sfr'] == 'sfr_func': 
+                columns = ['mass', 'sfr', 'ssfr', 'gal_type', 'halo_mass', 
+                        'sfr_phase, sfr_freq', 'sfr_amp', 
+                        'parent', 'child', 'ilk', 'snap_index']
+            elif kwargs['sfr'] == 'sfr_avg': 
+                columns = ['mass', 'sfr', 'ssfr', 'gal_type', 'halo_mass', 
+                        'sfr_resid', 'parent', 'child', 'ilk', 'snap_index']
+            else: 
+                raise NotImplementedError('kasdflk')
+
         n_cols = len(columns)       # number of columns 
         col_fmt = []                # column format 
     
@@ -303,36 +322,6 @@ class CenQue:
                 grp.attrs[metadatum] = getattr(self, metadatum) 
 
         f.close()  
-        '''
-            try:                # save column data 
-                column_data
-            except NameError: 
-                column_data = [column_attr] 
-            else: 
-                column_data.append( column_attr ) 
-                
-            if column in ('mass', 'sfr', 'ssfr', 'tau', 
-                    'parent_sfr', 'parent_mass', 'q_ssfr'):        # column format
-                col_fmt.append('%10.5f')    # float
-            elif column in ('parent', 'child', 'ilk', 'snap_index'): 
-                col_fmt.append('%d')        # integer
-            elif column in ('gal_type'): 
-                col_fmt.append('%s')        # string
-            else: /
-                raise NameError("column doesn't exist") 
-        
-        # header information 
-        snap_info = ''.join(['n_snap = ', str(self.nsnap), ', z = ', str(self.zsnap), 
-            ', t_cosmic = ', str(self.t_cosmic), ', t_step = ', str(self.t_step), ' \n'])
-        output_header = snap_info+', '.join(columns)+'\n'    # list the columns
-        
-        
-        f = open( output_file, 'w' )
-        f.write( output_header )
-        for i in range(len(column_data[0])): 
-            f.write(', \t'.join( [ str(column_data[j][i]) for j in range(n_cols) ] )+'\n' ) 
-        f.close() 
-        '''
 
     def sample_select(self, bool, columns=None, silent=False): 
         ''' Given boolean list remove False items from data
@@ -343,7 +332,7 @@ class CenQue:
             #print 'Removing ', n_remove, ' elements from ', len(bool)  
     
         if columns is None:         # if data columns aren't specified
-            data_columns = ['mass', 'sfr', 'ssfr', 'gal_type', 
+            data_columns = ['mass', 'halo_mass', 'sfr', 'ssfr', 'gal_type', 
                     'parent', 'child', 'ilk', 'snap_index', 'pos']
         else: 
             data_columns = columns 
@@ -371,7 +360,7 @@ class CenQue:
         '''
         return np.array(range(len(self.mass)))[bool]
 
-def EvolveCenQue(origin_nsnap, final_nsnap, mass_bin=None, **kwargs): 
+def EvolveCenQue(origin_nsnap, final_nsnap, mass_bin=None, silent=True, **kwargs): 
     ''' Evolve SF properties from origin_nsnap to final_nsnap 
     
     Parameters
@@ -399,10 +388,12 @@ def EvolveCenQue(origin_nsnap, final_nsnap, mass_bin=None, **kwargs):
     # import original snap SF prop 
     parent_cq = CenQue()
     parent_cq.readin(nsnap=origin_nsnap, file_type='sf assign', **kwargs)   
-
-    #print 'Quiescent Fraction = ', np.float(len(parent_cq.gal_type[parent_cq.gal_type == 'quiescent']))/np.float(len(parent_cq.gal_type)) 
-
-    for i_step in range(0, origin_nsnap - final_nsnap):    # evolve snapshot by snapshot 
+    
+    if not silent: 
+        print 'Quiescent Fraction = ', np.float(len(parent_cq.gal_type[parent_cq.gal_type == 'quiescent']))/np.float(len(parent_cq.gal_type)) 
+    
+    # evolve snapshot by snapshot ------------------------------------------------------
+    for i_step in range(0, origin_nsnap - final_nsnap):    
 
         i_snap = origin_nsnap - i_step  # current Nsnap 
         child_snap = i_snap-1
@@ -414,10 +405,9 @@ def EvolveCenQue(origin_nsnap, final_nsnap, mass_bin=None, **kwargs):
         child_mass_limit = (child_cq.mass > min(mass_bins.mass_low)) & \
                 (child_cq.mass <= max(mass_bins.mass_high))
         child_cq.sample_select( child_mass_limit, 
-                columns = ['mass', 'parent', 'child', 'ilk', 'snap_index']  
+                columns = ['mass', 'halo_mass', 'parent', 'child', 'ilk', 'snap_index']  
                 )                   
         n_child = len(child_cq.mass)     # number of children left 
-        #print 'Snapshot ', child_snap, ' has ', n_child, ' Galaxies'
 
         # set up columns for assignment 
         child_cq.gal_type = np.array(['' for i in range(n_child)], dtype='|S16') 
@@ -427,7 +417,18 @@ def EvolveCenQue(origin_nsnap, final_nsnap, mass_bin=None, **kwargs):
         child_cq.tau = np.array([-999. for i in range(n_child)]) 
         child_cq.parent_sfr = np.array([-999. for i in range(n_child)]) 
         child_cq.parent_mass = np.array([-999. for i in range(n_child)]) 
-        child_cq.halo_mass = np.array([-999. for i in range(n_child)]) 
+        child_cq.parent_halo_mass = np.array([-999. for i in range(n_child)]) 
+
+        if kwargs['sfr'] == 'sfr_func': 
+            child_cq.sfr_amp = np.array([-999. for i in range(n_child)]) 
+            child_cq.sfr_freq = np.array([-999. for i in range(n_child)]) 
+            child_cq.sfr_phase = np.array([-999. for i in range(n_child)]) 
+
+        elif kwargs['sfr'] == 'sfr_avg': 
+            child_cq.sfr_resid = np.array([-999. for i in range(n_child)]) 
+
+        else: 
+            raise NotImplementedError('asdlkfj') 
 
         # parent children match
         # assign indices into dictionaries and then get dictionary values
@@ -444,6 +445,18 @@ def EvolveCenQue(origin_nsnap, final_nsnap, mass_bin=None, **kwargs):
         (child_cq.gal_type)[child_indx] = [(parent_cq.gal_type)[i] for i in parent_indx]
         (child_cq.parent_sfr)[child_indx] = [(parent_cq.sfr)[i] for i in parent_indx]
         (child_cq.parent_mass)[child_indx] = [(parent_cq.mass)[i] for i in parent_indx]
+        (child_cq.parent_halo_mass)[child_indx] = [(parent_cq.halo_mass)[i] for i in parent_indx]
+       
+        if kwargs['sfr'] == 'sfr_func': 
+            (child_cq.sfr_amp)[child_indx] = [(parent_cq.sfr_amp)[i] for i in parent_indx]
+            (child_cq.sfr_freq)[child_indx] = [(parent_cq.sfr_freq)[i] for i in parent_indx]
+            (child_cq.sfr_phase)[child_indx] = [(parent_cq.sfr_phase)[i] for i in parent_indx]
+
+        elif kwargs['sfr'] == 'sfr_avg': 
+            (child_cq.sfr_resid)[child_indx] = [(parent_cq.sfr_resid)[i] for i in parent_indx]
+
+        else: 
+            raise NotImplementedError('lkajsdfkj')
         
         # Star-forming Children ----------------------------------------
         sf_child = (child_cq.gal_type[child_indx] == 'star-forming')
@@ -459,19 +472,58 @@ def EvolveCenQue(origin_nsnap, final_nsnap, mass_bin=None, **kwargs):
         #        child_cq.zsnap, sfms_sfr_fit)
         #parent_sfr, parent_sig_sfr = util.get_sfr_mstar_z_flex(
         #        parent_cq.mass[sf_child_parent_indx], parent_cq.zsnap, sfms_sfr_fit) 
-
-        child_sfr, child_sig_sfr = util.get_sfr_mstar_z_bestfit(
-                child_cq.mass[sf_child_indx], child_cq.zsnap, Mrcut=18)
-        parent_sfr, parent_sig_sfr = util.get_sfr_mstar_z_bestfit(
-                parent_cq.mass[sf_child_parent_indx], parent_cq.zsnap, Mrcut=18) 
     
-        ''' SFR evolution is assumed to be equal to the overall change in SFR  
-        '''
-        dSFRt = child_sfr - parent_sfr          # overall change in SFR
+        if kwargs['sfr'] == 'sfr_avg': 
+            child_sfr, child_sig_sfr = util.get_sfr_mstar_z_bestfit(
+                    child_cq.mass[sf_child_indx], child_cq.zsnap, Mrcut=18)
+            parent_sfr, parent_sig_sfr = util.get_sfr_mstar_z_bestfit(
+                    parent_cq.mass[sf_child_parent_indx], parent_cq.zsnap, Mrcut=18) 
         
-        # evolve sf children SFR
-        child_cq.sfr[sf_child_indx] = child_cq.parent_sfr[sf_child_indx] + dSFRt
+            ''' SFR evolution is assumed to be equal to the overall change in SFR  
+            '''
+            dSFRt = child_sfr - parent_sfr          # overall change in SFR
+            
+            # evolve sf children SFR
+            child_cq.sfr[sf_child_indx] = child_cq.parent_sfr[sf_child_indx] + dSFRt
+        
+        elif kwargs['sfr'] == 'sfr_funcs': 
+
+            child_cq.sfr[sf_child_indx] = util.sfr_squarewave(
+                    child_cq.mass[sf_child_indx], child_cq.t_cosmic, 
+                    amp = child_cq.sfr_amp[sf_child_indx], 
+                    freq = child_cq.sfr_freq[sf_child_indx], 
+                    phase = child_cq.sfr_phase[sf_child_indx]) 
+
+        else: 
+            raise NotImplementedError('asdflkjadf') 
+
         child_cq.ssfr[sf_child_indx] = child_cq.sfr[sf_child_indx] - child_cq.mass[sf_child_indx]
+        
+        # --------------------------------------------------------------------------------
+        # mass evolution of star-forming galaxies (only star-forming galaxies) 
+        # should quiescent galaxies remain the same mass or adopt SHAM masses? 
+
+        if kwargs['stellmass'].lower() == 'integrated':
+            # integrated stellar mass
+            if kwargs['sfr'] == 'sfr_func': 
+                (child_cq.mass)[sf_child_indx] = util.integrated_mass_rk4(
+                        util.sfr_squarewave, (child_cq.parent_mass)[sf_child_indx], 
+                        parent_cq.t_cosmic, child_cq.t_cosmic, 
+                        amp = (child_cq.sfr_amp)[sf_child_indx], 
+                        freq = (child_cq.sfr_freq)[sf_child_indx], 
+                        phase = (child_cq.sfr_phase)[sf_child_indx])
+
+            elif kwargs['sfr'] == 'sfr_avg': 
+                (child_cq.mass)[sf_child_indx] = util.integrated_mass_rk4(
+                        util.sfr_avg_residual, (child_cq.parent_mass)[sf_child_indx], 
+                        parent_cq.t_cosmic, child_cq.t_cosmic, 
+                        resid = (child_cq.sfr_resid)[sf_child_indx])
+
+        elif kwargs['stellmass'].lower() == 'sham': 
+            # leave stellar mass 
+            pass
+        else: 
+            raise NotImplementedError('asdfasdflkjasdflkj;') 
 
         # Quenching Children ------------------------------------------------        
         try: 
@@ -521,7 +573,8 @@ def EvolveCenQue(origin_nsnap, final_nsnap, mass_bin=None, **kwargs):
             mass_bin_bool = (child_cq.mass > mass_bins.mass_low[i_m]) & \
                     (child_cq.mass <= mass_bins.mass_high[i_m]) & \
                     (child_cq.gal_type != '') 
-            print mass_bins.mass_low[i_m], ' - ', mass_bins.mass_high[i_m]
+            if not silent: 
+                print mass_bins.mass_low[i_m], ' - ', mass_bins.mass_high[i_m]
 
             # indices of galaxies within mass range
             mass_bin_index = child_cq.get_index(mass_bin_bool) 
@@ -535,9 +588,10 @@ def EvolveCenQue(origin_nsnap, final_nsnap, mass_bin=None, **kwargs):
             
             # observed quiescent fraction at M* and z
             mbin_qf = util.get_fq(mass_bins.mass_mid[i_m], child_cq.zsnap, lit='wetzelsmooth') 
-
-            print 'nsnap = ', child_cq.nsnap, ' z = ', child_cq.zsnap, ' M* = ', mass_bins.mass_mid[i_m], ' fq = ', mbin_qf
             
+            if not silent: 
+                print 'nsnap = ', child_cq.nsnap, ' z = ', child_cq.zsnap, ' M* = ', mass_bins.mass_mid[i_m], ' fq = ', mbin_qf
+                
             # Number of expected quiescent galaxies (Ngal,Q_exp)
             mbin_exp_n_q = int( np.rint(mbin_qf * np.float(mbin_ngal)) )    
 
@@ -554,15 +608,17 @@ def EvolveCenQue(origin_nsnap, final_nsnap, mass_bin=None, **kwargs):
             # number of SF galaxies that need to be quenched 
             ngal_2quench = mbin_exp_n_q - mbin_q_ngal 
 
-            print 'sf', mbin_sf_ngal, 'q', mbin_q_ngal
-            print mbin_exp_n_q, ' expected quiescent galaxies' 
-            print 'current fq = ', np.float(mbin_q_ngal)/np.float(mbin_ngal)
-            print ngal_2quench, ' SF galaxies need to be quenched'
+            if not silent: 
+                print 'sf', mbin_sf_ngal, 'q', mbin_q_ngal
+                print mbin_exp_n_q, ' expected quiescent galaxies' 
+                print 'current fq = ', np.float(mbin_q_ngal)/np.float(mbin_ngal)
+                print ngal_2quench, ' SF galaxies need to be quenched'
 
             if ngal_2quench <= 0: 
                 # quenching, overshot in previous snapshot  
                 # move onto next mass bin 
-                print 'Quenching overshot in previous snapshot' 
+                if not silent: 
+                    print 'Quenching overshot in previous snapshot' 
                 pass
                 #continue 
 
@@ -606,25 +662,9 @@ def EvolveCenQue(origin_nsnap, final_nsnap, mass_bin=None, **kwargs):
             if ngal_totalq == 0: 
                 raise NameError("What the fuck") 
             #print 'ngal_totalq', ngal_totalq
-            
-            '''
-            #quenching_fraction = np.float(ngal_2quench)/ngal_totalq
-            if mass_bins.mass_mid[i_m] < 9.5: 
-                alpha = 0.5 
-            elif (mass_bins.mass_mid[i_m] >= 9.5) & (mass_bins.mass_mid[i_m] < 10.0): 
-                alpha = 0.5
-            elif (mass_bins.mass_mid[i_m] >= 10.0) & (mass_bins.mass_mid[i_m] < 10.5): 
-                alpha = 0.75
-            elif (mass_bins.mass_mid[i_m] >= 10.5) & (mass_bins.mass_mid[i_m] < 11.0): 
-                alpha = 0.75 
-            elif (mass_bins.mass_mid[i_m] >= 11.0) & (mass_bins.mass_mid[i_m] < 11.5): 
-                alpha = 2.0
-            elif (mass_bins.mass_mid[i_m] < 11.5): 
-                alpha = 2.0 
-            '''
+
             alpha = 1.5
             quenching_fraction = 0.025 * (mass_bins.mass_mid[i_m] - 9.5) * (1.8 - child_cq.zsnap)**alpha + 0.15
-            #quenching_fraction = 0.2
             quenching_fractions.append(quenching_fraction)
 
             quenching_fraction = np.float(ngal_2quench)/np.float(ngal_totalq)
@@ -632,13 +672,13 @@ def EvolveCenQue(origin_nsnap, final_nsnap, mass_bin=None, **kwargs):
             
             alpha = 1.5
             fqing1 = 0.025 * (mass_bins.mass_mid[i_m] - 9.5) * (1.8 - child_cq.zsnap)**alpha + 0.15
-            #fqing1 = 0.2
                 
             fqing2 = np.float(ngal_2quench)/np.float(ngal_totalq)
 
             if (mass_bins.mass_mid[i_m] < 11.0) and (fqing2 > fqing1): 
                 quenching_fraction = fqing1
-                print '####################################### FQING 2 > FQING 1'
+                if not silent: 
+                    print '####################################### FQING 2 > FQING 1'
             else: 
                 quenching_fraction = fqing2
 
@@ -686,18 +726,19 @@ def EvolveCenQue(origin_nsnap, final_nsnap, mass_bin=None, **kwargs):
             q_ssfr_mean = util.get_q_ssfr_mean(child_cq.mass[quench_index]) 
             child_cq.q_ssfr[quench_index] = 0.18 * np.random.randn(len(quench_index)) + q_ssfr_mean 
         
-        print child_cq.zsnap
-        print mass_bins.mass_mid
-        print quenching_fractions
-        print quenching_fractionss
-        # deal with orphans
+        if not silent: 
+            print child_cq.zsnap
+            print mass_bins.mass_mid
+            print quenching_fractions
+            print quenching_fractionss
 
+        # deal with orphans ------------------------------------------------------------
         print len(child_cq.gal_type[child_cq.gal_type == '']), ' child galaxies are orphans' 
         child_cq.AssignSFR(child_cq.nsnap, **kwargs) 
 
         if len(child_cq.gal_type[child_cq.gal_type == '']) != 0:
             print len(child_cq.gal_type[child_cq.gal_type == '']), ' child galaxies are orphans' 
-            print child_cq.mass[child_cq.gal_type == '']
+            raise NameError('asdflkjasdlfj') 
         
         # deal with galaxies that are being quenched beyond the designated final quenching  
         over_quenched = child_cq.ssfr < child_cq.q_ssfr 
@@ -705,34 +746,43 @@ def EvolveCenQue(origin_nsnap, final_nsnap, mass_bin=None, **kwargs):
         child_cq.tau[over_quenched] = -999.0            # done quenching 
 
         #if child_cq.nsnap == final_nsnap: 
-        child_cq.writeout(nsnap=child_cq.nsnap, file_type='evol from '+str(origin_nsnap), 
-                columns = ['mass', 'sfr', 'ssfr', 'gal_type', 'tau', 'q_ssfr', 
-                    'parent_sfr', 'parent_mass', 'parent', 'child', 'ilk', 'snap_index'], 
-                **kwargs)  
+
+        if kwargs['sfr'] == 'sfr_avg': 
+            child_cq.writeout(nsnap=child_cq.nsnap, file_type='evol from '+str(origin_nsnap), 
+                    columns = ['mass', 'sfr', 'ssfr', 'gal_type', 'tau', 'q_ssfr', 
+                        'halo_mass', 'sfr_resid', 
+                        'parent_sfr', 'parent_mass', 'parent_halo_mass', 'parent', 
+                        'child', 'ilk', 'snap_index'], 
+                    **kwargs)  
+        elif kwargs['sfr'] == 'sfr_func': 
+            child_cq.writeout(nsnap=child_cq.nsnap, file_type='evol from '+str(origin_nsnap), 
+                    columns = ['mass', 'sfr', 'ssfr', 'gal_type', 'tau', 'q_ssfr', 
+                        'halo_mass', 'sfr_amp', 'sfr_freq', 'sfr_phase', 
+                        'parent_sfr', 'parent_mass', 'parent_halo_mass', 'parent', 
+                        'child', 'ilk', 'snap_index'], 
+                    **kwargs)  
 
         parent_cq = child_cq
-        #print 'Quiescent Fraction = ', np.float(len(parent_cq.gal_type[parent_cq.gal_type == 'quiescent']))/np.float(len(parent_cq.gal_type)) 
+
+        if not silent: 
+            print 'Quiescent Fraction = ', np.float(len(parent_cq.gal_type[parent_cq.gal_type == 'quiescent']))/np.float(len(parent_cq.gal_type)) 
 
 def build_cenque_importsnap(**kwargs): 
     ''' 
     '''
     for i_snap in [13]: 
-        snap = CenQue() 
-        snap.AssignSFR(i_snap, **kwargs) 
-        snap.writeout(nsnap=i_snap, file_type='sf assign', **kwargs)
+        snap.ImportSnap(nsnap=i_snap)
+        snap.writeout(nsnap=i_snap)
 
-        #snap.ImportSnap(nsnap=i_snap)
-        #snap.writeout(nsnap=i_snap)
+def build_cenque_original(i_snap=13, **kwargs):
+    snap = CenQue() 
+    snap.AssignSFR(i_snap, **kwargs) 
+    snap.writeout(nsnap=i_snap, file_type='sf assign', **kwargs)
 
 if __name__=='__main__': 
-    #build_cenque_importsnap(fq='wetzel') 
-    #EvolveCenQue(13, 1, fq='wetzel', tau='instant') 
-    #EvolveCenQue(13, 1, fq='wetzel', tau='constant') 
-    #EvolveCenQue(13, 1, fq='wetzel', tau='linear') 
-                        
-    #build_cenque_importsnap(fqing_yint=-5.0)
-    #build_cenque_importsnap()
     #EvolveCenQue(13, 1, fqing_yint=-5.84, tau='instant')  
     #tau='linefit', tau_param=[-0.5, 0.4]) 
     #EvolveCenQue(13, 1, fqing_yint=-5.84, tau='linefit', tau_param=[-0.4, 0.2])
-    EvolveCenQue(13, 1, tau='linefit', tau_param=[-0.7, 0.4])
+    build_cenque_original(sfr='sfr_avg') 
+    EvolveCenQue(13, 1, tau='linefit', tau_param=[-0.7, 0.4], 
+            sfr='sfr_avg', stellmass='sham') 

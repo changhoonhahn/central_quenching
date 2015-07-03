@@ -501,6 +501,29 @@ def get_q_ssfr_mean(masses, Mrcut=18):
     return q_ssfr 
 
 # integrated mass ---------------------------------------------
+def sfr_avg_residual(mass, z_cosmic, **sfr_param): 
+    ''' SFR = average SFR + sampled residual  
+
+    Parameters
+    ----------
+    mass : stellar mass 
+    z_cosmic : redshift 
+    sfr_param : SFR parameters  (residual, 'resid') 
+
+    Notes
+    -----
+
+    '''
+    if 'resid' in sfr_param.keys(): 
+        sfr_resid = sfr_param['resid']
+    else: 
+        raise NameError('asdflkjaskdf') 
+
+    sfr, sig_sfr = get_sfr_mstar_z_bestfit( mass, z_cosmic, Mrcut=18)
+    #print 'SF AVG RESIDUAL function ', sfr
+
+    return sfr + sfr_resid 
+
 def sfr_squarewave(mass, tcosmic, **sfr_param): 
     ''' SFR determined by square function 
 
@@ -520,10 +543,10 @@ def sfr_squarewave(mass, tcosmic, **sfr_param):
     sfr_d = sfr_param['phase']
     sfr_w = sfr_param['freq']
 
-    #if sfr_w not float: 
-    #    if len(sfr_w) != len(mass): 
-    #        break 
-   
+    if not isinstance(sfr_w, float): 
+        if len(sfr_w) != len(mass): 
+            return None
+
     dSFR = sfr_A * signal.square(sfr_w * (tcosmic - 6.9048 + sfr_d))    # 
      
     z_cosmic = get_zsnap(tcosmic) 
@@ -547,7 +570,7 @@ def integrated_mass_rk4(sfr, mass, t0, tf, f_retain=0.6, **sfr_param):
     '''
 
     delt = 0.025 # Gyr
-    iter = np.round( (tf-t0)/delt )
+    iter = int(np.round( (tf-t0)/delt )) 
     delt = (tf - t0)/np.float(iter) 
     
     t_n_1 = t0 
@@ -559,13 +582,19 @@ def integrated_mass_rk4(sfr, mass, t0, tf, f_retain=0.6, **sfr_param):
 
         k1 = f_retain * (10.0 ** SFR_n_1)
         k2 = f_retain * (10.0 ** (
-            SFR_n_1 + sfr(np.log10(10.0**M_n_1 + delt/2.0 * k1), t_n_1 + delt/2.0, **sfr_param) - sfr(M_n_1, t_n_1, **sfr_param)))
+            SFR_n_1 + sfr(np.log10(10.0**M_n_1 + delt/2.0 * k1), t_n_1 + delt/2.0, **sfr_param) \
+                    - sfr(M_n_1, t_n_1, **sfr_param)))
         k3 = f_retain * (10.0 ** (
-            SFR_n_1 + sfr(np.log10(10.0**M_n_1 + delt/2.0 * k2), t_n_1 + delt/2.0, **sfr_param) - sfr(M_n_1, t_n_1, **sfr_param)))
+            SFR_n_1 + sfr(np.log10(10.0**M_n_1 + delt/2.0 * k2), t_n_1 + delt/2.0, **sfr_param) \
+                    - sfr(M_n_1, t_n_1, **sfr_param)))
         k4 = f_retain * (10.0 ** (
-            SFR_n_1 + sfr(np.log10(10.0**M_n_1 + delt * k3), t_n_1 + delt) - sfr(M_n_1, t_n_1, **sfr_param)))
+            SFR_n_1 + sfr(np.log10(10.0**M_n_1 + delt * k3), t_n_1 + delt, **sfr_param) \
+                    - sfr(M_n_1, t_n_1, **sfr_param)))
 
         M_n = np.log10(10.0 ** M_n_1 + 1.0/6.0 * delt * (k1 + 2.0*k2 + 2.0*k3 + k4)) 
+        
+        if np.sum(np.isnan(M_n)) > 0: 
+            raise NameError('asldkfjalkjsdflk;ajsdf') 
 
         M_n_1 = M_n
         SFR_n_1 = sfr(M_n, t_n, **sfr_param)
@@ -671,6 +700,7 @@ def mwrfits(fitstable, filename, columns=[], clobber=1):
     real_fitstable.writeto(filename, clobber=clobber) 
 
 # CenQue file treatment ----------------------------------------------------------------------- 
+"""
 def cenque_file( **kwargs ): 
     ''' Given kwargs get CenQue file name
     
@@ -726,6 +756,122 @@ def cenque_file( **kwargs ):
                 original_nsnap = int(((kwargs['file_type']).split('from'))[-1]) 
 
                 file_type_str = '_evol_from'+str(original_nsnap) 
+               
+                # Tau specifier
+                if kwargs['tau'] == 'discrete': 
+                    tau_str = '_'+'_'.join( [str("%.1f" % t) for t in kwargs['tau_param']] )+'tau'
+                elif kwargs['tau'] == 'linefit':
+                    tau_str = '_line'+'_'.join( [str("%.2f" % t) for t in kwargs['tau_param']] )+'tau'
+                else: 
+                    tau_str = '_'+kwargs['tau']+'tau'
+
+                # Quenching Fraction specifier 
+                if 'fqing_slope' in kwargs.keys(): 
+                    fqing_slope_str = str(kwargs['fqing_slope'])
+                else: 
+                    fqing_slope_str = str(0.63)
+
+                if 'fqing_yint' in kwargs.keys(): 
+                    fqing_yint_str = str(kwargs['fqing_yint'])
+                else: 
+                    fqing_yint_str = str(-6.04) 
+
+                fqing_str = '_'+fqing_slope_str+'_'+fqing_yint_str+'fqing'
+
+                # combine specifiers
+                file_type_str = ''.join([tau_str, fqing_str, file_type_str]) 
+
+            else: 
+                raise NameError("File not specified") 
+    
+        if 'sfms_slope' not in kwargs.keys(): 
+            sfms_param_str = ''
+        else: 
+            slope_str = "%.2f" % kwargs['sfms_slope']
+            yint_str = "%.2f" % kwargs['sfms_yint'] 
+            sfms_param_str = '_sfms_slope'+slope_str+'_yint'+yint_str
+
+        cenque_filename = ''.join(['dat/central_quenching/', 
+            'cenque_centrals_snapshot', str(kwargs['nsnap']), file_type_str, sfms_param_str, 
+            '.hdf5']) 
+
+    return cenque_filename
+    
+"""
+def cenque_file( **kwargs ): 
+    ''' Given kwargs get CenQue file name
+    
+    Parameters (try to keep this up-to-date!)
+    ----------
+    nsnap : snapshot number 
+    file_type : "sf assign", "evol from"
+    tau : "discrete", "linefit", or tau flag
+    sfms_slope : slope of the SF Main Sequence
+    sfms_yint : yint of the SF Main Sequence 
+
+    Notes
+    -----
+    * MORE FILE TYPES WILL BE SPECIFIED
+
+    '''
+
+    if 'input_file' in kwargs.keys(): 
+        cenque_filename = kwargs['input_file']
+    else: 
+        try: 
+            kwargs['nsnap'] 
+        except KeyError:
+            raise KeyError("Specify input file or nsnap + file_type") 
+
+        try: 
+            kwargs['file_type']
+        except KeyError:
+            file_type_str = '' 
+        else: 
+            if min( (kwargs['file_type']).find('sf'), (kwargs['file_type']).find('ass') ) > -1: 
+
+                # star-formation assign (random about average or functional) 
+                if kwargs['sfr'] == 'sfr_avg': 
+                    file_type_str = '_sfravg_sfpropassign'
+                elif kwargs['sfr'] == 'sfr_func': 
+                    file_type_str = '_sfrfunc_sfpropassign'
+                else: 
+                    raise NotImplementedError('asdfasdflkjasdf;lkjasdf') 
+                
+                # Quenching Fraction specifier 
+                if 'fqing_slope' in kwargs.keys(): 
+                    fqing_slope_str = str("%.2f" % kwargs['fqing_slope'])
+                else: 
+                    fqing_slope_str = str("%.2f" % 0.63)
+
+                if 'fqing_yint' in kwargs.keys(): 
+                    fqing_yint_str = str("%.2f" % kwargs['fqing_yint'])
+                else: 
+                    fqing_yint_str = str("%.2f" % -6.04) 
+
+                fqing_str = ''.join([fqing_slope_str, '_', fqing_yint_str, 'fqing']) 
+
+                # combine specifiers
+                file_type_str = ''.join(['_', fqing_str, file_type_str])
+                
+            elif min( (kwargs['file_type']).find('evo'), (kwargs['file_type']).find('from') ) > -1: 
+                # evolved from nsnap
+                original_nsnap = int(((kwargs['file_type']).split('from'))[-1]) 
+            
+                if kwargs['stellmass'].lower() == 'integrated': 
+                    mass_str = '_integ'
+                elif kwargs['stellmass'].lower() == 'sham': 
+                    mass_str = '_sham'
+                else: 
+                    raise NotImplementedError('asdfalkjlkjasdf') 
+
+                # star-formation assign (random about average or functional) 
+                if kwargs['sfr'] == 'sfr_avg': 
+                    file_type_str = mass_str+'_sfravg_evol_from'+str(original_nsnap) 
+                elif kwargs['sfr'] == 'sfr_func': 
+                    file_type_str = mass_str+'_sfrfunc_evol_from'+str(original_nsnap) 
+                else: 
+                    raise NotImplementedError('asdfasdflkjasdf;lkjasdf') 
                
                 # Tau specifier
                 if kwargs['tau'] == 'discrete': 
