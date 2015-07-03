@@ -520,9 +520,9 @@ def sfr_squarewave(mass, tcosmic, **sfr_param):
     sfr_d = sfr_param['phase']
     sfr_w = sfr_param['freq']
 
-    if sfr_w not float: 
-        if len(sfr_w) != len(mass): 
-            break 
+    #if sfr_w not float: 
+    #    if len(sfr_w) != len(mass): 
+    #        break 
    
     dSFR = sfr_A * signal.square(sfr_w * (tcosmic - 6.9048 + sfr_d))    # 
      

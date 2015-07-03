@@ -203,14 +203,15 @@ def sf_duty_test():
     t_snaps = t_snap[n_snaps < 13]
     nsnaps = n_snaps[n_snaps < 13]
 
-    sfr_gauss = 0.3 * np.random.randn(10000)   # SFR gaussian with 0.3 dex sigma 
+    #sfr_gauss = 0.3 * np.random.randn(10000)   # SFR gaussian with 0.3 dex sigma 
     sfr_w = (2.0 * np.pi)/np.random.uniform(0.01, 0.1, 10000)  # frequency
     sfr_d = np.random.uniform(0.0, 1.0, 10000)
+    sfr_A = 0.3 * np.random.randn(10000)
+    sfr_t = lambda t: sfr_A * signal.square(sfr_w * (t - t_snap[n_snaps == 12] + sfr_d))
+
     #sfr_amp = sfr_gauss / np.sin( sfr_d ) 
     #sfr_t = lambda t: sfr_amp * np.sin( sfr_w * (t - t_snap[n_snaps == 12]) - sfr_d )
 
-    sfr_A = 0.3 * np.random.randn(10000)
-    sfr_t = lambda t: sfr_A * signal.square(sfr_w * (t - t_snap[n_snaps == 12] + sfr_d))
     #sfr_t = lambda t: sfr_A * signal.sawtooth(sfr_w * (t - t_snap[n_snaps == 12] + sfr_d), width=0.5)
     #sfr_t = lambda t: sfr_a * (t - t_snap[n_snaps == 12] + sfr_b) % sfr_A
     #sfr_t = lambda t: sfr_gauss + 0.3

@@ -12,7 +12,7 @@ import random
 import h5py
 
 #---- Local ----
-import cenque_utility as util
+import cenque_utility_old as util
 import sf_mainseq as sfms
 
 class CenQue: 
@@ -444,7 +444,6 @@ def EvolveCenQue(origin_nsnap, final_nsnap, mass_bin=None, **kwargs):
         (child_cq.gal_type)[child_indx] = [(parent_cq.gal_type)[i] for i in parent_indx]
         (child_cq.parent_sfr)[child_indx] = [(parent_cq.sfr)[i] for i in parent_indx]
         (child_cq.parent_mass)[child_indx] = [(parent_cq.mass)[i] for i in parent_indx]
-        (child_cq.halo_mass)[child_indx] = [(parent_cq.halo_mass)[i] for i in parent_indx]
         
         # Star-forming Children ----------------------------------------
         sf_child = (child_cq.gal_type[child_indx] == 'star-forming')

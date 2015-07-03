@@ -10,6 +10,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import mpfit
 import scipy.stats as scistat
+import pylab as pyl
 
 #----- Local -----
 from utility.plotting import prettyplot
@@ -158,7 +159,7 @@ def plot_cenque_ssfr_dist_evolution(Mrcut=18, **kwargs):
     '''
     snap = cq.CenQue() 
     snap.readin(nsnap=13, file_type='sf assign', **kwargs)  # starting CenQue 
-    #ssfr_fig = plot_cenque_ssfr_dist(snap, lw=2, line_style='--')      # plot!
+    ssfr_fig = plot_cenque_ssfr_dist(snap, lw=2, line_style='--')      # plot!
     
     # determine which snapshots to plot 
     if 'nsnaps' in kwargs.keys():   
@@ -178,8 +179,7 @@ def plot_cenque_ssfr_dist_evolution(Mrcut=18, **kwargs):
     ssfr_fig = plot_cenque_ssfr_dist(central_ssfr, fig=ssfr_fig, label= r'$M_\mathtt{r,cut} = '+str(Mrcut)+'$', **kwargs) 
     
     # file name ----------------------------------------------------------------------------
-    # sfms specifier
-    if 'sfms_slope' in kwargs.keys(): 
+    if 'sfms_slope' in kwargs.keys():       # sfms specifier
         slope_str = str("%.2f" % kwargs['sfms_slope']) 
         yint_str = str("%.2f" % kwargs['sfms_yint']) 
         sfms_str = '_sfms_slope'+slope_str+'_yint'+yint_str
@@ -206,9 +206,26 @@ def plot_cenque_ssfr_dist_evolution(Mrcut=18, **kwargs):
         tau_str = '_'.join( [str("%.2f" % t) for t in kwargs['tau_param']] )+'tau'
     else: 
         tau_str = kwargs['tau']+'tau'
+    
+    # Stellar mass specifier 
+    if kwargs['stellmass'].lower() == 'integrated': 
+        mass_str = '_integ'
+    elif kwargs['stellmass'].lower() == 'sham': 
+        mass_str = '_sham'
+    else: 
+        raise NotImplementedError('asdfalkjlkjasdf') 
+
+    # SFR specifier
+    if kwargs['sfr'] == 'sfr_avg': 
+        file_type_str = mass_str+'_sfravg'
+    elif kwargs['sfr'] == 'sfr_func': 
+        file_type_str = mass_str+'_sfrfunc'
+    else: 
+        raise NotImplementedError('asdfasdflkjasdf;lkjasdf') 
 
     fig_file = ''.join(['figure/', 
-        'cenque_ssfr_evol_', tau_str, '_', fqing_str, '_Mrcut', str(Mrcut), '.png'])
+        'cenque_ssfr_evol_', tau_str, '_', fqing_str, '_Mrcut', str(Mrcut), 
+        file_type_str, '.png'])
     ssfr_fig.savefig(fig_file, bbox_inches='tight') 
     ssfr_fig.clear() 
     plt.close(ssfr_fig)
@@ -332,9 +349,25 @@ def plot_cenque_quenching_ssfr_dist(nsnap, **kwargs):
         tau_str = '_'.join( [str("%.2f" % t) for t in kwargs['tau_param']] )+'tau'
     else: 
         tau_str = kwargs['tau']+'tau'
+   
+    # Stellar mass specifier 
+    if kwargs['stellmass'].lower() == 'integrated': 
+        mass_str = '_integ'
+    elif kwargs['stellmass'].lower() == 'sham': 
+        mass_str = '_sham'
+    else: 
+        raise NotImplementedError('asdfalkjlkjasdf') 
+
+    # SFR specifier
+    if kwargs['sfr'] == 'sfr_avg': 
+        file_type_str = mass_str+'_sfravg'
+    elif kwargs['sfr'] == 'sfr_func': 
+        file_type_str = mass_str+'_sfrfunc'
+    else: 
+        raise NotImplementedError('asdfalkjlkjasdf') 
 
     fig_file = ''.join(['figure/', 
-        'cenque_ssfr_evol_', tau_str, '_', fqing_str, '_nsnap', str(nsnap), 
+        'cenque_ssfr_evol_', tau_str, '_', fqing_str, file_type_str, '_nsnap', str(nsnap), 
         '_quenching_component.png'])
     fig.savefig(fig_file, bbox_inches='tight') 
     fig.clear() 
@@ -659,6 +692,7 @@ def plot_snapshot_fqobs_evol(nsnaps=[1,2,3,4,5,6,7,8,9,10,11,12],fq_type='wetzel
 
     subs[0].set_ylabel('Quiescent Fraction') 
     
+    # file name ----------------------------------------------------------------
     # Quenching Fraction specifier 
     if 'fqing_slope' in kwargs.keys(): 
         fqing_slope_str = str(kwargs['fqing_slope'])
@@ -680,8 +714,24 @@ def plot_snapshot_fqobs_evol(nsnaps=[1,2,3,4,5,6,7,8,9,10,11,12],fq_type='wetzel
     else: 
         tau_str = kwargs['tau']+'tau'
 
+    # Stellar mass specifier 
+    if kwargs['stellmass'].lower() == 'integrated': 
+        mass_str = '_integ'
+    elif kwargs['stellmass'].lower() == 'sham': 
+        mass_str = '_sham'
+    else: 
+        raise NotImplementedError('asdfalkjlkjasdf') 
+
+    # SFR specifier
+    if kwargs['sfr'] == 'sfr_avg': 
+        file_type_str = mass_str+'_sfravg'
+    elif kwargs['sfr'] == 'sfr_func': 
+        file_type_str = mass_str+'_sfrfunc'
+    else: 
+        raise NotImplementedError('asdfasdflkjasdf;lkjasdf') 
+
     fig_file = ''.join(['figure/', 
-        'fq_obs_snapshots_', tau_str, '_', fqing_str, '.png'])
+        'fq_obs_snapshots_', tau_str, '_', fqing_str, file_type_str, '.png'])
     fig.savefig(fig_file, bbox_inches='tight')
     fig.clear()
     plt.close(fig)
@@ -762,9 +812,25 @@ def plot_snapshot_fqobs(nsnap, fq_type='wetzel', **kwargs):
         tau_str = '_'.join( [str("%.2f" % t) for t in kwargs['tau_param']] )+'tau'
     else: 
         tau_str = kwargs['tau']+'tau'
+    
+    # Stellar mass specifier 
+    if kwargs['stellmass'].lower() == 'integrated': 
+        mass_str = '_integ'
+    elif kwargs['stellmass'].lower() == 'sham': 
+        mass_str = '_sham'
+    else: 
+        raise NotImplementedError('asdfalkjlkjasdf') 
+
+    # SFR specifier
+    if kwargs['sfr'] == 'sfr_avg': 
+        file_type_str = mass_str+'_sfravg'
+    elif kwargs['sfr'] == 'sfr_func': 
+        file_type_str = mass_str+'_sfrfunc'
+    else: 
+        raise NotImplementedError('asdfasdflkjasdf;lkjasdf') 
 
     fig_file = ''.join(['figure/', 
-        'fq_obs_snapshot', str(nsnap), '_', tau_str, '_', fqing_str, '.png'])
+        'fq_obs_snapshot', str(nsnap), '_', tau_str, '_', fqing_str, file_type_str, '.png'])
     fig.savefig(fig_file, bbox_inches='tight')
     fig.clear()
     plt.close(fig)
@@ -1192,6 +1258,338 @@ def plot_groupcat_obs_fq(Mrcut=18):
     fig.savefig(fig_name, bbox_inches='tight') 
     fig.clear() 
 
+# Mhalo-M* ------------------------------------
+def plot_mhalo_mstar(i_nsnap = 1, **kwargs): 
+    ''' Plot Mhalo versus M* of galaxies for CenQue file 
+
+    '''
+    prettyplot() 
+    pretty_colors = prettycolors() 
+
+    # import evolved snapshot 
+    if i_nsnap == 13: 
+        snap = cq.CenQue() 
+        snap.readin(nsnap=i_nsnap, file_type='sf assign', **kwargs) 
+    else: 
+        snap = cq.CenQue() 
+        snap.readin(nsnap=i_nsnap, file_type='evol from 13', **kwargs) 
+
+    mhalo = snap.halo_mass 
+    mstar = snap.mass
+    
+    fig1 = plt.figure(1, figsize=[8,8])
+    sub1 = fig1.add_subplot(111)
+    
+    sub1.scatter(mstar, mhalo, c='b', s=3) 
+
+    mass_bins = util.simple_mass_bin()  # use simplest mass bins
+
+    avg_mhalo, var_mhalo = [], [] 
+    for i_m in range(mass_bins.nbins): 
+        mass_limit = (mstar > mass_bins.mass_low[i_m]) & \
+                (mstar <= mass_bins.mass_high[i_m]) 
+        avg_mhalo.append( np.mean(mhalo[mass_limit]) ) 
+        var_mhalo.append( np.std(mhalo[mass_limit]) ) 
+        
+        #print mass_bins.mass_low[i_m], ' - ', mass_bins.mass_high[i_m]
+        #print min(mhalo[mass_limit]), max(mhalo[mass_limit])
+        #print np.mean(mhalo[mass_limit]), np.std(mhalo[mass_limit])
+         
+    sub1.errorbar(mass_bins.mass_mid, avg_mhalo, yerr=var_mhalo, 
+                lw=4, c=pretty_colors[1])
+
+    sub1.set_xlim([9.0, 11.5]) 
+    sub1.set_xlabel(r'$\mathtt{M_*}$')
+    sub1.set_ylabel(r'$\mathtt{M_{Halo}}$')
+
+    #fig2 = plt.figure(2, figsize=[8,8]) 
+    #sub2 = fig2.add_subplot(111)
+    #sub2.hist2d(mstar, mhalo, bins=[100, 100])
+    #sub2.set_xlim([9.0, 11.5]) 
+    #sub2.set_xlabel(r'$\mathtt{M_*}$')
+    #sub2.set_ylabel(r'$\mathtt{M_{Halo}}$')
+    
+    # figure file name ------------------------------------------------------------
+    
+    # tau specifier
+    if kwargs['tau'] == 'discrete': 
+        tau_str = '_'.join( [str("%.1f" % t) for t in kwargs['tau_param']] )+'tau'
+    elif kwargs['tau'] == 'linefit':
+        tau_str = '_'.join( [str("%.2f" % t) for t in kwargs['tau_param']] )+'tau'
+    else: 
+        tau_str = kwargs['tau']+'tau'
+    
+    # Stellar mass specifier 
+    if kwargs['stellmass'].lower() == 'integrated': 
+        mass_str = '_integ'
+    elif kwargs['stellmass'].lower() == 'sham': 
+        mass_str = '_sham'
+    else: 
+        raise NotImplementedError('asdfalkjlkjasdf') 
+
+    # SFR specifier
+    if kwargs['sfr'] == 'sfr_avg': 
+        file_type_str = mass_str+'_sfravg'
+    elif kwargs['sfr'] == 'sfr_func': 
+        file_type_str = mass_str+'_sfrfunc'
+    else: 
+        raise NotImplementedError('asdfasdflkjasdf;lkjasdf') 
+    
+    fig_name1 = ''.join(['figure/', 
+        'cenque_mstar_mhalo_snapshot', str(i_nsnap), tau_str, file_type_str, 
+        '_scatter.png'])
+    fig_name2 = ''.join(['figure/', 
+        'cenque_mstar_mhalo_snapshot', str(i_nsnap), tau_str, file_type_str, 
+        '_contour.png'])
+    fig1.savefig(fig_name1, bbox_inches='tight')
+    fig1.clear()
+    #fig2.savefig(fig_name2, bbox_inches='tight')
+    #fig2.clear()
+
+def plot_mhalo_mstar_sham_integrated(i_nsnap = 1, **kwargs): 
+    ''' Plot Mhalo versus M* of galaxies for CenQue file 
+
+    '''
+    prettyplot() 
+    pretty_colors = prettycolors()  
+
+    fig1 = plt.figure(1, figsize=[8,8])
+    sub1 = fig1.add_subplot(111)
+    
+    mass_bins = util.simple_mass_bin()  # use simplest mass bins
+
+    for i_mstar, mstar_type in enumerate(['sham', 'integrated']): 
+
+        # import evolved snapshot 
+        if i_nsnap == 13: 
+            snap = cq.CenQue() 
+            snap.readin(nsnap=i_nsnap, file_type='sf assign', **kwargs) 
+        else: 
+            kwargs['stellmass'] = mstar_type
+            snap = cq.CenQue() 
+            snap.readin(nsnap=i_nsnap, file_type='evol from 13', **kwargs) 
+
+        mhalo = snap.halo_mass 
+        mstar = snap.mass
+    
+        #sub1.scatter(mstar, mhalo, c=pretty_colors[i_mstar+1], s=3) 
+
+        avg_mhalo, var_mhalo = [], [] 
+        for i_m in range(mass_bins.nbins): 
+            mass_limit = (mstar > mass_bins.mass_low[i_m]) & \
+                    (mstar <= mass_bins.mass_high[i_m]) 
+            avg_mhalo.append( np.mean(mhalo[mass_limit]) ) 
+            var_mhalo.append( np.std(mhalo[mass_limit]) ) 
+            
+            #print mass_bins.mass_low[i_m], ' - ', mass_bins.mass_high[i_m]
+            #print min(mhalo[mass_limit]), max(mhalo[mass_limit])
+            #print np.mean(mhalo[mass_limit]), np.std(mhalo[mass_limit])
+
+        if mstar_type == 'sham':  
+            sub1.errorbar(mass_bins.mass_mid, avg_mhalo, yerr=var_mhalo, 
+                        lw=4, c=pretty_colors[1], label='SHAM')
+        else: 
+            sub1.errorbar(mass_bins.mass_mid, avg_mhalo, yerr=var_mhalo, 
+                        lw=4, ls='--', c=pretty_colors[3], label='Integrated Mass')
+
+    sub1.set_xlim([9.0, 11.5]) 
+    sub1.set_xlabel(r'$\mathtt{M_*}$', fontsize=24)
+    sub1.set_ylabel(r'$\mathtt{M_{Halo}}$', fontsize=24)
+    sub1.legend(loc='upper left')
+
+    # tau specifier
+    if kwargs['tau'] == 'discrete': 
+        tau_str = '_'.join( [str("%.1f" % t) for t in kwargs['tau_param']] )+'tau'
+    elif kwargs['tau'] == 'linefit':
+        tau_str = '_'.join( [str("%.2f" % t) for t in kwargs['tau_param']] )+'tau'
+    else: 
+        tau_str = kwargs['tau']+'tau'
+    
+    # Stellar mass specifier 
+    mass_str = '_integ_sham_comp'
+
+    # SFR specifier
+    if kwargs['sfr'] == 'sfr_avg': 
+        file_type_str = mass_str+'_sfravg'
+    elif kwargs['sfr'] == 'sfr_func': 
+        file_type_str = mass_str+'_sfrfunc'
+    else: 
+        raise NotImplementedError('asdfasdflkjasdf;lkjasdf') 
+    
+    fig_name1 = ''.join(['figure/', 
+        'cenque_mstar_mhalo_snapshot', str(i_nsnap), tau_str, file_type_str, '.png'])
+    fig1.savefig(fig_name1, bbox_inches='tight')
+    fig1.clear()
+
+def plot_mhalo_mstar_snapshotSHAM(i_nsnap=1): 
+    ''' Plot Mhalo versus M* of galaxies for snapshot data from TreePM --> SHAM 
+
+    Notes
+    -----
+    * Essentially for testing TreePM and SHAM 
+
+
+    '''
+    prettyplot() 
+    pretty_colors = prettycolors() 
+
+    # import TreePM-->SHAM output 
+    snapshot_file = ''.join(['dat/wetzel_tree/', 
+        'subhalo_sham_centrals_snapshot', str(i_nsnap), '.hdf5' 
+        ]) 
+    print snapshot_file 
+    f = h5py.File(snapshot_file, 'r') # read snapshot file
+    grp = f['cenque_data']
+
+    mhalo = grp['mass_halo'][:]
+    mstar = grp['mass'][:]
+    
+    fig1 = plt.figure(1, figsize=[8,8])
+    sub1 = fig1.add_subplot(111)
+    
+    sub1.scatter(mstar, mhalo, c='b', s=3) 
+
+    '''
+    mass_bins = util.simple_mass_bin()  # use simplest mass bins
+
+    avg_mhalo, var_mhalo = [], [] 
+    for i_m in range(mass_bins.nbins): 
+        mass_limit = (mstar > mass_bins.mass_low[i_m]) & \
+                (mstar <= mass_bins.mass_high[i_m]) 
+        avg_mhalo.append( np.mean(mhalo[mass_limit]) ) 
+        var_mhalo.append( np.std(mhalo[mass_limit]) ) 
+        
+        #print mass_bins.mass_low[i_m], ' - ', mass_bins.mass_high[i_m]
+        #print min(mhalo[mass_limit]), max(mhalo[mass_limit])
+        #print np.mean(mhalo[mass_limit]), np.std(mhalo[mass_limit])
+         
+    sub1.errorbar(mass_bins.mass_mid, avg_mhalo, yerr=var_mhalo, 
+                lw=4, c=pretty_colors[1])
+    '''
+
+    sub1.set_xlim([9.0, 11.5]) 
+    sub1.set_xlabel(r'$\mathtt{M_*}$')
+    sub1.set_ylabel(r'$\mathtt{M_{Halo}}$')
+
+    fig_name1 = ''.join(['figure/', 
+        'subhalo_sham_centrals_snapshot', str(i_nsnap), '.png'])
+    fig1.savefig(fig_name1, bbox_inches='tight')
+    fig1.clear()
+
+def plot_mhalo_mstar_snapshotSHAM_scatter(i_nsnap=1, scatter=0.2): 
+    ''' Plot Mhalo versus M* of galaxies for snapshot data from TreePM --> SHAM 
+
+    Notes
+    -----
+    * Essentially for testing TreePM and SHAM 
+
+
+    '''
+    prettyplot() 
+    pretty_colors = prettycolors() 
+
+    # import TreePM-->SHAM output 
+    snapshot_file = ''.join(['dat/wetzel_tree/', 
+        'subhalo_sham_centrals_snapshot', str(i_nsnap), '_scatter', str(scatter), '.hdf5' 
+        ]) 
+    print snapshot_file 
+    f = h5py.File(snapshot_file, 'r') # read snapshot file
+    grp = f['cenque_data']
+
+    mhalo = grp['mass_halo'][:]
+    mstar = grp['mass'][:]
+    
+    fig1 = plt.figure(1, figsize=[8,8])
+    sub1 = fig1.add_subplot(111)
+    
+    sub1.scatter(mstar, mhalo, c='b', s=3) 
+
+    '''
+    mass_bins = util.simple_mass_bin()  # use simplest mass bins
+
+    avg_mhalo, var_mhalo = [], [] 
+    for i_m in range(mass_bins.nbins): 
+        mass_limit = (mstar > mass_bins.mass_low[i_m]) & \
+                (mstar <= mass_bins.mass_high[i_m]) 
+        avg_mhalo.append( np.mean(mhalo[mass_limit]) ) 
+        var_mhalo.append( np.std(mhalo[mass_limit]) ) 
+        
+        #print mass_bins.mass_low[i_m], ' - ', mass_bins.mass_high[i_m]
+        #print min(mhalo[mass_limit]), max(mhalo[mass_limit])
+        #print np.mean(mhalo[mass_limit]), np.std(mhalo[mass_limit])
+         
+    sub1.errorbar(mass_bins.mass_mid, avg_mhalo, yerr=var_mhalo, 
+                lw=4, c=pretty_colors[1])
+    '''
+
+    sub1.set_xlim([9.0, 11.5]) 
+    sub1.set_xlabel(r'$\mathtt{M_*}$')
+    sub1.set_ylabel(r'$\mathtt{M_{Halo}}$')
+
+    fig_name1 = ''.join(['figure/', 
+        'subhalo_sham_centrals_snapshot', str(i_nsnap), '_scatter', str(scatter), '.png'])
+    fig1.savefig(fig_name1, bbox_inches='tight')
+    fig1.clear()
+
+# CenQue SF-MS ----------------------
+def plot_cenque_sfms(i_nsnap, **kwargs): 
+    ''' Plot SF-MS for CenQue 
+
+    '''
+    prettyplot()                        #make things pretty 
+    pretty_colors = prettycolors() 
+
+    if i_nsnap < 13: 
+        snap = cq.CenQue() 
+        snap.readin(nsnap=i_nsnap, file_type='evol from 13', **kwargs) 
+    else: 
+        snap = cq.CenQue() 
+        snap.readin(nsnap=13, file_type='sf assign', **kwargs) 
+
+    sf_index = np.where(snap.gal_type == 'star-forming')    # only keep star forming galaxies
+    mass = (snap.mass)[sf_index]
+    sfr = (snap.sfr)[sf_index]
+
+    fig = plt.figure(1) 
+    sub = fig.add_subplot(111) 
+    #sub.scatter(mass, sfr) 
+    sub.hist2d(mass, sfr, bins=[30, 30]) 
+    sub.set_xlim([9.0, 12.0]) 
+    sub.set_ylim([-2.0, 1.5])
+
+    sub.set_xlabel(r'$\mathtt{M_*}$', fontsize=20) 
+    sub.set_ylabel(r'$\mathtt{SFR}$', fontsize=20) 
+    
+    # figure file name ------------------------------------------------------------
+    
+    # tau specifier
+    if kwargs['tau'] == 'discrete': 
+        tau_str = '_'.join( [str("%.1f" % t) for t in kwargs['tau_param']] )+'tau'
+    elif kwargs['tau'] == 'linefit':
+        tau_str = '_'.join( [str("%.2f" % t) for t in kwargs['tau_param']] )+'tau'
+    else: 
+        tau_str = kwargs['tau']+'tau'
+    
+    # Stellar mass specifier 
+    if kwargs['stellmass'].lower() == 'integrated': 
+        mass_str = '_integ'
+    elif kwargs['stellmass'].lower() == 'sham': 
+        mass_str = '_sham'
+    else: 
+        raise NotImplementedError('asdfalkjlkjasdf') 
+
+    # SFR specifier
+    if kwargs['sfr'] == 'sfr_avg': 
+        file_type_str = mass_str+'_sfravg'
+    elif kwargs['sfr'] == 'sfr_func': 
+        file_type_str = mass_str+'_sfrfunc'
+    else: 
+        raise NotImplementedError('asdfasdflkjasdf;lkjasdf') 
+    
+    fig_name = ''.join(['figure/cenque_sfms', tau_str, file_type_str, '.png'])
+    fig.savefig(fig_name, bbox_inches='tight')
+    fig.clear()
+
 if __name__=='__main__': 
     #plot_group_cat_bigauss_bestfit()
     #plot_sdss_group_cat() 
@@ -1208,11 +1606,7 @@ if __name__=='__main__':
     #        sfms_slope=0.7, sfms_yint=0.125) 
     #plot_q_groupcat(Mrcut=18)
     #plot_cenque_ssfr_dist_evolution(nsnaps=np.arange(13,1,1), fq='wetzel', tau='instant') #tau='linefit', tau_param=[-0.5, 0.4])
-    
-    #plot_cenque_ssfr_dist_evolution(Mrcut=18, fqing_yint=-5.84, tau='instant') 
-    #plot_cenque_ssfr_dist_evolution(Mrcut=19, fqing_yint=-5.84, tau='instant') 
-    #plot_cenque_ssfr_dist_evolution(Mrcut=18, fqing_yint=-5.84, tau='constant') 
-    #plot_cenque_ssfr_dist_evolution(Mrcut=18, fqing_yint=-5.84, tau='linear') 
+
     #cq.EvolveCenQue(13, 1, fqing_yint=-5.84, tau='linefit', tau_param=[-0.15, 0.17])
     #plot_groupcat_zdist()
 
@@ -1225,27 +1619,36 @@ if __name__=='__main__':
 
     #plot_fq_geha_groupcat(Mrcut=18) 
    
-    #plot_cenque_ssfr_dist_evolution(nsnaps=[2], Mrcut=20, tau='linear')
-    #plot_cenque_ssfr_dist_evolution(nsnaps=[1], Mrcut=19, tau='linear')
-    #plot_cenque_ssfr_dist_evolution(nsnaps=[1], Mrcut=18, tau='linear')
-    
     #plot_quenching_efold(['linear', 'linefit', 'linefit'], [[], [-0.6, 0.3], [-0.7, 0.4]]) 
     
     tau_str = 'linefit'
     tau_param_str = [-0.7, 0.4]
-    plot_cenque_ssfr_dist_evolution(nsnaps=[2], Mrcut=20, tau=tau_str, tau_param=tau_param_str)
-    plot_cenque_ssfr_dist_evolution(nsnaps=[1], Mrcut=19, tau=tau_str, tau_param=tau_param_str)
-    plot_cenque_ssfr_dist_evolution(nsnaps=[1], Mrcut=18, tau=tau_str, tau_param=tau_param_str)
+    sfr_str = 'sfr_avg'
+    #sfr_str = 'sfr_func'
+    stellmass_str = 'sham'
+    #stellmass_str = 'integrated'
+    cenque_params = {'tau': tau_str, 'tau_param': tau_param_str, 
+            'sfr': sfr_str, 'stellmass': stellmass_str} 
+    #cenque_params = {'tau': tau_str, 'tau_param': tau_param_str}
+    #plot_cenque_sfms(1, **cenque_params)
+    '''
+    for i_snap in np.arange(1,14): 
+        #plot_mhalo_mstar_sham_integrated(i_nsnap = i_snap, **cenque_params)
+        plot_mhalo_mstar_snapshotSHAM_scatter(i_nsnap = i_snap)
+        #plot_mhalo_mstar(i_nsnap=i_snap, **cenque_params)
+    '''
+    #plot_cenque_ssfr_dist_evolution(nsnaps=[2], Mrcut=20, **cenque_params)
+    #plot_cenque_ssfr_dist_evolution(nsnaps=[1], Mrcut=19, **cenque_params)
+    #plot_cenque_ssfr_dist_evolution(nsnaps=[1], Mrcut=18, **cenque_params)
     
-    '''
-    for i in range(1,13): 
-        plot_cenque_quenching_ssfr_dist(i, tau=tau_str, tau_param=tau_param_str)
+    #for i in range(1,13): 
+    #    plot_cenque_quenching_ssfr_dist(i, **cenque_params) 
 
-    plot_snapshot_fqobs_evol(nsnaps=[1,2,3,4,5,6,7,8,9,10,11,12], fq_type='wetzelsmooth', tau=tau_str, tau_param=tau_param_str)
+    plot_snapshot_fqobs_evol(nsnaps=[1,2,3,4,5,6,7,8,9,10,11,12], 
+            fq_type='wetzelsmooth', **cenque_params)
     for i in range(1,13): 
-        plot_snapshot_fqobs(i, fq_type='wetzelsmooth', tau=tau_str, tau_param=tau_param_str)
-    '''
-    #plot_ssfms_groupcat(Mrcut=18)
+        plot_snapshot_fqobs(i, fq_type='wetzelsmooth', **cenque_params)
+    ##plot_ssfms_groupcat(Mrcut=18)
     #plot_ssfms_groupcat(Mrcut=19)
     #plot_ssfms_groupcat(Mrcut=20)
     #
