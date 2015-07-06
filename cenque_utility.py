@@ -582,22 +582,20 @@ def integrated_mass_rk4(sfr, mass, t0, tf, f_retain=0.6, **sfr_param):
 
         k1 = f_retain * (10.0 ** SFR_n_1)
         k2 = f_retain * (10.0 ** (
-            SFR_n_1 + sfr(np.log10(10.0**M_n_1 + delt/2.0 * k1), t_n_1 + delt/2.0, **sfr_param) \
-                    - sfr(M_n_1, t_n_1, **sfr_param)))
+            sfr(np.log10(10.0**M_n_1 + 10**9 * delt/2.0 * k1), t_n_1 + delt/2.0, **sfr_param))) 
         k3 = f_retain * (10.0 ** (
-            SFR_n_1 + sfr(np.log10(10.0**M_n_1 + delt/2.0 * k2), t_n_1 + delt/2.0, **sfr_param) \
-                    - sfr(M_n_1, t_n_1, **sfr_param)))
+            sfr(np.log10(10.0**M_n_1 + 10**9 * delt/2.0 * k2), t_n_1 + delt/2.0, **sfr_param))) 
         k4 = f_retain * (10.0 ** (
-            SFR_n_1 + sfr(np.log10(10.0**M_n_1 + delt * k3), t_n_1 + delt, **sfr_param) \
-                    - sfr(M_n_1, t_n_1, **sfr_param)))
+            sfr(np.log10(10.0**M_n_1 + 10**9 * delt * k3), t_n_1 + delt, **sfr_param))) 
 
-        M_n = np.log10(10.0 ** M_n_1 + 1.0/6.0 * delt * (k1 + 2.0*k2 + 2.0*k3 + k4)) 
+        M_n = np.log10(10.0 ** M_n_1 + 1.0/6.0 * delt * 10**9 * (k1 + 2.0*k2 + 2.0*k3 + k4)) 
         
         if np.sum(np.isnan(M_n)) > 0: 
             raise NameError('asldkfjalkjsdflk;ajsdf') 
 
-        M_n_1 = M_n
         SFR_n_1 = sfr(M_n, t_n, **sfr_param)
+
+        M_n_1 = M_n
         t_n_1 = t_n
     
     return M_n

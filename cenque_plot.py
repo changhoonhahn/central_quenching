@@ -1503,6 +1503,81 @@ def plot_mhalo_mstar_snapshotSHAM_scatter(i_nsnap=1, scatter=0.2):
         'subhalo_sham_centrals_snapshot', str(i_nsnap), '_scatter', str(scatter), '.png'])
     plt.savefig(fig_name1, bbox_inches='tight')
 
+def plot_mstar_msham_snapshot(i_nsnap=1, **kwargs): 
+    ''' Plot M* versus Msham of galaxies for CenQue file 
+
+    '''
+    prettyplot() 
+    pretty_colors = prettycolors()  
+
+    # import evolved snapshot 
+    if i_nsnap == 13: 
+        snap = cq.CenQue() 
+        snap.readin(nsnap=i_nsnap, file_type='sf assign', **kwargs) 
+    else: 
+        snap = cq.CenQue() 
+        snap.readin(nsnap=i_nsnap, file_type='evol from 13', **kwargs) 
+    
+    gal_type = snap.gal_type 
+    mass = (snap.mass)[gal_type == 'star-forming']
+    sham = (snap.sham_mass)[gal_type == 'star-forming']
+    bovy.scatterplot(mass, sham, scatter=True, color=pretty_colors[1], 
+            xlabel=r'$\mathtt{M_*}$', ylabel=r'$\mathtt{M_{SHAM}}$', 
+            xrange=[9.0, 11.5])
+
+    # tau specifier
+    if kwargs['tau'] == 'discrete': 
+        tau_str = '_'.join( [str("%.1f" % t) for t in kwargs['tau_param']] )+'tau'
+    elif kwargs['tau'] == 'linefit':
+        tau_str = '_'.join( [str("%.2f" % t) for t in kwargs['tau_param']] )+'tau'
+    else: 
+        tau_str = kwargs['tau']+'tau'
+    
+    # SFR specifier
+    file_type_str = kwargs['sfr']
+    
+    fig_name = ''.join(['figure/', 
+        'cenque_mstar_msham_snapshot', str(i_nsnap), tau_str, file_type_str, '.png'])
+    plt.savefig(fig_name, bbox_inches='tight')
+
+def plot_d_stellmass_snapshot(i_nsnap=1, **kwargs): 
+    ''' Plot the difference betwen integrated mass and SHAM mass versus SHAM mass for 
+    CenQue model  
+
+    '''
+    prettyplot() 
+    pretty_colors = prettycolors()  
+
+    # import evolved snapshot 
+    if i_nsnap == 13: 
+        snap = cq.CenQue() 
+        snap.readin(nsnap=i_nsnap, file_type='sf assign', **kwargs) 
+    else: 
+        snap = cq.CenQue() 
+        snap.readin(nsnap=i_nsnap, file_type='evol from 13', **kwargs) 
+    
+    gal_type = snap.gal_type 
+    mass = (snap.mass)[gal_type == 'star-forming']
+    sham = (snap.sham_mass)[gal_type == 'star-forming']
+    bovy.scatterplot(sham, sham-mass, scatter=True, color=pretty_colors[1], 
+            xlabel=r'$\mathtt{M_{SHAM}}$', ylabel=r'$\mathtt{\Delta M (M_{SHAM}- M_*)}$', 
+            xrange=[9.0, 11.5])
+
+    # tau specifier
+    if kwargs['tau'] == 'discrete': 
+        tau_str = '_'.join( [str("%.1f" % t) for t in kwargs['tau_param']] )+'tau'
+    elif kwargs['tau'] == 'linefit':
+        tau_str = '_'.join( [str("%.2f" % t) for t in kwargs['tau_param']] )+'tau'
+    else: 
+        tau_str = kwargs['tau']+'tau'
+    
+    # SFR specifier
+    file_type_str = kwargs['sfr']
+    
+    fig_name = ''.join(['figure/', 
+        'cenque_d_mstellmass_snapshot', str(i_nsnap), tau_str, file_type_str, '.png'])
+    plt.savefig(fig_name, bbox_inches='tight')
+
 # CenQue SF-MS ----------------------
 def plot_cenque_sfms(i_nsnap, **kwargs): 
     ''' Plot SF-MS for CenQue 
@@ -1586,19 +1661,22 @@ if __name__=='__main__':
    
     #plot_quenching_efold(['linear', 'linefit', 'linefit'], [[], [-0.6, 0.3], [-0.7, 0.4]]) 
     
-    tau_str = 'linefit'
-    tau_param_str = [-0.7, 0.4]
-    #sfr_str = 'sfr_avg'
-    sfr_str = 'sfr_func'
-    stellmass_str = 'sham'
-    #stellmass_str = 'integrated'
-    cenque_params = {'tau': tau_str, 'tau_param': tau_param_str, 
-            'sfr': sfr_str, 'stellmass': stellmass_str} 
-    #plot_cenque_sfms(1, **cenque_params)
-    for i_snap in np.arange(1,14): 
-    #    #plot_mhalo_mstar_sham_integrated(i_nsnap = i_snap, **cenque_params)
-        plot_mhalo_mstar_snapshotSHAM_scatter(i_nsnap = i_snap)
-        plot_mhalo_mstar(i_nsnap=i_snap, **cenque_params)
+    for sfr_str in ['sfr_avg', 'sfr_func']:
+        tau_str = 'linefit'
+        tau_param_str = [-0.7, 0.4]
+        #sfr_str = 'sfr_avg'
+        #sfr_str = 'sfr_func'
+        #stellmass_str = 'sham'
+        stellmass_str = 'integrated'
+        cenque_params = {'tau': tau_str, 'tau_param': tau_param_str, 
+                'sfr': sfr_str, 'stellmass': stellmass_str} 
+        #plot_cenque_sfms(1, **cenque_params)
+        for i_snap in [12, 6, 1]: 
+            plot_d_stellmass_snapshot(i_nsnap=i_snap, **cenque_params)
+            #plot_mstar_msham_snapshot(i_nsnap=i_snap, **cenque_params)
+        #plot_mhalo_mstar_sham_integrated(i_nsnap = i_snap, **cenque_params)
+        #plot_mhalo_mstar_snapshotSHAM_scatter(i_nsnap = i_snap)
+        #plot_mhalo_mstar(i_nsnap=i_snap, **cenque_params)
 
     #plot_cenque_ssfr_dist_evolution(nsnaps=[2], Mrcut=20, **cenque_params)
     #plot_cenque_ssfr_dist_evolution(nsnaps=[1], Mrcut=19, **cenque_params)

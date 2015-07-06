@@ -29,6 +29,7 @@ class CenQue:
         self.pos = None     # position 
         self.gal_type = None    # quiescent/star-forming 
         self.halo_mass = None 
+        self.sham_mass = None
 
         self.nsnap = None       # n_snapshot 
         self.zsnap = None           # z_snapshot
@@ -281,6 +282,10 @@ class CenQue:
     
         for i_col, column in enumerate(grp.keys()): 
             setattr(self, column, grp[column][:])
+        
+        if 'sham_mass' not in grp.keys(): 
+            setattr(self, 'sham_mass', grp['mass'][:])
+
         f.close() 
 
     def writeout(self, **kwargs): 
@@ -410,7 +415,7 @@ def EvolveCenQue(origin_nsnap, final_nsnap, mass_bin=None, silent=True, **kwargs
         child_mass_limit = (child_cq.mass > min(mass_bins.mass_low)) & \
                 (child_cq.mass <= max(mass_bins.mass_high))
         child_cq.sample_select( child_mass_limit, 
-                columns = ['mass', 'halo_mass', 'parent', 'child', 'ilk', 'snap_index']  
+                columns = ['mass', 'sham_mass', 'halo_mass', 'parent', 'child', 'ilk', 'snap_index']  
                 )                   
         n_child = len(child_cq.mass)     # number of children left 
 
@@ -512,20 +517,26 @@ def EvolveCenQue(origin_nsnap, final_nsnap, mass_bin=None, silent=True, **kwargs
         # should quiescent galaxies remain the same mass or adopt SHAM masses? 
 
         if kwargs['stellmass'].lower() == 'integrated':
+
             # integrated stellar mass
             if kwargs['sfr'] == 'sfr_func': 
-                (child_cq.mass)[sf_child_indx] = util.integrated_mass_rk4(
+                integrated_mass = util.integrated_mass_rk4(
                         util.sfr_squarewave, (child_cq.parent_mass)[sf_child_indx], 
                         parent_cq.t_cosmic, child_cq.t_cosmic, 
                         amp = (child_cq.sfr_amp)[sf_child_indx], 
                         freq = (child_cq.sfr_freq)[sf_child_indx], 
                         phase = (child_cq.sfr_phase)[sf_child_indx])
+                (child_cq.mass)[sf_child_indx] = integrated_mass
 
             elif kwargs['sfr'] == 'sfr_avg': 
+
                 (child_cq.mass)[sf_child_indx] = util.integrated_mass_rk4(
                         util.sfr_avg_residual, (child_cq.parent_mass)[sf_child_indx], 
                         parent_cq.t_cosmic, child_cq.t_cosmic, 
                         resid = (child_cq.sfr_resid)[sf_child_indx])
+                if not silent: 
+                    print 'Integrated Mass vs SHAM mass' 
+                    print (child_cq.mass)[sf_child_indx] - (child_cq.sham_mass)[sf_child_indx]
 
         elif kwargs['stellmass'].lower() == 'sham': 
             # leave stellar mass 
@@ -575,8 +586,8 @@ def EvolveCenQue(origin_nsnap, final_nsnap, mass_bin=None, silent=True, **kwargs
         
         quenching_fractions = [] 
         quenching_fractionss = [] 
+
         for i_m in range(mass_bins.nbins):              
-            
             # boolean list for mass range
             mass_bin_bool = (child_cq.mass > mass_bins.mass_low[i_m]) & \
                     (child_cq.mass <= mass_bins.mass_high[i_m]) & \
@@ -754,21 +765,40 @@ def EvolveCenQue(origin_nsnap, final_nsnap, mass_bin=None, silent=True, **kwargs
         child_cq.tau[over_quenched] = -999.0            # done quenching 
 
         #if child_cq.nsnap == final_nsnap: 
+    
+        if kwargs['stellmass'] == 'sham': 
+            if kwargs['sfr'] == 'sfr_avg': 
+                child_cq.writeout(nsnap=child_cq.nsnap, file_type='evol from '+str(origin_nsnap),
+                        columns = ['mass', 'sfr', 'ssfr', 'gal_type', 'tau', 'q_ssfr', 
+                            'halo_mass', 'sfr_resid', 
+                            'parent_sfr', 'parent_mass', 'parent_halo_mass', 'parent', 
+                            'child', 'ilk', 'snap_index'], 
+                        **kwargs)  
+            elif kwargs['sfr'] == 'sfr_func': 
+                child_cq.writeout(nsnap=child_cq.nsnap, file_type='evol from '+str(origin_nsnap),
+                        columns = ['mass', 'sfr', 'ssfr', 'gal_type', 'tau', 'q_ssfr', 
+                            'halo_mass', 'sfr_amp', 'sfr_freq', 'sfr_phase', 
+                            'parent_sfr', 'parent_mass', 'parent_halo_mass', 'parent', 
+                            'child', 'ilk', 'snap_index'], 
+                    **kwargs)  
 
-        if kwargs['sfr'] == 'sfr_avg': 
-            child_cq.writeout(nsnap=child_cq.nsnap, file_type='evol from '+str(origin_nsnap), 
-                    columns = ['mass', 'sfr', 'ssfr', 'gal_type', 'tau', 'q_ssfr', 
-                        'halo_mass', 'sfr_resid', 
-                        'parent_sfr', 'parent_mass', 'parent_halo_mass', 'parent', 
-                        'child', 'ilk', 'snap_index'], 
+        elif kwargs['stellmass'] == 'integrated': 
+            if kwargs['sfr'] == 'sfr_avg': 
+                child_cq.writeout(nsnap=child_cq.nsnap, file_type='evol from '+str(origin_nsnap),
+                        columns = ['mass', 'sfr', 'ssfr', 'gal_type', 'tau', 'q_ssfr', 
+                            'halo_mass', 'sfr_resid', 'sham_mass', 
+                            'parent_sfr', 'parent_mass', 'parent_halo_mass', 'parent', 
+                            'child', 'ilk', 'snap_index'], 
+                        **kwargs)  
+            elif kwargs['sfr'] == 'sfr_func': 
+                child_cq.writeout(nsnap=child_cq.nsnap, file_type='evol from '+str(origin_nsnap),
+                        columns = ['mass', 'sfr', 'ssfr', 'gal_type', 'tau', 'q_ssfr', 
+                            'halo_mass', 'sfr_amp', 'sfr_freq', 'sfr_phase', 'sham_mass', 
+                            'parent_sfr', 'parent_mass', 'parent_halo_mass', 'parent', 
+                            'child', 'ilk', 'snap_index'], 
                     **kwargs)  
-        elif kwargs['sfr'] == 'sfr_func': 
-            child_cq.writeout(nsnap=child_cq.nsnap, file_type='evol from '+str(origin_nsnap), 
-                    columns = ['mass', 'sfr', 'ssfr', 'gal_type', 'tau', 'q_ssfr', 
-                        'halo_mass', 'sfr_amp', 'sfr_freq', 'sfr_phase', 
-                        'parent_sfr', 'parent_mass', 'parent_halo_mass', 'parent', 
-                        'child', 'ilk', 'snap_index'], 
-                    **kwargs)  
+        else: 
+            raise NotImplementedError('asdflkjasdkf') 
 
         parent_cq = child_cq
 
@@ -785,13 +815,12 @@ def build_cenque_importsnap(**kwargs):
 def build_cenque_original(i_snap=13, **kwargs):
     snap = CenQue() 
     snap.AssignSFR(i_snap, **kwargs) 
-    print snap.sfr_phase
     snap.writeout(nsnap=i_snap, file_type='sf assign', **kwargs)
 
 if __name__=='__main__': 
     #EvolveCenQue(13, 1, fqing_yint=-5.84, tau='instant')  
     #tau='linefit', tau_param=[-0.5, 0.4]) 
     #EvolveCenQue(13, 1, fqing_yint=-5.84, tau='linefit', tau_param=[-0.4, 0.2])
-    build_cenque_original(sfr='sfr_avg') 
+    build_cenque_original(sfr='sfr_func') 
     EvolveCenQue(13, 1, tau='linefit', tau_param=[-0.7, 0.4], 
-            sfr='sfr_avg', stellmass='integrated') 
+            sfr='sfr_func', stellmass='integrated') 
