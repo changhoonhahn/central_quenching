@@ -619,7 +619,7 @@ def get_zsnap(tcosmic):
     # read in snapshot table file 
     z, t = np.loadtxt('snapshot_table.dat', unpack=True, usecols=[2, 3]) 
 
-    z_of_t = interpolate.interp1d(z, t) 
+    z_of_t = interpolate.interp1d(list(reversed(t)), list(reversed(z)), kind='cubic') 
 
     return z_of_t(tcosmic) 
 
@@ -638,7 +638,7 @@ def get_tsnap(redshift):
     # read in snapshot table file 
     z, t = np.loadtxt('snapshot_table.dat', unpack=True, usecols=[2, 3]) 
 
-    t_of_z = interpolate.interp1d(t, z) 
+    t_of_z = interpolate.interp1d(z, t, kind='cubic') 
 
     return t_of_z(redshift) 
 

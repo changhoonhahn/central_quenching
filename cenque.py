@@ -221,7 +221,12 @@ class CenQue:
                             mass_bins.mass_mid[i_m], self.zsnap, Mrcut=18) 
 
                     #print 'SF Average(SFR) = ', sf_avg_sfr, ' sigma_SFR = ', sf_sig_sfr
-                    self.sfr[mass_bin_sf_index] = sf_sig_sfr * np.random.randn(mass_bin_n_sf) + sf_avg_sfr 
+
+                    self.sfr_resid[mass_bin_sf_index] = sf_sig_sfr * np.random.randn(mass_bin_n_sf)
+                    self.sfr[mass_bin_sf_index] = util.sfr_avg_residual(
+                            mass_bins.mass_mid[i_m], self.zsnap, 
+                            resid = self.sfr_resid[mass_bin_sf_index]) 
+                    #self.sfr[mass_bin_sf_index] = sf_sig_sfr * np.random.randn(mass_bin_n_sf) + sf_avg_sfr 
 
                 elif kwargs['sfr'] == 'sfr_func': 
                     # Fluctuating SFR with random amplitude, frequency, and phase 
@@ -237,7 +242,7 @@ class CenQue:
                             (2.0 * np.pi)/np.random.uniform(0.01, 0.1, mass_bin_n_sf)  
                     self.sfr_phase[mass_bin_sf_index] = \
                             np.random.uniform(0.0, 1.0, mass_bin_n_sf)
-                    
+
                     self.sfr[mass_bin_sf_index] = util.sfr_squarewave(
                             self.mass[mass_bin_sf_index], self.t_cosmic, 
                             amp = self.sfr_amp[mass_bin_sf_index], 
@@ -266,7 +271,7 @@ class CenQue:
         # kwargs specifies the input file 
         input_file = util.cenque_file( **kwargs ) 
         f = h5py.File(input_file, 'r') 
-        #print input_file 
+        print input_file 
 
         grp = f['cenque_data']
 
@@ -297,7 +302,7 @@ class CenQue:
             # if SFR/SSFR have been assigned
             if kwargs['sfr'] == 'sfr_func': 
                 columns = ['mass', 'sfr', 'ssfr', 'gal_type', 'halo_mass', 
-                        'sfr_phase, sfr_freq', 'sfr_amp', 
+                        'sfr_phase', 'sfr_freq', 'sfr_amp', 
                         'parent', 'child', 'ilk', 'snap_index']
             elif kwargs['sfr'] == 'sfr_avg': 
                 columns = ['mass', 'sfr', 'ssfr', 'gal_type', 'halo_mass', 
@@ -484,9 +489,12 @@ def EvolveCenQue(origin_nsnap, final_nsnap, mass_bin=None, silent=True, **kwargs
             dSFRt = child_sfr - parent_sfr          # overall change in SFR
             
             # evolve sf children SFR
-            child_cq.sfr[sf_child_indx] = child_cq.parent_sfr[sf_child_indx] + dSFRt
+            #child_cq.sfr[sf_child_indx] = child_cq.parent_sfr[sf_child_indx] + dSFRt
+            child_cq.sfr[sf_child_indx] = util.sfr_avg_residual(
+                    child_cq.mass[sf_child_indx], child_cq.zsnap, 
+                    resid = child_cq.sfr_resid[sf_child_indx] ) 
         
-        elif kwargs['sfr'] == 'sfr_funcs': 
+        elif kwargs['sfr'] == 'sfr_func': 
 
             child_cq.sfr[sf_child_indx] = util.sfr_squarewave(
                     child_cq.mass[sf_child_indx], child_cq.t_cosmic, 
@@ -777,6 +785,7 @@ def build_cenque_importsnap(**kwargs):
 def build_cenque_original(i_snap=13, **kwargs):
     snap = CenQue() 
     snap.AssignSFR(i_snap, **kwargs) 
+    print snap.sfr_phase
     snap.writeout(nsnap=i_snap, file_type='sf assign', **kwargs)
 
 if __name__=='__main__': 
@@ -785,4 +794,4 @@ if __name__=='__main__':
     #EvolveCenQue(13, 1, fqing_yint=-5.84, tau='linefit', tau_param=[-0.4, 0.2])
     build_cenque_original(sfr='sfr_avg') 
     EvolveCenQue(13, 1, tau='linefit', tau_param=[-0.7, 0.4], 
-            sfr='sfr_avg', stellmass='sham') 
+            sfr='sfr_avg', stellmass='integrated') 

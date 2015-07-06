@@ -19,6 +19,7 @@ import cenque_utility as util
 import cenque as cq 
 import cenque_groupcat as cq_group
 import sf_mainseq as sfms 
+import bovy_plot as bovy
 
 # ssfr distribution ------------------------------------------
 def plot_cenque_ssfr_dist(cenque, fig=None, **kwargs): 
@@ -1277,30 +1278,25 @@ def plot_mhalo_mstar(i_nsnap = 1, **kwargs):
     mhalo = snap.halo_mass 
     mstar = snap.mass
     
-    fig1 = plt.figure(1, figsize=[8,8])
-    sub1 = fig1.add_subplot(111)
-    
-    sub1.scatter(mstar, mhalo, c='b', s=3) 
+    bovy.scatterplot(mstar, mhalo, scatter=True, color=pretty_colors[1], s=3, 
+            xrange=[9.0, 11.5], 
+            xlabel='\mathtt{M_*}', ylabel='\mathtt{M_{Halo}}')
 
-    mass_bins = util.simple_mass_bin()  # use simplest mass bins
+    #mass_bins = util.simple_mass_bin()  # use simplest mass bins
 
-    avg_mhalo, var_mhalo = [], [] 
-    for i_m in range(mass_bins.nbins): 
-        mass_limit = (mstar > mass_bins.mass_low[i_m]) & \
-                (mstar <= mass_bins.mass_high[i_m]) 
-        avg_mhalo.append( np.mean(mhalo[mass_limit]) ) 
-        var_mhalo.append( np.std(mhalo[mass_limit]) ) 
+    #avg_mhalo, var_mhalo = [], [] 
+    #for i_m in range(mass_bins.nbins): 
+    #    mass_limit = (mstar > mass_bins.mass_low[i_m]) & \
+    #            (mstar <= mass_bins.mass_high[i_m]) 
+    #    avg_mhalo.append( np.mean(mhalo[mass_limit]) ) 
+    #    var_mhalo.append( np.std(mhalo[mass_limit]) ) 
         
         #print mass_bins.mass_low[i_m], ' - ', mass_bins.mass_high[i_m]
         #print min(mhalo[mass_limit]), max(mhalo[mass_limit])
         #print np.mean(mhalo[mass_limit]), np.std(mhalo[mass_limit])
          
-    sub1.errorbar(mass_bins.mass_mid, avg_mhalo, yerr=var_mhalo, 
-                lw=4, c=pretty_colors[1])
-
-    sub1.set_xlim([9.0, 11.5]) 
-    sub1.set_xlabel(r'$\mathtt{M_*}$')
-    sub1.set_ylabel(r'$\mathtt{M_{Halo}}$')
+    #plt.errorbar(mass_bins.mass_mid, avg_mhalo, yerr=var_mhalo, 
+    #            lw=4, c=pretty_colors[1])
 
     #fig2 = plt.figure(2, figsize=[8,8]) 
     #sub2 = fig2.add_subplot(111)
@@ -1341,8 +1337,8 @@ def plot_mhalo_mstar(i_nsnap = 1, **kwargs):
     fig_name2 = ''.join(['figure/', 
         'cenque_mstar_mhalo_snapshot', str(i_nsnap), tau_str, file_type_str, 
         '_contour.png'])
-    fig1.savefig(fig_name1, bbox_inches='tight')
-    fig1.clear()
+    plt.savefig(fig_name1, bbox_inches='tight')
+    #fig1.clear()
     #fig2.savefig(fig_name2, bbox_inches='tight')
     #fig2.clear()
 
@@ -1499,37 +1495,13 @@ def plot_mhalo_mstar_snapshotSHAM_scatter(i_nsnap=1, scatter=0.2):
     mhalo = grp['mass_halo'][:]
     mstar = grp['mass'][:]
     
-    fig1 = plt.figure(1, figsize=[8,8])
-    sub1 = fig1.add_subplot(111)
-    
-    sub1.scatter(mstar, mhalo, c='b', s=3) 
-
-    '''
-    mass_bins = util.simple_mass_bin()  # use simplest mass bins
-
-    avg_mhalo, var_mhalo = [], [] 
-    for i_m in range(mass_bins.nbins): 
-        mass_limit = (mstar > mass_bins.mass_low[i_m]) & \
-                (mstar <= mass_bins.mass_high[i_m]) 
-        avg_mhalo.append( np.mean(mhalo[mass_limit]) ) 
-        var_mhalo.append( np.std(mhalo[mass_limit]) ) 
-        
-        #print mass_bins.mass_low[i_m], ' - ', mass_bins.mass_high[i_m]
-        #print min(mhalo[mass_limit]), max(mhalo[mass_limit])
-        #print np.mean(mhalo[mass_limit]), np.std(mhalo[mass_limit])
-         
-    sub1.errorbar(mass_bins.mass_mid, avg_mhalo, yerr=var_mhalo, 
-                lw=4, c=pretty_colors[1])
-    '''
-
-    sub1.set_xlim([9.0, 11.5]) 
-    sub1.set_xlabel(r'$\mathtt{M_*}$')
-    sub1.set_ylabel(r'$\mathtt{M_{Halo}}$')
+    bovy.scatterplot(mstar, mhalo, scatter=True, color=pretty_colors[1], s=3, 
+            xrange=[9.0, 11.5], 
+            xlabel=r'$\mathtt{M_*}$', ylabel=r'$\mathtt{M_{Halo}}$')
 
     fig_name1 = ''.join(['figure/', 
         'subhalo_sham_centrals_snapshot', str(i_nsnap), '_scatter', str(scatter), '.png'])
-    fig1.savefig(fig_name1, bbox_inches='tight')
-    fig1.clear()
+    plt.savefig(fig_name1, bbox_inches='tight')
 
 # CenQue SF-MS ----------------------
 def plot_cenque_sfms(i_nsnap, **kwargs): 
@@ -1549,19 +1521,12 @@ def plot_cenque_sfms(i_nsnap, **kwargs):
     sf_index = np.where(snap.gal_type == 'star-forming')    # only keep star forming galaxies
     mass = (snap.mass)[sf_index]
     sfr = (snap.sfr)[sf_index]
-
-    fig = plt.figure(1) 
-    sub = fig.add_subplot(111) 
-    #sub.scatter(mass, sfr) 
-    sub.hist2d(mass, sfr, bins=[30, 30]) 
-    sub.set_xlim([9.0, 12.0]) 
-    sub.set_ylim([-2.0, 1.5])
-
-    sub.set_xlabel(r'$\mathtt{M_*}$', fontsize=20) 
-    sub.set_ylabel(r'$\mathtt{SFR}$', fontsize=20) 
     
+    # scatter plot with contours!
+    bovy.scatterplot(mass, sfr, scatter=True, color=pretty_colors[1], s=3, 
+            xlabel=r'$\mathtt{M_*}$', ylabel=r'$\mathtt{SFR}$')
+
     # figure file name ------------------------------------------------------------
-    
     # tau specifier
     if kwargs['tau'] == 'discrete': 
         tau_str = '_'.join( [str("%.1f" % t) for t in kwargs['tau_param']] )+'tau'
@@ -1587,8 +1552,8 @@ def plot_cenque_sfms(i_nsnap, **kwargs):
         raise NotImplementedError('asdfasdflkjasdf;lkjasdf') 
     
     fig_name = ''.join(['figure/cenque_sfms', tau_str, file_type_str, '.png'])
-    fig.savefig(fig_name, bbox_inches='tight')
-    fig.clear()
+    plt.savefig(fig_name, bbox_inches='tight')
+    plt.show() 
 
 if __name__=='__main__': 
     #plot_group_cat_bigauss_bestfit()
@@ -1623,20 +1588,18 @@ if __name__=='__main__':
     
     tau_str = 'linefit'
     tau_param_str = [-0.7, 0.4]
-    sfr_str = 'sfr_avg'
-    #sfr_str = 'sfr_func'
+    #sfr_str = 'sfr_avg'
+    sfr_str = 'sfr_func'
     stellmass_str = 'sham'
     #stellmass_str = 'integrated'
     cenque_params = {'tau': tau_str, 'tau_param': tau_param_str, 
             'sfr': sfr_str, 'stellmass': stellmass_str} 
-    #cenque_params = {'tau': tau_str, 'tau_param': tau_param_str}
     #plot_cenque_sfms(1, **cenque_params)
-    '''
     for i_snap in np.arange(1,14): 
-        #plot_mhalo_mstar_sham_integrated(i_nsnap = i_snap, **cenque_params)
+    #    #plot_mhalo_mstar_sham_integrated(i_nsnap = i_snap, **cenque_params)
         plot_mhalo_mstar_snapshotSHAM_scatter(i_nsnap = i_snap)
-        #plot_mhalo_mstar(i_nsnap=i_snap, **cenque_params)
-    '''
+        plot_mhalo_mstar(i_nsnap=i_snap, **cenque_params)
+
     #plot_cenque_ssfr_dist_evolution(nsnaps=[2], Mrcut=20, **cenque_params)
     #plot_cenque_ssfr_dist_evolution(nsnaps=[1], Mrcut=19, **cenque_params)
     #plot_cenque_ssfr_dist_evolution(nsnaps=[1], Mrcut=18, **cenque_params)
@@ -1644,10 +1607,10 @@ if __name__=='__main__':
     #for i in range(1,13): 
     #    plot_cenque_quenching_ssfr_dist(i, **cenque_params) 
 
-    plot_snapshot_fqobs_evol(nsnaps=[1,2,3,4,5,6,7,8,9,10,11,12], 
-            fq_type='wetzelsmooth', **cenque_params)
-    for i in range(1,13): 
-        plot_snapshot_fqobs(i, fq_type='wetzelsmooth', **cenque_params)
+    #plot_snapshot_fqobs_evol(nsnaps=[1,2,3,4,5,6,7,8,9,10,11,12], 
+    #        fq_type='wetzelsmooth', **cenque_params)
+    #for i in range(1,13): 
+    #    plot_snapshot_fqobs(i, fq_type='wetzelsmooth', **cenque_params)
     ##plot_ssfms_groupcat(Mrcut=18)
     #plot_ssfms_groupcat(Mrcut=19)
     #plot_ssfms_groupcat(Mrcut=20)
