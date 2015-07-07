@@ -133,10 +133,20 @@ class CenQue:
             mass_child_limit = (self.mass > min(mass_bins.mass_low)) & \
                     (self.mass <= max(mass_bins.mass_high)) & \
                     (self.child >= 0)  
+    
+            trim_column = [] 
+            for col in self.__dict__.keys(): 
+                col_data = getattr(self, col)
+
+                if isinstance( col_data, type(self.mass) ):  
+                    if len(col_data) == len(self.mass): 
+                        trim_column.append(col) 
+                    else: 
+                        pass
 
             # only keep galaxies within the min and max mass
             self.sample_select(mass_child_limit, 
-                    columns = ['mass', 'halo_mass', 'parent', 'child', 'ilk', 'snap_index'])          
+                    columns = trim_column)          
 
         if self.gal_type is None:         
             self.gal_type = np.array(['' for i in range(len(self.mass))], dtype='|S16') 
@@ -752,6 +762,9 @@ def EvolveCenQue(origin_nsnap, final_nsnap, mass_bin=None, silent=True, **kwargs
             print quenching_fractionss
 
         # deal with orphans ------------------------------------------------------------
+
+        sfing = np.where(child_cq.gal_type == 'star-forming') 
+        print max(child_cq.mass[sfing]) 
         print len(child_cq.gal_type[child_cq.gal_type == '']), ' child galaxies are orphans' 
         child_cq.AssignSFR(child_cq.nsnap, **kwargs) 
 
@@ -821,6 +834,6 @@ if __name__=='__main__':
     #EvolveCenQue(13, 1, fqing_yint=-5.84, tau='instant')  
     #tau='linefit', tau_param=[-0.5, 0.4]) 
     #EvolveCenQue(13, 1, fqing_yint=-5.84, tau='linefit', tau_param=[-0.4, 0.2])
-    build_cenque_original(sfr='sfr_func') 
+    #build_cenque_original(sfr='sfr_avg') 
     EvolveCenQue(13, 1, tau='linefit', tau_param=[-0.7, 0.4], 
-            sfr='sfr_func', stellmass='integrated') 
+            sfr='sfr_avg', stellmass='sham') 

@@ -1282,31 +1282,7 @@ def plot_mhalo_mstar(i_nsnap = 1, **kwargs):
             xrange=[9.0, 11.5], 
             xlabel='\mathtt{M_*}', ylabel='\mathtt{M_{Halo}}')
 
-    #mass_bins = util.simple_mass_bin()  # use simplest mass bins
-
-    #avg_mhalo, var_mhalo = [], [] 
-    #for i_m in range(mass_bins.nbins): 
-    #    mass_limit = (mstar > mass_bins.mass_low[i_m]) & \
-    #            (mstar <= mass_bins.mass_high[i_m]) 
-    #    avg_mhalo.append( np.mean(mhalo[mass_limit]) ) 
-    #    var_mhalo.append( np.std(mhalo[mass_limit]) ) 
-        
-        #print mass_bins.mass_low[i_m], ' - ', mass_bins.mass_high[i_m]
-        #print min(mhalo[mass_limit]), max(mhalo[mass_limit])
-        #print np.mean(mhalo[mass_limit]), np.std(mhalo[mass_limit])
-         
-    #plt.errorbar(mass_bins.mass_mid, avg_mhalo, yerr=var_mhalo, 
-    #            lw=4, c=pretty_colors[1])
-
-    #fig2 = plt.figure(2, figsize=[8,8]) 
-    #sub2 = fig2.add_subplot(111)
-    #sub2.hist2d(mstar, mhalo, bins=[100, 100])
-    #sub2.set_xlim([9.0, 11.5]) 
-    #sub2.set_xlabel(r'$\mathtt{M_*}$')
-    #sub2.set_ylabel(r'$\mathtt{M_{Halo}}$')
-    
     # figure file name ------------------------------------------------------------
-    
     # tau specifier
     if kwargs['tau'] == 'discrete': 
         tau_str = '_'.join( [str("%.1f" % t) for t in kwargs['tau_param']] )+'tau'
@@ -1334,13 +1310,7 @@ def plot_mhalo_mstar(i_nsnap = 1, **kwargs):
     fig_name1 = ''.join(['figure/', 
         'cenque_mstar_mhalo_snapshot', str(i_nsnap), tau_str, file_type_str, 
         '_scatter.png'])
-    fig_name2 = ''.join(['figure/', 
-        'cenque_mstar_mhalo_snapshot', str(i_nsnap), tau_str, file_type_str, 
-        '_contour.png'])
     plt.savefig(fig_name1, bbox_inches='tight')
-    #fig1.clear()
-    #fig2.savefig(fig_name2, bbox_inches='tight')
-    #fig2.clear()
 
 def plot_mhalo_mstar_sham_integrated(i_nsnap = 1, **kwargs): 
     ''' Plot Mhalo versus M* of galaxies for CenQue file 
@@ -1476,6 +1446,7 @@ def plot_mstar_msham_snapshot(i_nsnap=1, **kwargs):
     gal_type = snap.gal_type 
     mass = (snap.mass)[gal_type == 'star-forming']
     sham = (snap.sham_mass)[gal_type == 'star-forming']
+
     bovy.scatterplot(mass, sham, scatter=True, color=pretty_colors[1], 
             xlabel=r'$\mathtt{M_*}$', ylabel=r'$\mathtt{M_{SHAM}}$', 
             xrange=[9.0, 11.5])
@@ -1586,25 +1557,6 @@ def plot_cenque_sfms(i_nsnap, **kwargs):
     plt.show() 
 
 if __name__=='__main__': 
-    #plot_group_cat_bigauss_bestfit()
-    #plot_sdss_group_cat() 
-    #plot_cenque_ssfr_dist_evolution(fq='wetzel', tau='instant') 
-    #plot_cenque_ssfr_dist_evolution(fq='wetzel', tau='linear') 
-    #plot_cenque_ssfr_dist_evolution(fq='wetzel', tau='constant') 
-    #plot_cenque_ssfr_dist_evolution(fq='wetzel', tau=[0.6, 0.4, 0.1, 0.0], 
-    #        sfms_slope=0.3, sfms_yint=-0.1) 
-    #plot_cenque_ssfr_dist_evolution(Mrcut=18, fq='wetzel', tau='linefit', tau_param=[-0.5, 0.4], 
-    #        sfms_slope=0.7, sfms_yint=0.125) 
-    #plot_cenque_ssfr_dist_evolution(Mrcut=19, fq='wetzel', tau='linefit', tau_param=[-0.5, 0.4], 
-    #        sfms_slope=0.7, sfms_yint=0.125) 
-    #plot_cenque_ssfr_dist_evolution(Mrcut=20, fq='wetzel', tau='linefit', tau_param=[-0.5, 0.4], 
-    #        sfms_slope=0.7, sfms_yint=0.125) 
-    #plot_q_groupcat(Mrcut=18)
-    #plot_cenque_ssfr_dist_evolution(nsnaps=np.arange(13,1,1), fq='wetzel', tau='instant') #tau='linefit', tau_param=[-0.5, 0.4])
-
-    #cq.EvolveCenQue(13, 1, fqing_yint=-5.84, tau='linefit', tau_param=[-0.15, 0.17])
-    #plot_groupcat_zdist()
-
     #plot_cenque_quenching_ssfr_dist(10, fqing_yint=-5.84, tau='linear')
     #plot_cenque_quenching_ssfr_dist(1, fqing_yint=-5.84, tau='constant')
     #plot_cenque_quenching_ssfr_dist(1, fqing_yint=-5.84, tau='linefit', tau_param=[-0.15, 0.17])
@@ -1615,49 +1567,34 @@ if __name__=='__main__':
     #plot_fq_geha_groupcat(Mrcut=18) 
    
     #plot_quenching_efold(['linear', 'linefit', 'linefit'], [[], [-0.6, 0.3], [-0.7, 0.4]]) 
+    #for i_snap in [12, 6, 1]: 
+    #    plot_mhalo_mstar_snapshotSHAM(i_nsnap = i_snap, scatter=0.0)
+    #    plot_mhalo_mstar_snapshotSHAM(i_nsnap = i_snap, scatter=0.2)
     
-    for sfr_str in ['sfr_avg', 'sfr_func']:
-        tau_str = 'linefit'
-        tau_param_str = [-0.7, 0.4]
-        #sfr_str = 'sfr_avg'
-        #sfr_str = 'sfr_func'
-        #stellmass_str = 'sham'
-        stellmass_str = 'integrated'
-        cenque_params = {'tau': tau_str, 'tau_param': tau_param_str, 
-                'sfr': sfr_str, 'stellmass': stellmass_str} 
-        #plot_cenque_sfms(1, **cenque_params)
-        for i_snap in [12, 6, 1]: 
-            plot_mhalo_mstar_snapshotSHAM(i_nsnap = i_snap, scatter=0.0)
-            plot_mhalo_mstar_snapshotSHAM(i_nsnap = i_snap, scatter=0.2)
-            #plot_d_stellmass_snapshot(i_nsnap=i_snap, **cenque_params)
-            #plot_mstar_msham_snapshot(i_nsnap=i_snap, **cenque_params)
-            #plot_mhalo_mstar_sham_integrated(i_nsnap = i_snap, **cenque_params)
-        #plot_mhalo_mstar(i_nsnap=i_snap, **cenque_params)
+    tau_str = 'linefit'
+    tau_param_str = [-0.7, 0.4]
+    sfr_str = 'sfr_avg'
+    #stellmass_str = 'sham'
+    stellmass_str = 'integrated'
+    cenque_params = {'tau': tau_str, 'tau_param': tau_param_str, 
+            'sfr': sfr_str, 'stellmass': stellmass_str} 
+    #plot_cenque_sfms(1, **cenque_params)
+    for i_snap in [12, 6, 1]: 
+        #plot_mstar_msham_snapshot(i_nsnap=i_snap, **cenque_params)
+        #plot_mhalo_mstar_sham_integrated(i_nsnap = i_snap, **cenque_params)
+        plot_mhalo_mstar(i_nsnap=i_snap, **cenque_params)
 
-    #plot_cenque_ssfr_dist_evolution(nsnaps=[2], Mrcut=20, **cenque_params)
-    #plot_cenque_ssfr_dist_evolution(nsnaps=[1], Mrcut=19, **cenque_params)
-    #plot_cenque_ssfr_dist_evolution(nsnaps=[1], Mrcut=18, **cenque_params)
+    '''
+    plot_cenque_ssfr_dist_evolution(nsnaps=[2], Mrcut=20, **cenque_params)
+    plot_cenque_ssfr_dist_evolution(nsnaps=[1], Mrcut=19, **cenque_params)
+    plot_cenque_ssfr_dist_evolution(nsnaps=[1], Mrcut=18, **cenque_params)
     
-    #for i in range(1,13): 
-    #    plot_cenque_quenching_ssfr_dist(i, **cenque_params) 
+    for i in range(1,13): 
+        plot_cenque_quenching_ssfr_dist(i, **cenque_params) 
 
-    #plot_snapshot_fqobs_evol(nsnaps=[1,2,3,4,5,6,7,8,9,10,11,12], 
-    #        fq_type='wetzelsmooth', **cenque_params)
-    #for i in range(1,13): 
-    #    plot_snapshot_fqobs(i, fq_type='wetzelsmooth', **cenque_params)
-    ##plot_ssfms_groupcat(Mrcut=18)
-    #plot_ssfms_groupcat(Mrcut=19)
-    #plot_ssfms_groupcat(Mrcut=20)
-    #
-    #plot_sfms_groupcat(Mrcut=18)
-    #plot_sfms_groupcat(Mrcut=19)
-    #plot_sfms_groupcat(Mrcut=20)
-    
-    #plot_sfms_data()
-    #plot_cenque_sf_mainseq()
+    plot_snapshot_fqobs_evol(nsnaps=[1,2,3,4,5,6,7,8,9,10,11,12], 
+            fq_type='wetzelsmooth', **cenque_params)
+    for i in range(1,13): 
+        plot_snapshot_fqobs(i, fq_type='wetzelsmooth', **cenque_params)
 
-    #fq_fig = plot_fq_evol_w_geha() 
-    #plot_fq_evol()
-
-    #tau_fig = plot_quenching_efold() 
-    #tau_fig.savefig('figure/quenching_efold_fig.png', bbox_inches='tight')
+    '''
