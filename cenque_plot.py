@@ -1417,8 +1417,13 @@ def plot_mhalo_mstar_sham_integrated(i_nsnap = 1, **kwargs):
     fig1.savefig(fig_name1, bbox_inches='tight')
     fig1.clear()
 
-def plot_mhalo_mstar_snapshotSHAM(i_nsnap=1): 
-    ''' Plot Mhalo versus M* of galaxies for snapshot data from TreePM --> SHAM 
+def plot_mhalo_mstar_snapshotSHAM(i_nsnap=1, scatter=0.0): 
+    ''' Plot M_halo versus SHAM stellar mass for TreePM --> SHAM snapshot
+
+    Parameters
+    ----------
+    i_nsnap : snapshot # 
+    scatter : set scatter of M_halo-M* in SHAM code 
 
     Notes
     -----
@@ -1428,66 +1433,16 @@ def plot_mhalo_mstar_snapshotSHAM(i_nsnap=1):
     '''
     prettyplot() 
     pretty_colors = prettycolors() 
-
-    # import TreePM-->SHAM output 
-    snapshot_file = ''.join(['dat/wetzel_tree/', 
-        'subhalo_sham_centrals_snapshot', str(i_nsnap), '.hdf5' 
-        ]) 
-    print snapshot_file 
-    f = h5py.File(snapshot_file, 'r') # read snapshot file
-    grp = f['cenque_data']
-
-    mhalo = grp['mass_halo'][:]
-    mstar = grp['mass'][:]
     
-    fig1 = plt.figure(1, figsize=[8,8])
-    sub1 = fig1.add_subplot(111)
-    
-    sub1.scatter(mstar, mhalo, c='b', s=3) 
-
-    '''
-    mass_bins = util.simple_mass_bin()  # use simplest mass bins
-
-    avg_mhalo, var_mhalo = [], [] 
-    for i_m in range(mass_bins.nbins): 
-        mass_limit = (mstar > mass_bins.mass_low[i_m]) & \
-                (mstar <= mass_bins.mass_high[i_m]) 
-        avg_mhalo.append( np.mean(mhalo[mass_limit]) ) 
-        var_mhalo.append( np.std(mhalo[mass_limit]) ) 
-        
-        #print mass_bins.mass_low[i_m], ' - ', mass_bins.mass_high[i_m]
-        #print min(mhalo[mass_limit]), max(mhalo[mass_limit])
-        #print np.mean(mhalo[mass_limit]), np.std(mhalo[mass_limit])
-         
-    sub1.errorbar(mass_bins.mass_mid, avg_mhalo, yerr=var_mhalo, 
-                lw=4, c=pretty_colors[1])
-    '''
-
-    sub1.set_xlim([9.0, 11.5]) 
-    sub1.set_xlabel(r'$\mathtt{M_*}$')
-    sub1.set_ylabel(r'$\mathtt{M_{Halo}}$')
-
-    fig_name1 = ''.join(['figure/', 
-        'subhalo_sham_centrals_snapshot', str(i_nsnap), '.png'])
-    fig1.savefig(fig_name1, bbox_inches='tight')
-    fig1.clear()
-
-def plot_mhalo_mstar_snapshotSHAM_scatter(i_nsnap=1, scatter=0.2): 
-    ''' Plot Mhalo versus M* of galaxies for snapshot data from TreePM --> SHAM 
-
-    Notes
-    -----
-    * Essentially for testing TreePM and SHAM 
-
-
-    '''
-    prettyplot() 
-    pretty_colors = prettycolors() 
-
     # import TreePM-->SHAM output 
-    snapshot_file = ''.join(['dat/wetzel_tree/', 
-        'subhalo_sham_centrals_snapshot', str(i_nsnap), '_scatter', str(scatter), '.hdf5' 
-        ]) 
+    if scatter == 0.0: 
+        snapshot_file = ''.join(['dat/wetzel_tree/', 
+            'subhalo_sham_centrals_snapshot', str(i_nsnap), '.hdf5' 
+            ]) 
+    else: 
+        snapshot_file = ''.join(['dat/wetzel_tree/', 
+            'subhalo_sham_centrals_snapshot', str(i_nsnap), '_scatter', str(scatter), '.hdf5' 
+            ]) 
     print snapshot_file 
     f = h5py.File(snapshot_file, 'r') # read snapshot file
     grp = f['cenque_data']
@@ -1496,12 +1451,12 @@ def plot_mhalo_mstar_snapshotSHAM_scatter(i_nsnap=1, scatter=0.2):
     mstar = grp['mass'][:]
     
     bovy.scatterplot(mstar, mhalo, scatter=True, color=pretty_colors[1], s=3, 
-            xrange=[9.0, 11.5], 
-            xlabel=r'$\mathtt{M_*}$', ylabel=r'$\mathtt{M_{Halo}}$')
+        xrange = [9.0, 11.5], 
+        xlabel=r'$\mathtt{M_{SHAM}}$', ylabel=r'$\mathtt{M_{Halo}}$') 
 
-    fig_name1 = ''.join(['figure/', 
+    fig_name = ''.join(['figure/', 
         'subhalo_sham_centrals_snapshot', str(i_nsnap), '_scatter', str(scatter), '.png'])
-    plt.savefig(fig_name1, bbox_inches='tight')
+    plt.savefig(fig_name, bbox_inches='tight')
 
 def plot_mstar_msham_snapshot(i_nsnap=1, **kwargs): 
     ''' Plot M* versus Msham of galaxies for CenQue file 
@@ -1672,10 +1627,11 @@ if __name__=='__main__':
                 'sfr': sfr_str, 'stellmass': stellmass_str} 
         #plot_cenque_sfms(1, **cenque_params)
         for i_snap in [12, 6, 1]: 
-            plot_d_stellmass_snapshot(i_nsnap=i_snap, **cenque_params)
+            plot_mhalo_mstar_snapshotSHAM(i_nsnap = i_snap, scatter=0.0)
+            plot_mhalo_mstar_snapshotSHAM(i_nsnap = i_snap, scatter=0.2)
+            #plot_d_stellmass_snapshot(i_nsnap=i_snap, **cenque_params)
             #plot_mstar_msham_snapshot(i_nsnap=i_snap, **cenque_params)
-        #plot_mhalo_mstar_sham_integrated(i_nsnap = i_snap, **cenque_params)
-        #plot_mhalo_mstar_snapshotSHAM_scatter(i_nsnap = i_snap)
+            #plot_mhalo_mstar_sham_integrated(i_nsnap = i_snap, **cenque_params)
         #plot_mhalo_mstar(i_nsnap=i_snap, **cenque_params)
 
     #plot_cenque_ssfr_dist_evolution(nsnaps=[2], Mrcut=20, **cenque_params)

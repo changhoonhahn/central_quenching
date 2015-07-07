@@ -43,9 +43,9 @@ def sfr_squarewave_testing(mass, tcosmic, **sfr_param):
         if len(sfr_w) != len(mass): 
             return None
 
-    dSFR = (10**sfr_A) * signal.square(sfr_w * (tcosmic - 6.9048 + sfr_d))    # 
+    dSFR = sfr_A * signal.square(sfr_w * (tcosmic - 6.9048 + sfr_d))    # 
      
-    return np.log10(dSFR)
+    return dSFR #np.log10(dSFR)
 
 def sfr_constant_testing(mass, tcosmic, **sfr_param): 
     ''' Constant SFR to test integator 
@@ -60,10 +60,10 @@ def rk4_integrator_testing():
     ''' Test RK4 integator used for integrated stellar mass 
 
     '''
-    ngal = 2    # 10,000 galaxies   
+    ngal = 10000    # 10,000 galaxies   
 
     # mass of galaxies
-    mass = np.array([0.0, 0.0]) #np.random.uniform(9.0, 12.0, ngal)
+    mass = np.array([0.0 for i in range(ngal)]) #np.random.uniform(9.0, 12.0, ngal)
     
     # assign random amp, freq, and phase
     sfr_amp = 0.3 * np.random.randn(ngal) 
@@ -72,16 +72,15 @@ def rk4_integrator_testing():
     
     t0 = 6.5
     for tcosmic in np.arange(7.0, 13.0, 0.5): 
-        print 'SFR = ', sfr_squarewave_testing(mass, tcosmic, 
-                amp = sfr_amp, freq = sfr_freq, phase = sfr_phase) 
+        #print 'SFR = ', sfr_squarewave_testing(mass, tcosmic, 
+        #        amp = sfr_amp, freq = sfr_freq, phase = sfr_phase) 
         new_mass = util.integrated_mass_rk4(sfr_squarewave_testing, mass, 
                 t0, tcosmic, f_retain = 1.0, 
                 amp = sfr_amp, freq = sfr_freq, phase = sfr_phase) 
         #new_mass = util.integrated_mass_rk4(sfr_constant_testing, mass, 
         #        t0, tcosmic, f_retain = 1.0) 
         #print new_mass - mass 
-        print new_mass 
-        print np.log10(((tcosmic - 6.5) * 10**9))
+        print min(new_mass - np.log10(((tcosmic - 6.5) * 10**9))), max(new_mass - np.log10(((tcosmic - 6.5) * 10**9)))
 
         mass = new_mass 
         t0 = tcosmic 
