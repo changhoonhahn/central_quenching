@@ -12,7 +12,17 @@ import pyfits
 
 def build_centrals_snapshot(): 
     ''' Build central catalogues using SHAMed TreePM subhalos 
+
+    Parameters
+    ----------
+    halo_mass : 'm.max' or 'halo.m'
+
+    Notes
+    -----
+    * m.max is default 
+
     '''
+
     snap_range = range(1,16)    # snapshot range
 
     # read in TreePM Subhalo snapshots from z~0.0502 to z~1.0833
@@ -27,6 +37,7 @@ def build_centrals_snapshot():
         print 'Number of Central Subhalos in Snapshot', i, '=', len(cen_index) 
 
         mhalo   = (sub[i]['halo.m'])[cen_index]     # M_halo
+        mhalo_max = (sub[i]['m.max'])[cen_index]
         mstar   = (sub[i]['m.star'])[cen_index]     # M* of subhalo
         pos     = (sub[i]['pos'])[cen_index]        # position of subhalo
         ilk     = (sub[i]['ilk'])[cen_index]        # classification flag in case we want to consider centrals and virtual centrals separately 
@@ -58,7 +69,8 @@ def build_centrals_snapshot():
         grp.create_dataset('mass', data=mstar)
         grp.create_dataset('child', data=child)
         grp.create_dataset('parent', data=parent)
-        grp.create_dataset('mass_halo', data=mhalo)
+        grp.create_dataset('halo.m', data=mhalo)
+        grp.create_dataset('halo.m.max', data=mhalo_max)
         
         print np.min(mstar), np.max(mstar), np.mean(mstar)
         print i,'number of parents that have child',len(child[child >=0])
@@ -108,6 +120,7 @@ def build_centrals_snapshot_scatter(scatter=0.2):
         print 'Number of Central Subhalos in Snapshot', i, '=', len(cen_index) 
 
         mhalo   = (sub[i]['halo.m'])[cen_index]     # M_halo
+        mhalo_max = (sub[i]['m.max'])[cen_index]     # M_halo
         mstar   = (sub[i]['m.star'])[cen_index]     # M* of subhalo
         pos     = (sub[i]['pos'])[cen_index]        # position of subhalo
         ilk     = (sub[i]['ilk'])[cen_index]        # classification flag in case we want to consider centrals and virtual centrals separately 
@@ -139,7 +152,8 @@ def build_centrals_snapshot_scatter(scatter=0.2):
         grp.create_dataset('mass', data=mstar)
         grp.create_dataset('child', data=child)
         grp.create_dataset('parent', data=parent)
-        grp.create_dataset('mass_halo', data=mhalo)
+        grp.create_dataset('halo.m', data=mhalo)
+        grp.create_dataset('halo.m.max', data=mhalo_max)
         
         print np.min(mstar), np.max(mstar), np.mean(mstar)
         print i,'number of parents that have child',len(child[child >=0])
@@ -148,5 +162,5 @@ def build_centrals_snapshot_scatter(scatter=0.2):
         f.close() 
 
 if __name__=="__main__": 
-    #build_centrals_snapshot()
+    build_centrals_snapshot()
     build_centrals_snapshot_scatter(scatter=0.2)

@@ -51,7 +51,8 @@ class CenQue:
         self.ilk = grp['ilk'][:]
         self.snap_index = grp['index'][:]
         self.pos = grp['pos'][:]
-        self.halo_mass = grp['mass_halo'][:]
+        #self.halo_mass = grp['mass_halo'][:]
+        self.halo_mass = grp['halo.m.max'][:]
             
         # Old code that reads in fits rather than hdf5 files 
         '''
@@ -818,10 +819,15 @@ def EvolveCenQue(origin_nsnap, final_nsnap, mass_bin=None, silent=True, **kwargs
         if not silent: 
             print 'Quiescent Fraction = ', np.float(len(parent_cq.gal_type[parent_cq.gal_type == 'quiescent']))/np.float(len(parent_cq.gal_type)) 
 
-def build_cenque_importsnap(**kwargs): 
-    ''' 
+def build_cenque_importsnap(): 
+    ''' Build CenQue snapshots with TreePM data imported
+    
+    Notes
+    -----
+    * pretty much hardcoded
     '''
-    for i_snap in [13]: 
+    for i_snap in np.arange(1, 13, 1): 
+        snap = CenQue() 
         snap.ImportSnap(nsnap=i_snap)
         snap.writeout(nsnap=i_snap)
 
@@ -834,6 +840,9 @@ if __name__=='__main__':
     #EvolveCenQue(13, 1, fqing_yint=-5.84, tau='instant')  
     #tau='linefit', tau_param=[-0.5, 0.4]) 
     #EvolveCenQue(13, 1, fqing_yint=-5.84, tau='linefit', tau_param=[-0.4, 0.2])
-    #build_cenque_original(sfr='sfr_avg') 
+    build_cenque_importsnap() 
+    build_cenque_original(sfr='sfr_avg') 
     EvolveCenQue(13, 1, tau='linefit', tau_param=[-0.7, 0.4], 
             sfr='sfr_avg', stellmass='sham') 
+    EvolveCenQue(13, 1, tau='linefit', tau_param=[-0.7, 0.4], 
+            sfr='sfr_avg', stellmass='integrated') 

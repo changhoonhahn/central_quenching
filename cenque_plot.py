@@ -1417,7 +1417,7 @@ def plot_mhalo_mstar_snapshotSHAM(i_nsnap=1, scatter=0.0):
     f = h5py.File(snapshot_file, 'r') # read snapshot file
     grp = f['cenque_data']
 
-    mhalo = grp['mass_halo'][:]
+    mhalo = grp['halo.m.max'][:]
     mstar = grp['mass'][:]
     
     bovy.scatterplot(mstar, mhalo, scatter=True, color=pretty_colors[1], s=3, 
@@ -1596,5 +1596,4 @@ if __name__=='__main__':
             fq_type='wetzelsmooth', **cenque_params)
     for i in range(1,13): 
         plot_snapshot_fqobs(i, fq_type='wetzelsmooth', **cenque_params)
-
     '''
