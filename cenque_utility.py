@@ -229,15 +229,11 @@ def simple_mass_bin():
     '''
     simple_mass_binsize = 0.2
     simple_mass_bin = mass_bin()
-    simple_mass_bin.mass_low = [ 9.0 + np.float(i)*simple_mass_binsize for i in range(13) ]
-    simple_mass_bin.mass_high = [ simple_mass_bin.mass_low[i] + simple_mass_binsize
-            for i in range(len(simple_mass_bin.mass_low)) ]
-    simple_mass_bin.mass_mid = [
-            0.5 * (simple_mass_bin.mass_low[i] + simple_mass_bin.mass_high[i]) 
-            for i in range(len(simple_mass_bin.mass_low))]
+    simple_mass_bin.mass_low  = np.array([ 9.0 + np.float(i)*simple_mass_binsize for i in xrange(13) ])
+    simple_mass_bin.mass_high = simple_mass_bin.mass_low + simple_mass_binsize
+    simple_mass_bin.mass_mid  = 0.5 * (simple_mass_bin.mass_low + simple_mass_bin.mass_high) 
 
-    simple_mass_bin.mass_wid = [simple_mass_bin.mass_high[i] - simple_mass_bin.mass_low[i] 
-            for i in range(len(simple_mass_bin.mass_high))]
+    simple_mass_bin.mass_wid = simple_mass_bin.mass_high - simple_mass_bin.mass_low 
 
     simple_mass_bin.nbins = len(simple_mass_bin.mass_low)
 
@@ -446,9 +442,9 @@ def get_quenching_efold(mstar, type='constant', param=None):
 
     elif type == 'linear':      # lienar tau(mass) 
 
-        tau = -(0.9 / 1.5) * ( mstar - 9.5) + 1.0
-        if np.min(tau) < 0.1:
-            tau[ tau < 0.1 ] = 0.1
+        tau = -(0.8 / 1.67) * ( mstar - 9.5) + 1.0
+        #if np.min(tau) < 0.1:
+        #    tau[ tau < 0.1 ] = 0.1
          
     elif type == 'instant':     # instant quenching 
 

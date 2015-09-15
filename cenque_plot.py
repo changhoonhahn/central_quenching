@@ -29,7 +29,7 @@ def plot_cenque_ssfr_dist(cenque, fig=None, **kwargs):
     pretty_colors = prettycolors() 
     
     if fig == None: 
-        fig = plt.figure(1, figsize=(35,8))
+        fig = plt.figure(1, figsize=(16,16))
         #fig.subplots_adjust(hspace=0., wspace=0.)
         new_plot = True
     else: 
@@ -63,7 +63,7 @@ def plot_cenque_ssfr_dist(cenque, fig=None, **kwargs):
             except AttributeError: 
                 ssfr_hist_label = 'Centrals'     # redshift lable 
             else: 
-                ssfr_hist_label = r'$z='+str(cenque.zsnap)+'$'     # redshift lable 
+                ssfr_hist_label = r'$\mathtt{z='+str(cenque.zsnap)+'}$'     # redshift lable 
     
         if 'line_color' in kwargs: 
             line_color = kwargs['line_color']
@@ -83,7 +83,8 @@ def plot_cenque_ssfr_dist(cenque, fig=None, **kwargs):
         else:
             line_width = 4
 
-        sub = fig.add_subplot(1, 5, i_mass+1)       # panel subplot 
+        #sub = fig.add_subplot(1, 5, i_mass+1)       # panel subplot 
+        sub = fig.add_subplot(2, 2, i_mass+1)       # panel subplot 
         sub.plot(ssfr_bin_mid, ssfr_hist, 
                 color=line_color, lw=line_width, ls=line_style, label=ssfr_hist_label) 
    
@@ -108,19 +109,22 @@ def plot_cenque_ssfr_dist(cenque, fig=None, **kwargs):
         # set y-axes labels
         if i_mass == 0: 
             sub.set_ylabel(r'$\mathtt{P(log \; SSFR)}$') 
-        elif i_mass in [1, 2]:
+        elif i_mass == 1: 
             sub.set_yticklabels([])
+        elif i_mass == 2:
+            #sub.set_yticklabels([])
             sub.set_xlabel(r'$\mathtt{log \; SSFR \;[yr^{-1}]}$') 
         else: 
             sub.set_yticklabels([])
+            sub.set_xlabel(r'$\mathtt{log \; SSFR \;[yr^{-1}]}$') 
                 
-            try: 
-                fig_leg.remove() 
-            except UnboundLocalError: 
-                pass
-            
-            fig_leg = sub.legend(loc='lower right', prop={'size':'24'})        # legends 
-    
+            #try: 
+            #    fig_leg.remove() 
+            #except UnboundLocalError: 
+            #    pass
+            #
+            #fig_leg = sub.legend(loc='lower left', prop={'size':'28'})        # legends 
+    ''' 
     if 'tau' in kwargs.keys(): 
         sub = fig.add_subplot(1, 5, 5)       # tau panel 
 
@@ -146,6 +150,7 @@ def plot_cenque_ssfr_dist(cenque, fig=None, **kwargs):
         sub.set_ylabel(r'Quenching e-Fold time $\tau$') 
         sub.yaxis.set_label_position('right')
         sub.legend(loc='lower left', prop={'size':'24'}) 
+    '''
     return fig   
 
 def plot_cenque_ssfr_dist_evolution(Mrcut=18, **kwargs): 
@@ -177,7 +182,8 @@ def plot_cenque_ssfr_dist_evolution(Mrcut=18, **kwargs):
     
     # overplot SDSS group catalog sSFR dist
     central_ssfr = cq_group.central_catalog(Mrcut=Mrcut) 
-    ssfr_fig = plot_cenque_ssfr_dist(central_ssfr, fig=ssfr_fig, label= r'$M_\mathtt{r,cut} = '+str(Mrcut)+'$', **kwargs) 
+    #ssfr_fig = plot_cenque_ssfr_dist(central_ssfr, fig=ssfr_fig, label= r'$M_\mathtt{r,cut} = '+str(Mrcut)+'$', **kwargs) 
+    ssfr_fig = plot_cenque_ssfr_dist(central_ssfr, fig=ssfr_fig, label= r'SDSS Group Catalog', **kwargs) 
     
     # file name ----------------------------------------------------------------------------
     if 'sfms_slope' in kwargs.keys():       # sfms specifier
@@ -857,22 +863,35 @@ def plot_quenching_efold(taus, tau_params):
 
     mass_bin = util.simple_mass_bin()       # mass bin 
        
-    fig, subs = plt.subplots(1, len(taus), figsize=[5*len(taus), 5]) 
-    subs = subs.ravel() 
+    #fig, subs = plt.subplots(1, len(taus), figsize=[5*len(taus), 5]) 
+    #subs = subs.ravel() 
+    fig = plt.figure(1, figsize=[8,8])
+    subs = fig.add_subplot(111)
     
     tau_str = ''
     for i_tau, tau in enumerate(taus): 
+        
 
         tau_mass = util.get_quenching_efold(np.array(mass_bin.mass_mid), 
                 type=tau, param=tau_params[i_tau]) 
 
-        subs[i_tau].plot(mass_bin.mass_mid, tau_mass, 
-                color=pretty_colors[5], lw=4) 
+        subs.plot(10**np.array(mass_bin.mass_mid), tau_mass, 
+                color=pretty_colors[3], lw=4, label='Central') 
+        
+        # satellite quenching fraction 
+        sat_mass = np.array([9.75 + 0.2*np.float(i) for i in range(9)])
+        tau_mass = util.get_quenching_efold(sat_mass, 
+                type='linear') 
+    
+        subs.plot(10**sat_mass, tau_mass, color='black', lw=4, ls='--',
+                label=r'Satellite (Wetzel et al. 2013)') 
 
-        subs[i_tau].set_title(tau) 
-        subs[i_tau].set_xlim([9.0, 12.0])
-        subs[i_tau].set_ylim([0.0, 1.0])
-        subs[i_tau].set_xlabel('Mass') 
+        #subs.set_title(tau) 
+        subs.set_xlim([10**9.5, 10**11.75])
+        subs.set_xscale('log')
+        subs.set_ylim([0.0, 2.5])
+        subs.set_xlabel(r'Stellar Mass $[M_\odot]}$',fontsize=28) 
+        subs.legend(loc='upper right') 
 
         # tau specifier 
         if tau == 'discrete': 
@@ -884,7 +903,7 @@ def plot_quenching_efold(taus, tau_params):
 
         tau_str += 'tau'
 
-    subs[0].set_ylabel(r'Quenching e-fold $(\tau)$') 
+    subs.set_ylabel(r'Quenching Timescales $(\tau_\mathtt{Q})$ [Gyr]',fontsize=28) 
                 
     fig.savefig('figure/quenching_efold'+tau_str+'.png', bbox_inches='tight')
     fig.clear() 
@@ -1566,29 +1585,30 @@ if __name__=='__main__':
 
     #plot_fq_geha_groupcat(Mrcut=18) 
    
-    #plot_quenching_efold(['linear', 'linefit', 'linefit'], [[], [-0.6, 0.3], [-0.7, 0.4]]) 
+    plot_quenching_efold(['linefit'], [[-0.7, 0.4]]) 
     #for i_snap in [12, 6, 1]: 
     #    plot_mhalo_mstar_snapshotSHAM(i_nsnap = i_snap, scatter=0.0)
     #    plot_mhalo_mstar_snapshotSHAM(i_nsnap = i_snap, scatter=0.2)
     
     tau_str = 'linefit'
     tau_param_str = [-0.7, 0.4]
+    #sfr_str = 'sfr_func'
     sfr_str = 'sfr_avg'
-    #stellmass_str = 'sham'
-    stellmass_str = 'integrated'
+    stellmass_str = 'sham'
+    #stellmass_str = 'integrated'
+    #for stellmass_str  in ['sham', 'integrated']: 
     cenque_params = {'tau': tau_str, 'tau_param': tau_param_str, 
             'sfr': sfr_str, 'stellmass': stellmass_str} 
     #plot_cenque_sfms(1, **cenque_params)
-    for i_snap in [12, 6, 1]: 
-        #plot_mstar_msham_snapshot(i_nsnap=i_snap, **cenque_params)
-        #plot_mhalo_mstar_sham_integrated(i_nsnap = i_snap, **cenque_params)
-        plot_mhalo_mstar(i_nsnap=i_snap, **cenque_params)
+    #for i_snap in [12, 6, 1]: 
+    #    #plot_mstar_msham_snapshot(i_nsnap=i_snap, **cenque_params)
+    #    #plot_mhalo_mstar_sham_integrated(i_nsnap = i_snap, **cenque_params)
+    #    plot_mhalo_mstar(i_nsnap=i_snap, **cenque_params)
 
+    #plot_cenque_ssfr_dist_evolution(nsnaps=[2], Mrcut=20, **cenque_params)
+    #plot_cenque_ssfr_dist_evolution(nsnaps=[1], Mrcut=19, **cenque_params)
+    #plot_cenque_ssfr_dist_evolution(nsnaps=[1], Mrcut=18, **cenque_params)
     '''
-    plot_cenque_ssfr_dist_evolution(nsnaps=[2], Mrcut=20, **cenque_params)
-    plot_cenque_ssfr_dist_evolution(nsnaps=[1], Mrcut=19, **cenque_params)
-    plot_cenque_ssfr_dist_evolution(nsnaps=[1], Mrcut=18, **cenque_params)
-    
     for i in range(1,13): 
         plot_cenque_quenching_ssfr_dist(i, **cenque_params) 
 
