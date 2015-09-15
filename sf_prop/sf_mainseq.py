@@ -15,10 +15,10 @@ import h5py
 from scipy import signal
 
 # --- Local ---
-#import cenque as cq
+import cenque as cq
 from group_catalog import group_catalog as cq_group
-#import cenque_utility as util 
-
+from group_catalog.group_catalog import sf_centrals 
+from util import cenque_utility as util 
 
 def get_sfr_mstar_z_envcount(m_star, z_in, machine='harmattan'): 
     ''' Return SFR(m_star, z_in) from SDSS/PRIMUS envcount data 
@@ -242,86 +242,6 @@ def sf_duty_test():
     plt.show() 
 
 # Group catalog SF-MS ----------------
-def build_groupcat_sf(Mrcut=18): 
-    ''' Build SF population for the SDSS group catalog for group catalog with specified Mrcut 
-
-    Parameters
-    ----------
-    Mrcut : Absolute magnitude cut that specifies the group catalog 
-
-    '''
-    if Mrcut == 18: 
-        masscut='9.4'
-    elif Mrcut == 19: 
-        masscut='9.8'
-    elif Mrcut == 20: 
-        masscut='10.2'
-
-    # import centrals  
-    centrals = cq_group.central_catalog(Mrcut=Mrcut, clobber=True) 
-    
-    # classification motivated by Salim et al. 
-    sf_gals = centrals.sfr > -1.30 + 0.65*(centrals.mass-10.0)
-
-    centrals_sfms = cq.CenQue() 
-
-    group_catalog_columns = ['mass', 'sfr', 'ssfr']
-    for column in group_catalog_columns: 
-        column_data = getattr(centrals, column)[sf_gals]
-        setattr(centrals_sfms, column, column_data) 
-
-    output_file = ''.join(['dat/group_catalog/', 
-        'massSFR_clf_groups_M', str(Mrcut), '_', str(masscut), '_D360.central.starforming.hdf5']) 
-    centrals_sfms.writeout(columns=group_catalog_columns,
-            input_file=output_file) 
-
-def sf_centrals(Mrcut=18, clobber=False): 
-    ''' Read SDSS star-forming central group catalog into CenQue class
-
-    Parameters
-    ----------
-    Mrcut : Absolute mangitude cut that specifies the group catalog 
-    clobber : If True, re-construct the catalog. If False, just read catalog 
-
-    Notes
-    -----
-    SF determined by a variation of the Salim et al. equation from Moustakas et al. 2013
-
-    '''
-
-    if Mrcut == 18: 
-        masscut='9.4'
-    elif Mrcut == 19: 
-        masscut='9.8'
-    elif Mrcut == 20: 
-        masscut='10.2'
-    
-    catalog_file = ''.join([
-        'dat/group_catalog/', 
-        'massSFR_clf_groups_M', 
-        str(Mrcut), '_', str(masscut), 
-        '_D360.central.starforming.hdf5'
-        ]) 
-
-    if not os.path.isfile(catalog_file) or clobber: 
-
-        build_groupcat_sf(Mrcut=Mrcut, central=True)
-    
-    f = h5py.File(catalog_file, 'r') 
-    grp = f['cenque_data']
-    mass = grp['mass'][:]
-    sfr = grp['sfr'][:]
-    ssfr = grp['ssfr'][:]
-
-    catalog = cq.CenQue() 
-    setattr(catalog, 'mass', mass) 
-    setattr(catalog, 'sfr', sfr) 
-    setattr(catalog, 'ssfr', ssfr) 
-    
-    f.close()
-
-    return catalog 
-
 def get_sfr_mstar_z_groupcat(m_star, Mrcut=18, clobber=False): 
     ''' SFR(M*, z) from SDSS Group Catalog SFMS 
 

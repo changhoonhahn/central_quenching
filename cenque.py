@@ -189,6 +189,46 @@ class CenQue:
         CenQue class object
         """
 
+        pass
+
+    def sample_trim(self, npwhere, quiet = False): 
+        ''' Given numpy.where condition, apply numpy where condition
+        to object data columns. 
+        '''
+
+        if not quiet: 
+            pass
+            #n_remove = len(bool) - len(bool[bool == True])
+            #print 'Removing ', n_remove, ' elements from ', len(bool)  
+    
+        if columns is None:         # if data columns aren't specified
+            data_columns = ['mass', 'halo_mass', 'sfr', 'ssfr', 'gal_type', 
+                    'parent', 'child', 'ilk', 'snap_index', 'pos']
+        else: 
+            data_columns = columns 
+
+        n_list = len(bool) 
+        
+        for column in self.data_columns:         # loop through columns and only keep true values
+            attr_list = getattr(self, column) 
+
+            try: 
+                n_attr_list = len(attr_list) 
+            except TypeError: 
+                n_attr_list = 0 
+            
+            if n_list != n_attr_list: 
+                raise TypeError(column+": boolean does not match length!") 
+            else:  
+                # impose boolean so only "true" values are kept
+                new_attr_list = attr_list[bool]     
+
+                setattr(self, column, new_attr_list)    # save to class 
+    
+
+
+
+        """
         if self.nsnap == None: 
             raise ValueError()
 
@@ -278,41 +318,9 @@ class CenQue:
             'cenque_centrals_snapshot', str(kwargs['nsnap']), file_type_str, sfms_param_str, 
             '.hdf5']) 
 
-    return cenque_filename
+        return cenque_filename
+        """
 
-    def sample_trim(self, npwhere, columns = self.data_columns, quiet = False): 
-        ''' Given numpy.where condition, apply numpy where condition
-        to object data columns. 
-        '''
-
-        if not quiet: 
-            #n_remove = len(bool) - len(bool[bool == True])
-            #print 'Removing ', n_remove, ' elements from ', len(bool)  
-    
-        if columns is None:         # if data columns aren't specified
-            data_columns = ['mass', 'halo_mass', 'sfr', 'ssfr', 'gal_type', 
-                    'parent', 'child', 'ilk', 'snap_index', 'pos']
-        else: 
-            data_columns = columns 
-
-        n_list = len(bool) 
-        
-        for column in data_columns:         # loop through columns and only keep true values
-            attr_list = getattr(self, column) 
-
-            try: 
-                n_attr_list = len(attr_list) 
-            except TypeError: 
-                n_attr_list = 0 
-            
-            if n_list != n_attr_list: 
-                raise TypeError(column+": boolean does not match length!") 
-            else:  
-                # impose boolean so only "true" values are kept
-                new_attr_list = attr_list[bool]     
-
-                setattr(self, column, new_attr_list)    # save to class 
-    
 
 def build_cenque_importsnap(): 
     ''' Build CenQue snapshots with TreePM data imported
