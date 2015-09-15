@@ -6,7 +6,7 @@ Author(s): ChangHoon Hahn
 
 """
 
-def EvolveCenQue(origin_nsnap, final_nsnap, mass_bin=None, silent=True, **kwargs): 
+def evolve_CenQue(origin_nsnap, final_nsnap, mass_bin=None, silent=True, **kwargs): 
     ''' Evolve SF properties from origin_nsnap to final_nsnap 
     
     Parameters

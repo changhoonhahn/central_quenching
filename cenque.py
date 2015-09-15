@@ -48,6 +48,7 @@ class CenQue:
 
         self.mass_bins = self.set_mass_bins()
         self.data_columns = None 
+        self.cenque_type = None
 
     def import_treepm(self, nsnap): 
         """ Import the following snapshot data from TreePM --> SHAM snapshots. Also imports 
@@ -67,6 +68,7 @@ class CenQue:
         grp = f['cenque_data'] 
 
         self.data_columns = ['mass', 'parent', 'child', 'ilk', 'snap_index', 'pos']
+        self.cenque_type = 'treepm_import'
 
         self.mass = grp['mass'][:] 
         self.parent = grp['parent'][:]
@@ -96,7 +98,7 @@ class CenQue:
     def set_mass_bins(self): 
         """ Mass bin of 
         """
-        
+
         massbins = util.simple_mass_bin() 
         # nothing else specified here but this should later be implemented 
         # to change based on kwargs
@@ -133,10 +135,12 @@ class CenQue:
 
         return None 
 
-    def writeout(self, **kwargs): 
-        ''' simply outputs specified columns to file
-        '''
-        output_file = util.cenque_file( **kwargs )  # output file 
+    def writeout(self): 
+        """ Write out self.data_columns to h5py file
+        """
+        
+        output_file = self.file()  # output file 
+
         print 'Writing ', output_file 
         f = h5py.File(output_file, 'w')         # hdf5 file format (open file) 
         grp = f.create_group('cenque_data')     # create group 
@@ -179,6 +183,102 @@ class CenQue:
         f.close()  
 
         return None 
+    
+    def file(self): 
+        """ File name of CenQue object. Only used to writeout 
+        CenQue class object
+        """
+
+        if self.nsnap == None: 
+            raise ValueError()
+
+        if self.cenque_type == None: 
+            raise ValueError()
+    
+        # Cenque Object with assigned starformation properties
+        if self.cenque_type == 'sfassigned':
+
+            #if kwargs['sfr'] == 'sfr_avg': 
+            #    file_type_str = '_sfravg_sfpropassign'
+            #elif kwargs['sfr'] == 'sfr_func': 
+            #    file_type_str = '_sfrfunc_sfpropassign'
+            #else: 
+            #    raise NotImplementedError('asdfasdflkjasdf;lkjasdf') 
+                
+            # Quenching Fraction specifier 
+            if 'fqing_slope' in kwargs.keys(): 
+                fqing_slope_str = str("%.2f" % kwargs['fqing_slope'])
+            else: 
+                fqing_slope_str = str("%.2f" % 0.63)
+
+            if 'fqing_yint' in kwargs.keys(): 
+                fqing_yint_str = str("%.2f" % kwargs['fqing_yint'])
+            else: 
+                fqing_yint_str = str("%.2f" % -6.04) 
+
+            fqing_str = ''.join([fqing_slope_str, '_', fqing_yint_str, 'fqing']) 
+
+            # combine specifiers
+            file_type_str = ''.join(['_', fqing_str, file_type_str])
+                
+        elif 'evo_from' in self.cenque_type:
+            # evolved from nsnap
+            original_nsnap = int(((kwargs['file_type']).split('from'))[-1]) 
+        
+            if kwargs['stellmass'].lower() == 'integrated': 
+                mass_str = '_integ'
+            elif kwargs['stellmass'].lower() == 'sham': 
+                mass_str = '_sham'
+            else: 
+                raise NotImplementedError('asdfalkjlkjasdf') 
+
+            # star-formation assign (random about average or functional) 
+            if kwargs['sfr'] == 'sfr_avg': 
+                file_type_str = mass_str+'_sfravg_evol_from'+str(original_nsnap) 
+            elif kwargs['sfr'] == 'sfr_func': 
+                file_type_str = mass_str+'_sfrfunc_evol_from'+str(original_nsnap) 
+            else: 
+                raise NotImplementedError('asdfasdflkjasdf;lkjasdf') 
+           
+            # Tau specifier
+            if kwargs['tau'] == 'discrete': 
+                tau_str = '_'+'_'.join( [str("%.1f" % t) for t in kwargs['tau_param']] )+'tau'
+            elif kwargs['tau'] == 'linefit':
+                tau_str = '_line'+'_'.join( [str("%.2f" % t) for t in kwargs['tau_param']] )+'tau'
+            else: 
+                tau_str = '_'+kwargs['tau']+'tau'
+
+            # Quenching Fraction specifier 
+            if 'fqing_slope' in kwargs.keys(): 
+                fqing_slope_str = str(kwargs['fqing_slope'])
+            else: 
+                fqing_slope_str = str(0.63)
+
+            if 'fqing_yint' in kwargs.keys(): 
+                fqing_yint_str = str(kwargs['fqing_yint'])
+            else: 
+                fqing_yint_str = str(-6.04) 
+
+            fqing_str = '_'+fqing_slope_str+'_'+fqing_yint_str+'fqing'
+
+            # combine specifiers
+            file_type_str = ''.join([tau_str, fqing_str, file_type_str]) 
+
+        else: 
+            raise NameError() 
+
+        if 'sfms_slope' not in kwargs.keys(): 
+            sfms_param_str = ''
+        else: 
+            slope_str = "%.2f" % kwargs['sfms_slope']
+            yint_str = "%.2f" % kwargs['sfms_yint'] 
+            sfms_param_str = '_sfms_slope'+slope_str+'_yint'+yint_str
+
+        cenque_filename = ''.join(['dat/central_quenching/', 
+            'cenque_centrals_snapshot', str(kwargs['nsnap']), file_type_str, sfms_param_str, 
+            '.hdf5']) 
+
+    return cenque_filename
 
     def sample_trim(self, npwhere, columns = self.data_columns, quiet = False): 
         ''' Given numpy.where condition, apply numpy where condition
@@ -213,10 +313,6 @@ class CenQue:
 
                 setattr(self, column, new_attr_list)    # save to class 
     
-    def get_index(self, bool): 
-        ''' Given boolean from conditional statement, give indices of boolean
-        '''
-        return np.array(range(len(self.mass)))[bool]
 
 def build_cenque_importsnap(): 
     ''' Build CenQue snapshots with TreePM data imported
