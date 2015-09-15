@@ -13,8 +13,7 @@ import h5py
 import time
 
 #---- Local ----
-import cenque_utility as util
-import sf_mainseq as sfms
+from util import cenque_utility as util
 
 class CenQue: 
 

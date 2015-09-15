@@ -14,7 +14,6 @@ import matplotlib.pyplot as plt
 import h5py
 
 #---- Local ----
-from util import cenque_utility as util
 import cenque as cq 
 
 def read_group_catalog_galdata(Mrcut=18): 
@@ -32,7 +31,7 @@ def read_group_catalog_galdata(Mrcut=18):
     file = ''.join(['dat/group_catalog/', 
         'clf_groups_M', str(Mrcut), '_', str(masscut), '_D360.galdata_corr.fits']) 
 
-    gal_data = util.mrdfits(file) 
+    gal_data = mrdfits(file) 
     for column in gal_data.__dict__.keys(): 
         column_data = getattr(gal_data, column)
         if column == 'stellmass': 
@@ -64,7 +63,7 @@ def read_group_catalog_prob(Mrcut=18):
     file = ''.join(['dat/group_catalog/', 
         'clf_groups_M', str(Mrcut), '_', str(masscut), '_D360.prob.fits']) 
 
-    prob_data = util.mrdfits(file)            # import probability file 
+    prob_data = mrdfits(file)            # import probability file 
 
     return prob_data
 
@@ -212,6 +211,80 @@ def sf_centrals(Mrcut=18, clobber=False):
     
     f.close()
 
+    return catalog 
+
+def build_groupcat_q(Mrcut=18): 
+    ''' Build Q population for the SDSS group catalog for group catalog with specified Mrcut 
+
+    Parameters
+    ----------
+    Mrcut : Absolute magnitude cut that specifies the group catalog 
+
+    '''
+    if Mrcut == 18: 
+        masscut='9.4'
+    elif Mrcut == 19: 
+        masscut='9.8'
+    elif Mrcut == 20: 
+        masscut='10.2'
+
+    # import centrals  
+    centrals = cq_group.central_catalog(Mrcut=Mrcut, clobber=True) 
+    
+    # classification motivated by Salim et al. 
+    sf_gals = centrals.sfr < -1.30 + 0.65*(centrals.mass-10.0)
+
+    centrals_sfms = cq.CenQue() 
+
+    group_catalog_columns = ['mass', 'sfr', 'ssfr']
+    for column in group_catalog_columns: 
+        column_data = getattr(centrals, column)[sf_gals]
+        setattr(centrals_sfms, column, column_data) 
+
+    output_file = ''.join(['dat/group_catalog/', 
+        'massSFR_clf_groups_M', str(Mrcut), '_', str(masscut), '_D360.central.quiescent.hdf5']) 
+    centrals_sfms.writeout(columns=group_catalog_columns,
+            input_file=output_file) 
+
+def q_centrals(Mrcut=18, clobber=False): 
+    ''' Read SDSS quiescent central group catalog into CenQue class
+
+    Parameters
+    ----------
+    Mrcut : Absolute mangitude cut that specifies the group catalog 
+    clobber : If True, re-construct the catalog. If False, just read catalog 
+
+    Notes
+    -----
+    Q determined by a variation of the Salim et al. equation from Moustakas et al. 2013
+
+    '''
+    if Mrcut == 18: 
+        masscut='9.4'
+    elif Mrcut == 19: 
+        masscut='9.8'
+    elif Mrcut == 20: 
+        masscut='10.2'
+    
+    catalog_file = ''.join(['dat/group_catalog/', 
+        'massSFR_clf_groups_M', str(Mrcut), '_', str(masscut), '_D360.central.quiescent.hdf5']) 
+
+    if (os.path.isfile(catalog_file) == False) or (clobber == True): 
+        # (re)construct quiescent group catalog 
+        build_groupcat_q(Mrcut=Mrcut)
+    
+    f = h5py.File(catalog_file, 'r') 
+    grp = f['cenque_data']
+    mass = grp['mass'][:]
+    sfr = grp['sfr'][:]
+    ssfr = grp['ssfr'][:]
+
+    catalog = cq.CenQue() 
+    setattr(catalog, 'mass', mass) 
+    setattr(catalog, 'sfr', sfr) 
+    setattr(catalog, 'ssfr', ssfr) 
+    
+    f.close()
     return catalog 
 
 if __name__=='__main__': 

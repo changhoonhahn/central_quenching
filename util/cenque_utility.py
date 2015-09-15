@@ -15,9 +15,7 @@ from scipy import signal
 from scipy import interpolate
 
 # ---- Local -----
-import cenque as cq 
-import cenque_groupcat as cq_group
-import sf_mainseq as sfms 
+#from sfms import sf_mainseq as sfms 
 
 
 # quiescent fraction ------------------------------------------------------------
