@@ -20,7 +20,7 @@ from group_catalog import group_catalog as cq_group
 from group_catalog.group_catalog import sf_centrals 
 from util import cenque_utility as util 
 
-def get_sfr_mstar_z_groupcat(m_star, Mrcut=18, clobber=False): 
+def get_sfr_mstar_z_groupcat(m_stars, Mrcut=18, clobber=False): 
     ''' SFR(M*, z) from SDSS Group Catalog SFMS. calculate 
     the average SFR, sigma SFR, and Ngal in the mass bin encapsulating 
     given M*. 
@@ -48,49 +48,66 @@ def get_sfr_mstar_z_groupcat(m_star, Mrcut=18, clobber=False):
 
     sf_data = sf_centrals(Mrcut=Mrcut, clobber=clobber) 
     
-    mbin_index = np.where(
-            (massbins.mass_low <= m_star) &
-            (massbins.mass_high > m_star) 
-            )
-    mass_low  = (massbins.mass_low[mbin_index])[0]
-    mass_high = (massbins.mass_high[mbin_index])[0]
+    if isinstance(m_stars, float): 
+        m_stars = [m_stars]
+    
+    avg_sfrs, sig_sfrs, n_gals = [], [], [] 
 
-    in_massbin = np.where(
-            (sf_data.mass >= mass_low) & 
-            (sf_data.mass < mass_high)
-            )
+    for m_star in m_stars:
 
-    sfr_massbin = sf_data.sfr[in_massbin]
+        mbin_index = np.where(
+                (massbins.mass_low <= m_star) &
+                (massbins.mass_high > m_star) 
+                )
 
-    n_gal = len(in_massbin[0])
+        if (len(mbin_index[0]) != 1):
+            avg_sfrs.append(-999.)
+            sig_sfrs.append(-999.)
 
-    if n_gal > 30: 
+            continue
 
-        med_sfr = np.median(sfr_massbin)
-        avg_sfr = np.average(sfr_massbin)
-        var_sfr = np.std(sfr_massbin)
-        
-        # Remove outliers by recomputing summary statistics 
-        # for +/- 3 sigma
-        for iter in xrange(3): 
-            sfr_range = np.where(
-                    (sfr_massbin > med_sfr - 3.0 * var_sfr) & 
-                    (sfr_massbin < med_sfr + 3.0 * var_sfr)
-                    ) 
+        mass_low  = (massbins.mass_low[mbin_index])[0]
+        mass_high = (massbins.mass_high[mbin_index])[0]
+
+        in_massbin = np.where(
+                (sf_data.mass >= mass_low) & 
+                (sf_data.mass < mass_high)
+                )
+
+        sfr_massbin = sf_data.sfr[in_massbin]
+
+        n_gal = len(in_massbin[0])
+
+        if n_gal > 30: 
             
-            if np.median(sfr_massbin[sfr_range]) > med_sfr: 
-                med_sfr = np.median(sfr_massbin[sfr_range]) 
-                avg_sfr = np.average(sfr_massbin[sfr_range]) 
-                sig_sfr = np.std(sfr_massbin[sfr_range])
+            avg_sfrs.append( 
+                    np.median(sfr_massbin)
+                    )
+            sig_sfrs.append(
+                    np.std(sfr_massbin)
+                    )
+            
+            print np.average(sfr_massbin), np.median(sfr_massbin)
+            # Remove outliers by recomputing summary statistics 
+            # for +/- 3 sigma
+            #for iter in xrange(3): 
+            #    sfr_range = np.where(
+            #            (sfr_massbin > med_sfr - 3.0 * var_sfr) & 
+            #            (sfr_massbin < med_sfr + 3.0 * var_sfr)
+            #            ) 
+            #    
+            #    if np.median(sfr_massbin[sfr_range]) > med_sfr: 
+            #        med_sfr = np.median(sfr_massbin[sfr_range]) 
+            #        avg_sfr = np.average(sfr_massbin[sfr_range]) 
+            #        sig_sfr = np.std(sfr_massbin[sfr_range])
 
-    else: 
-        med_sfr = -999.
-        avg_sfr = -999.
-        sig_sfr = -999.
+        else: 
+            avg_sfrs.append(-999.)
+            sig_sfrs.append(-999.)
 
-    return [med_sfr, var_sfr, n_gal] 
+    return [avg_sfrs, sig_sfrs, n_gals] 
 
-def get_sfr_mstar_z_envcount(m_star, z_in): 
+def get_sfr_mstar_z_envcount(m_stars, z_ins): 
     ''' SFR(m_star, z_in) from the SDSS/PRIMUS envcount catalog. 
     In this calcluation, we use an isolation criteria of central 
     galaxies for envcount catalog (envcount = 0). 
@@ -106,63 +123,100 @@ def get_sfr_mstar_z_envcount(m_star, z_in):
     ----------------------------------------------------------------
     sfr_out: star formation rate
     '''
+    if isinstance(m_stars, float): 
+        m_stars = [m_stars] 
+
+    if len(m_stars) != len(z_ins): 
+        raise ValueError()
 
     file_dir = 'dat/wetzel_tree/envcount/'
 
-    if z_in < 0.2:
-        file = ''.join([file_dir, 
+    sdss_file = ''.join([file_dir, 
             'envcount_cylr2.5h35_thresh75_sdss_active_z0.05_0.12_primuszerr.fits']) 
-    else: 
-        file = ''.join([file_dir, 
+    primus_file = ''.join([file_dir, 
             'envcount_cylr2.5h35_thresh75_active_z0.2_1.0_lit.fits']) 
 
-    sf_data = util.mrdfits(file) 
+    if np.max(z_ins) < 0.2:
+        sdss_sf_data = util.mrdfits(sdss_file) 
+    elif np.min(z_ins) > 0.2: 
+        primus_sf_data = util.mrdfits(primus_file)
+    else: 
+        sdss_sf_data = util.mrdfits(sdss_file) 
+        primus_sf_data = util.mrdfits(primus_file)
     
-    # determine mass bin and redshift bin to splice the data
     massbins = util.simple_mass_bin()
-    
-    mbin_index = np.where(
-            (massbins.mass_low <= m_star) &
-            (massbins.mass_high > m_star) 
-            )
-    mass_low  = (massbins.mass_low[mbin_index])[0]
-    mass_high = (massbins.mass_high[mbin_index])[0]
-
     zbins_low = np.array([ 0.0, 0.2, 0.4, 0.6, 0.8 ])
     zbins_high = np.array([ 0.2, 0.4, 0.6, 0.8, 1.0 ])
-    zbin_index = np.where(
-            (zbins_low <= z_in) & 
-            (zbins_high > z_in) 
-            )
-
-    z_low = (zbins_low[zbin_index])[0]
-    z_high = (zbins_high[zbin_index])[0]
-    print z_low, z_high
     
-    # slice data into bins of mass and redshift 
-    mass_z_slice = np.where(
-            (sf_data.mass >= mass_low) & (sf_data.mass < mass_high) & 
-            (sf_data.redshift >= z_low) & (sf_data.redshift < z_high) & 
-            (sf_data.envcount == 0.0) & (sf_data.mass > sf_data.masslimit) & 
-            (sf_data.edgecut == 1) 
-            )
+    avg_sfrs, sig_sfrs, n_gals = [], [], [] 
 
-    n_gal = len(mass_z_slice[0])
+    for i_obj in xrange(len(m_stars)): 
 
-    if n_gal > 0: 
-        avg_sfr = np.average(
-                sf_data.sfr[mass_z_slice], 
-                weights = sf_data.weight[mass_z_slice]
-                ) 
-        sig_sfr = np.sqrt(np.average( 
-                (sf_data.sfr[mass_z_slice] - avg_sfr)**2, 
-                weights = sf_data.weight[mass_z_slice]
-                ))
-    else: 
-        avg_sfr = -999.
-        sig_sfr = -999.
+        mbin_index = np.where(
+                (massbins.mass_low <= m_stars[i_obj]) &
+                (massbins.mass_high > m_stars[i_obj]) 
+                )
+        
+        zbin_index = np.where(
+                (zbins_low <= z_ins[i_obj]) & 
+                (zbins_high > z_ins[i_obj]) 
+                )
+        
+        if (len(zbin_index[0]) != 1) or (len(mbin_index[0]) != 1):
 
-    return [avg_sfr, sig_sfr, n_gal] 
+            print m_stars[i_obj], z_ins[i_obj]
+
+            avg_sfrs.append(-999.)
+            sig_sfrs.append(-999.)
+
+            continue
+
+        mass_low  = (massbins.mass_low[mbin_index])[0]
+        mass_high = (massbins.mass_high[mbin_index])[0]
+        z_low = (zbins_low[zbin_index])[0]
+        z_high = (zbins_high[zbin_index])[0]
+
+        if z_ins[i_obj] < 0.2: 
+            sf_data = sdss_sf_data
+        else: 
+            sf_data = primus_sf_data
+        
+        # slice data into bins of mass and redshift 
+        mass_z_slice = np.where(
+                (sf_data.mass >= mass_low) & (sf_data.mass < mass_high) & 
+                (sf_data.redshift >= z_low) & (sf_data.redshift < z_high) & 
+                (sf_data.envcount == 0.0) & (sf_data.mass > sf_data.masslimit) & 
+                (sf_data.edgecut == 1) 
+                )
+
+        n_gal = len(mass_z_slice[0])
+
+        n_gals.append(n_gal)
+
+        if n_gal > 30: 
+
+            avg_sfr = np.average(
+                    sf_data.sfr[mass_z_slice], 
+                    weights = sf_data.weight[mass_z_slice]
+                    ) 
+            avg_sfrs.append(
+                    np.average(
+                        sf_data.sfr[mass_z_slice], 
+                        weights = sf_data.weight[mass_z_slice]
+                        ) 
+                    )
+
+            sig_sfrs.append(
+                    np.sqrt(np.average(
+                        (sf_data.sfr[mass_z_slice] - avg_sfr)**2, 
+                        weights = sf_data.weight[mass_z_slice]
+                        ))
+                    )
+        else: 
+            avg_sfrs.append(-999.)
+            sig_sfrs.append(-999.)
+
+    return [avg_sfrs, sig_sfrs, n_gals] 
 
 """
 def sf_duty_test(): 

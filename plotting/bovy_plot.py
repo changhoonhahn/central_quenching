@@ -1094,7 +1094,8 @@ def scatterplot(x,y,*args,**kwargs):
             w8= weights[cums > levels[-1]]
             for ii in range(len(plotx)):
                 bovy_plot(plotx[ii],ploty[ii],overplot=True,
-                          color='%.2f'%(1.-w8[ii]),*args,**kwargs)
+                          *args,**kwargs)
+                #          color='%.2f'%(1.-w8[ii]),*args,**kwargs)
         else:
             bovy_plot(plotx,ploty,overplot=True,*args,**kwargs)
     #Add onedhists

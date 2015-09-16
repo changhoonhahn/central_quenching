@@ -6,6 +6,7 @@ Fit SF-MS
 '''
 import os 
 import h5py
+import numpy as np
 # --- Local ---
 import mpfit
 
@@ -87,18 +88,16 @@ def get_bestfit_sfms_groupcat(Mrcut=18, fid_mass=10.5, clobber=False):
         print 'Writing '
         print bestfit_file
 
-        avg_sfrs, var_sfrs, masses = [], [], [] 
-
-        for mass in np.arange(9.0, 11.5, 0.25): 
+        avg_sfrs, var_sfrs, ngal = get_sfr_mstar_z_groupcat(
+                np.arange(9.0, 11.5, 0.25), 
+                Mrcut=Mrcut
+                )
             
-            avg_sfr, var_sfr, ngal = get_sfr_mstar_z_groupcat(mass, Mrcut=Mrcut)
+        enough_gal = np.where(ngal > 100)
             
-            if ngal < 100: 
-                continue 
-
-            masses.append(mass)
-            avg_sfrs.append(avg_sfr)
-            var_sfrs.append(var_sfr)
+        masses = np.arange(9.0, 11.5, 0.25 )[enough_gal]
+        avg_sfrs = np.array(avg_sfrs)[enough_gal]
+        var_sfrs = np.array(var_sfrs)[enough_gal]
         
         p0 = [0.5607, 0.0775917]    # guess 
         fa = {
@@ -118,12 +117,15 @@ def get_bestfit_sfms_groupcat(Mrcut=18, fid_mass=10.5, clobber=False):
         grp.attrs['fid_mass'] = fid_mass 
 
         grp.create_dataset('zmid', data=[0.1]) 
-        grp.create_dataset('slope', data=[bestfit.params[0]]) 
-        grp.create_dataset('yint', data=[bestfit.params[1]]) 
+        grp.create_dataset('slope', data=[0.65])
+        grp.create_dataset('yint', data=[0.0]) 
+        #grp.create_dataset('slope', data=[bestfit.params[0]]) 
+        #grp.create_dataset('yint', data=[bestfit.params[1]]) 
        
         f.close() 
 
-        return [0.1, bestfit.params[0], bestfit.params[1]]
+        #return [0.1, bestfit.params[0], bestfit.params[1]]
+        return [0.1, 0.65, 0.0]
 
     else: 
         f = h5py.File(bestfit_file, 'r') 
@@ -156,35 +158,31 @@ def get_bestfit_sfms_envcount(fid_mass = 10.5, clobber = False):
         # for SDSS redshift bin of the envcount catalog. Afterwards 
         # fit slope and yint to the SF-MS. Notes that mass range is higher
         # than later in the function. 
-        avg_sfrs, sig_sfrs, masses = [], [], [] 
-
-        for mass in np.arange(9.0, 11.5, 0.25): 
+        avg_sfrs, sig_sfrs, ngal = get_sfr_mstar_z_envcount(
+                np.arange(9.0, 11.5, 0.25), 
+                [0.1 for i in xrange(len(np.arange(9.0, 11.5, 0.25)))]
+                )
             
-            avg_sfr, sig_sfr, ngal = get_sfr_mstar_z_envcount(
-                    mass, 0.1
-                    )
+        enough_gal = np.where(np.array(avg_sfrs) != -10.)
             
-            if ngal < 100: 
-                continue 
-
-            masses.append(mass)
-            avg_sfrs.append(avg_sfr)
-            sig_sfrs.append(sig_sfr)
+        masses = np.arange(9.0, 11.5, 0.25 )[enough_gal]
+        avg_sfrs = np.array(avg_sfrs)[enough_gal]
+        sig_sfrs = np.array(sig_sfrs)[enough_gal]
         
-        p0 = [0.5607, 0.0775917]    # guess 
+        p0 = [0.0775917]    # guess 
         fa = {
                 'x': np.array(masses) - fid_mass, 
                 'y': np.array(avg_sfrs), 
                 'err': np.array(sig_sfrs)
                 }
         bestfit = mpfit.mpfit(
-                mpfit_line, 
+                mpfit_line_fixedslope, 
                 p0, 
                 functkw = fa
                 ) 
 
-        sdsszbin_slope = bestfit.params[0]
-        sdsszbin_yint = bestfit.params[1]
+        sdsszbin_slope = 0.65 #bestfit.params[0]
+        sdsszbin_yint = 0.2 #bestfit.params[0]
         
         # use bestfit slope of low z SDSS bin to fit fixed slope 
         # lines to the rest of the redshift bins
@@ -193,26 +191,21 @@ def get_bestfit_sfms_envcount(fid_mass = 10.5, clobber = False):
 
         for zbin in zbins: 
             
-            avg_sfrs, sig_sfrs, masses = [], [], [] 
+            avg_sfrs, sig_sfrs, ngal = get_sfr_mstar_z_envcount(
+                    np.arange(9.0, 11.5, 0.25), 
+                    [zbin for i in xrange(len(np.arange(9.0, 11.5, 0.25)))]
+                    )
+                
+            enough_gal = np.where(np.array(avg_sfrs) > -10.)
+                
+            masses = np.arange(9.0, 11.5, 0.25 )[enough_gal]
+            avg_sfrs = np.array(avg_sfrs)[enough_gal]
+            sig_sfrs = np.array(sig_sfrs)[enough_gal]
 
-            for mass in np.arange(9.5, 11.5, 0.25): 
-
-                avg_sfr, sig_sfr, ngal = get_sfr_mstar_z_envcount(
-                        mass, 
-                        zbin
-                        )
-
-                if ngal < 10: 
-                    continue 
-
-                masses.append(mass) 
-                avg_sfrs.append(avg_sfr)
-                sig_sfrs.append(sig_sfr)
-
-            p0 = [0.1]  # bad guess
+            p0 = [0.5]  # bad guess
             fa = {
                     'slope': sdsszbin_slope, 
-                    'x': np.array(mass) - fid_mass, 
+                    'x': np.array(masses) - fid_mass, 
                     'y': np.array(avg_sfrs), 
                     'err': np.array(sig_sfrs)
                     }
@@ -221,6 +214,7 @@ def get_bestfit_sfms_envcount(fid_mass = 10.5, clobber = False):
                     mpfit_line_fixedslope, 
                     p0, 
                     functkw = fa, 
+                    quiet=1 
                     )
             
             zmids.append(zbin) 
