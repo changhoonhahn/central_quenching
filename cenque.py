@@ -13,6 +13,7 @@ import h5py
 import time
 
 #---- Local ----
+from assign_sfr import assign_sfr
 from util import cenque_utility as util
 
 class CenQue: 
@@ -63,10 +64,11 @@ class CenQue:
             'dat/wetzel_tree/', 
             'subhalo_sham_centrals_snapshot', str(nsnap), '.hdf5'
             ]) 
+
         f = h5py.File(snapshot_file, 'r')       # read in h5py file 
         grp = f['cenque_data'] 
 
-        self.data_columns = ['mass', 'parent', 'child', 'ilk', 'snap_index', 'pos']
+        self.data_columns = ['mass', 'halo_mass', 'parent', 'child', 'ilk', 'snap_index', 'pos']
         self.cenque_type = 'treepm_import'
 
         self.mass = grp['mass'][:] 
@@ -138,57 +140,106 @@ class CenQue:
         """ Write out self.data_columns to h5py file
         """
         
-        output_file = self.file()  # output file 
-
+        output_file = self.file()  
         print 'Writing ', output_file 
-        f = h5py.File(output_file, 'w')         # hdf5 file format (open file) 
-        grp = f.create_group('cenque_data')     # create group 
-    
-        # set output columns 
-        if self.sfr is None: 
-            # basic 
-            columns = ['mass', 'halo_mass', 'parent', 'child', 'ilk', 'snap_index']
-        elif 'columns' in kwargs.keys():
-            # if columns are specified 
-            columns = kwargs['columns']
-        else:       
-            # if SFR/SSFR have been assigned
-            if kwargs['sfr'] == 'sfr_func': 
-                columns = ['mass', 'sfr', 'ssfr', 'gal_type', 'halo_mass', 
-                        'sfr_phase', 'sfr_freq', 'sfr_amp', 
-                        'parent', 'child', 'ilk', 'snap_index']
-            elif kwargs['sfr'] == 'sfr_avg': 
-                columns = ['mass', 'sfr', 'ssfr', 'gal_type', 'halo_mass', 
-                        'sfr_resid', 'parent', 'child', 'ilk', 'snap_index']
-            else: 
-                raise NotImplementedError('kasdflk')
 
-        n_cols = len(columns)       # number of columns 
+        f = h5py.File(output_file, 'w')    
+        grp = f.create_group('cenque_data')
+    
+        n_cols = len(self.data_columns)       # number of columns 
         col_fmt = []                # column format 
     
-        # save each column to dataset within 'cenque_data' group 
-        for column in columns:      
+        for column in self.data_columns:      
             column_attr = getattr(self, column)
 
-            # write out file
+            # save to h5py data group 
             grp.create_dataset( column, data=column_attr ) 
         
         # save metadata 
         metadata = [ 'nsnap', 'zsnap', 't_cosmic', 't_step' ]
         for metadatum in metadata: 
-            if self.nsnap is not None: 
-                grp.attrs[metadatum] = getattr(self, metadatum) 
-
+            grp.attrs[metadatum] = getattr(self, metadatum) 
+        
         f.close()  
-
         return None 
     
     def file(self): 
-        """ File name of CenQue object. Only used to writeout 
-        CenQue class object
+        """ File name of CenQue object. Only used when writeout method 
+        is called
         """
+        
+        if self.nsnap == None: 
+            raise ValueError()
 
-        pass
+        if self.cenque_type == None: 
+            raise ValueError()
+    
+        # Cenque Object with assigned starformation properties
+        if self.cenque_type == 'treepm_import':
+            file_type_str = ''
+
+        elif self.cenque_type == 'sf_assigned':
+
+            sfr_str = '_'
+            if self.sf_prop['name'] == 'average': 
+                sfr_str += 'average'
+            else: 
+                raise NotImplementedError()
+            sfr_str += '_sfassign'
+                
+            fq_str = '_'
+            if self.fq_prop['name'] == 'wetzelsmooth': 
+                fq_str += 'wetzelsmooth' 
+            fq_str +='_fq'
+
+            # combine specifiers
+            file_type_str = ''.join([fq_str, sfr_str])
+                
+        elif 'evol_from' in self.cenque_type:
+            # Cenque Object evolved from some n_snap 
+
+            original_nsnap = int(
+                    (cenque.cenque_type.split('from'))[-1]
+                    ) 
+        
+            if self.mass_evol == 'integrated': 
+                mass_str = '_integ'
+            elif self.mass_evol == 'sham': 
+                mass_str = '_sham'
+            else: 
+                raise NotImplementedError('asdfalkjlkjasdf') 
+            
+            sfr_str = '_'
+            if self.sf_prop['name'] == 'average': 
+                sfr_str += 'average'
+            else: 
+                raise NotImplementedError()
+            sfr_str += '_sfassign'
+                
+            fq_str = '_'
+            if self.fq_prop['name'] == 'wetzelsmooth': 
+                fq_str += 'wetzelsmooth' 
+            fq_str +='_fq'
+
+            # Tau specifier
+            if self.tau_prop['name'] == 'instant': 
+                tau_str = ''.join(['_', self.tau_prop['name'], 'tau'])
+
+            # combine specifiers
+            file_type_str = ''.join([tau_str, fq_str, sfr_str, '_', self.cenque_type]) 
+
+        else: 
+            raise NameError() 
+
+        cenque_filename = ''.join([
+            'dat/central_quenching/', 
+            'cenque_centrals_snapshot', 
+            str(self.nsnap), 
+            file_type_str, 
+            '.hdf5'
+            ]) 
+
+        return cenque_filename
 
     def sample_trim(self, npwhere, quiet = False): 
         ''' Given numpy.where condition, apply numpy where condition
@@ -223,104 +274,9 @@ class CenQue:
                 new_attr_list = attr_list[bool]     
 
                 setattr(self, column, new_attr_list)    # save to class 
+
+        return None 
     
-
-
-
-        """
-        if self.nsnap == None: 
-            raise ValueError()
-
-        if self.cenque_type == None: 
-            raise ValueError()
-    
-        # Cenque Object with assigned starformation properties
-        if self.cenque_type == 'sfassigned':
-
-            #if kwargs['sfr'] == 'sfr_avg': 
-            #    file_type_str = '_sfravg_sfpropassign'
-            #elif kwargs['sfr'] == 'sfr_func': 
-            #    file_type_str = '_sfrfunc_sfpropassign'
-            #else: 
-            #    raise NotImplementedError('asdfasdflkjasdf;lkjasdf') 
-                
-            # Quenching Fraction specifier 
-            if 'fqing_slope' in kwargs.keys(): 
-                fqing_slope_str = str("%.2f" % kwargs['fqing_slope'])
-            else: 
-                fqing_slope_str = str("%.2f" % 0.63)
-
-            if 'fqing_yint' in kwargs.keys(): 
-                fqing_yint_str = str("%.2f" % kwargs['fqing_yint'])
-            else: 
-                fqing_yint_str = str("%.2f" % -6.04) 
-
-            fqing_str = ''.join([fqing_slope_str, '_', fqing_yint_str, 'fqing']) 
-
-            # combine specifiers
-            file_type_str = ''.join(['_', fqing_str, file_type_str])
-                
-        elif 'evo_from' in self.cenque_type:
-            # evolved from nsnap
-            original_nsnap = int(((kwargs['file_type']).split('from'))[-1]) 
-        
-            if kwargs['stellmass'].lower() == 'integrated': 
-                mass_str = '_integ'
-            elif kwargs['stellmass'].lower() == 'sham': 
-                mass_str = '_sham'
-            else: 
-                raise NotImplementedError('asdfalkjlkjasdf') 
-
-            # star-formation assign (random about average or functional) 
-            if kwargs['sfr'] == 'sfr_avg': 
-                file_type_str = mass_str+'_sfravg_evol_from'+str(original_nsnap) 
-            elif kwargs['sfr'] == 'sfr_func': 
-                file_type_str = mass_str+'_sfrfunc_evol_from'+str(original_nsnap) 
-            else: 
-                raise NotImplementedError('asdfasdflkjasdf;lkjasdf') 
-           
-            # Tau specifier
-            if kwargs['tau'] == 'discrete': 
-                tau_str = '_'+'_'.join( [str("%.1f" % t) for t in kwargs['tau_param']] )+'tau'
-            elif kwargs['tau'] == 'linefit':
-                tau_str = '_line'+'_'.join( [str("%.2f" % t) for t in kwargs['tau_param']] )+'tau'
-            else: 
-                tau_str = '_'+kwargs['tau']+'tau'
-
-            # Quenching Fraction specifier 
-            if 'fqing_slope' in kwargs.keys(): 
-                fqing_slope_str = str(kwargs['fqing_slope'])
-            else: 
-                fqing_slope_str = str(0.63)
-
-            if 'fqing_yint' in kwargs.keys(): 
-                fqing_yint_str = str(kwargs['fqing_yint'])
-            else: 
-                fqing_yint_str = str(-6.04) 
-
-            fqing_str = '_'+fqing_slope_str+'_'+fqing_yint_str+'fqing'
-
-            # combine specifiers
-            file_type_str = ''.join([tau_str, fqing_str, file_type_str]) 
-
-        else: 
-            raise NameError() 
-
-        if 'sfms_slope' not in kwargs.keys(): 
-            sfms_param_str = ''
-        else: 
-            slope_str = "%.2f" % kwargs['sfms_slope']
-            yint_str = "%.2f" % kwargs['sfms_yint'] 
-            sfms_param_str = '_sfms_slope'+slope_str+'_yint'+yint_str
-
-        cenque_filename = ''.join(['dat/central_quenching/', 
-            'cenque_centrals_snapshot', str(kwargs['nsnap']), file_type_str, sfms_param_str, 
-            '.hdf5']) 
-
-        return cenque_filename
-        """
-
-
 def build_cenque_importsnap(): 
     ''' Build CenQue snapshots with TreePM data imported
     
@@ -339,12 +295,15 @@ def build_cenque_original(i_snap=13, **kwargs):
     snap.writeout(nsnap=i_snap, file_type='sf assign', **kwargs)
 
 if __name__=='__main__': 
+
+"""
     #EvolveCenQue(13, 1, fqing_yint=-5.84, tau='instant')  
     #tau='linefit', tau_param=[-0.5, 0.4]) 
     #EvolveCenQue(13, 1, fqing_yint=-5.84, tau='linefit', tau_param=[-0.4, 0.2])
-    build_cenque_importsnap() 
-    build_cenque_original(sfr='sfr_func') 
-    EvolveCenQue(13, 1, tau='linefit', tau_param=[-0.7, 0.4], 
-            sfr='sfr_func', stellmass='sham') 
-    EvolveCenQue(13, 1, tau='linefit', tau_param=[-0.7, 0.4], 
-            sfr='sfr_func', stellmass='integrated') 
+    #build_cenque_importsnap() 
+    #build_cenque_original(sfr='sfr_func') 
+    #EvolveCenQue(13, 1, tau='linefit', tau_param=[-0.7, 0.4], 
+    #        sfr='sfr_func', stellmass='sham') 
+    #EvolveCenQue(13, 1, tau='linefit', tau_param=[-0.7, 0.4], 
+    #        sfr='sfr_func', stellmass='integrated') 
+"""

@@ -17,168 +17,7 @@ from scipy import interpolate
 # ---- Local -----
 #from sfms import sf_mainseq as sfms 
 
-
-# quiescent fraction ------------------------------------------------------------
-class fq: 
-    ''' quiescent fraction 
-    '''
-    def __init__(self): 
-        self.z = None       # redshift
-        self.mass = None
-        self.fq = None      # quiescent fraction 
-
-def get_fq(Mstar, z_in, lit='cosmosinterp'): 
-    ''' Return quiescent fraction from selected literature
-
-    Parameters
-    ----------
-    Mstar : stellar mass
-    z_in : redshift 
-    '''
-
-    if lit == 'cosmosinterp': 
-        zbins = [0.36, 0.66, 0.88] 
-
-        fq_z = [] 
-        for zbin in zbins: 
-            fq_file = ''.join([ 'dat/wetzel_tree/', 
-                'qf_z', str(zbin), 'cen.dat' ]) 
-           
-            # read in mass and quiescent fraction
-            mass, fq = np.loadtxt(fq_file, unpack=True, usecols=[0,1])  
-    
-            fq_z.append( np.interp(Mstar, mass, fq) )   # interpolate to get fq(Mstar)
-        
-        return np.interp(z_in, zbins, fq_z) 
-
-    elif lit == 'cosmosfit': 
-        zbins = [0.36, 0.66, 0.88] 
-        exp_sigma = [1.1972271, 1.05830526, 0.9182575] 
-        exp_sig = np.interp(z_in, zbins, exp_sigma) 
-        output = np.exp( ( Mstar - 12.0 )/exp_sig)
-        if Mstar > 12.0: 
-            output = 1.0
-
-        return output
-
-    elif lit == 'wetzel':       # Wetzel et al. 2013
-        qf_z0 = -6.04 + 0.63*Mstar
-
-        if Mstar < 9.5: 
-            alpha = -2.3
-        elif (Mstar >= 9.5) & (Mstar < 10.0): 
-            alpha = -2.1
-        elif (Mstar >= 10.0) & (Mstar < 10.5): 
-            alpha = -2.2
-        elif (Mstar >= 10.5) & (Mstar < 11.0): 
-            alpha = -2.0
-        elif (Mstar >= 11.0) & (Mstar <= 11.5): 
-            alpha = -1.3
-        else: 
-            raise NameError('Mstar is out of range')
-
-        output = qf_z0 * ( 1.0 + z_in )**alpha 
-        if output < 0.0: 
-            output = 0.0
-        elif output > 1.0: 
-            output = 1.0 
-
-        return output 
-    
-    elif lit == 'wetzelsmooth': 
-
-        #qf_z0 = -6.04 + 0.63*Mstar
-        qf_z0 = -6.04 + 0.64*Mstar
-        alpha = -1.75
-
-        output = qf_z0 * ( 1.0 + z_in )**alpha 
-        if output < 0.0: 
-            output = 0.0
-        elif output > 1.0: 
-            output = 1.0 
-
-        return output 
-
-    else: 
-        raise NameError('Not yet coded') 
-
-def get_fq_alpha(Mstar, z_in, alpha): 
-    ''' Quiescent fraction evolved from z = 0.88 by (1+z)^alpha where alpha is a free parameter
-    '''
-
-    fq_file = ''.join([ 'dat/wetzel_tree/', 
-        'qf_z0.88cen.dat' ]) 
-           
-    # read in mass and quiescent fraction at z = 0.88 
-    mass, fq = np.loadtxt(fq_file, unpack=True, usecols=[0,1])  
-     
-    fq_mstar_highz = np.interp(Mstar, mass, fq)  # interpolate to get fq(Mstar)
-        
-    output = fq_mstar_highz * np.abs(z_in + 0.16)**alpha 
-
-    if output < 0.0: 
-        output = 0.0
-    elif output > 1.0: 
-        output = 1.0 
-
-    return output 
-
-# 'quenching' fraction 
-def get_fquenching(Mstar, z_in, **kwargs): 
-    ''' Return the *quenching* fraction for given stellar mass and redshift 
-    
-    Parameters
-    ----------
-    Mstar : Stellar mass 
-    z_in : Redshift
-
-    Returns
-    -------
-    fquenching : quenching fraction 
-
-    Notes
-    -----
-    * *Quenching* fraction is *not* quiescent fraction
-    * Based on Wetzel et al. Quiescent Fraction parameterization 
-    * Redshift evolution is the same as Wetzel     
-    * As a first test use wetzel slope while varying yint 
-
-    '''
-    if 'slope' in kwargs.keys(): 
-        slope = kwargs['slope']
-    else: 
-        slope = 0.63                # Wetzel slope
-
-    if 'yint' in kwargs.keys(): 
-        yint = kwargs['yint'] 
-    else: 
-        yint = -6.04
-
-    qf_z0 = yint + slope*Mstar
-    
-    if Mstar < 9.5: 
-        alpha = -2.3
-    elif (Mstar >= 9.5) & (Mstar < 10.0): 
-        alpha = -2.1
-    elif (Mstar >= 10.0) & (Mstar < 10.5): 
-        alpha = -2.2
-    elif (Mstar >= 10.5) & (Mstar < 11.0): 
-        alpha = -2.0
-    elif (Mstar >= 11.0) & (Mstar < 11.5): 
-        alpha = -1.3
-    else: 
-        raise NameError('Mstar is out of range')
-
-    output = qf_z0 * ( 1.0 + z_in )**alpha 
-    if output < 0.0: 
-        output = 0.0
-    elif output > 1.0: 
-        output = 1.0 
-
-    return output 
-
 # SSFR distribution ----------------------------------------------------------------
-
 class CQssfr: 
     ''' SSFR distribution for CenQue class
     '''
@@ -366,6 +205,7 @@ def sfq_classify(mstar, sfr, z_in, Mrcut=18, clobber=False):
     sfq[sf_index] = 'star-forming'
     q_index = sfr <= sfr_cut
     sfq[q_index] = 'quiescent'
+
     return sfq 
 
 '''
@@ -380,14 +220,15 @@ def sdss_sf_ms_fit():
     print line_fixedslope(11.0, bestfit_pars.params)
 '''
 
-def get_quenching_efold(mstar, type='constant', param=None): 
+def get_quenching_efold(mstar, tau_param = {'name': 'instant'}): 
     ''' get quenching efold based on stellar mass of galaxy 
     '''
+    type = tau_param['name']
 
     if type == 'constant':      # constant tau 
 
         n_arr = len(mstar) 
-        tau = np.array([0.5 for i in range(n_arr)]) 
+        tau = np.array([0.5 for i in xrange(n_arr)]) 
 
     elif type == 'linear':      # lienar tau(mass) 
 
@@ -591,56 +432,6 @@ class FitsTable:
         pass
     def columns(self): 
         return self.__dict__.keys()
-
-def mrdfits(filename): 
-    output = FitsTable()
-    fitsdata = fits.open(filename)[1].data
-    for name in fitsdata.names: 
-        setattr(output, name.lower(), fitsdata.field(name))
-    return output 
-
-def mwrfits(fitstable, filename, columns=[], clobber=1): 
-    typedict = dict([(d, type(np.zeros(1,d).tolist()[0])) for d in (np.float32,np.float64,np.uint32, np.int16)])
-   
-    if len(columns) == 0: 
-        # if columns aren't specified then all type of columns will be inputed
-        fitscolumn = fitstable.__dict__.keys() 
-    else: 
-        if all(isinstance(x,str) for x in columns): 
-            fitscolumn = columns
-        else: 
-            raise TypeError('columns need to be strings') 
-
-    table_arrays = [] 
-    for column in fitscolumn: 
-        column_array = getattr(fitstable, column)
-
-        if type(column_array[0]) in typedict.keys(): 
-            column_type = typedict[type(column_array[0])]
-        else: 
-            column_type = type(column_array[0])
-        
-        if column_type == str: 
-            max_str_len = np.max(np.array([len(column_array[i]) for i in range(len(column_array))]))
-            format_str = str(max_str_len)+'A'
-            column_array = np.array([column_array])
-        elif column_type == int: 
-            format_str = 'K'  
-        elif column_type == float: 
-            format_str = 'E'
-        else:                               # in the case that it's an array of arrays
-            array_len = len(column_array[0])    
-            if type((column_array[0])[0]) == int: 
-                format_str = str(array_len)+'K'  
-            elif type((column_array[0])[0]) == float: 
-                format_str = str(array_len)+'E'
-
-        column_array = fits.Column(name=column, format=format_str, array=column_array) 
-        table_arrays.append(column_array)
-
-    table_arrays_combined = fits.ColDefs(table_arrays)
-    real_fitstable = fits.new_table(table_arrays_combined)
-    real_fitstable.writeto(filename, clobber=clobber) 
 
 # CenQue file treatment ----------------------------------------------------------------------- 
 """

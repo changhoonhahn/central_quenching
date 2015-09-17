@@ -6,10 +6,21 @@ Author(s): ChangHoon Hahn
 
 """
 
-import sf_mainseq as sfms
+#import sf_mainseq as sfms
+from quiescent_fraction import get_fq
+from sfms.fitting import get_bestfit_sfr_mstar_z
 
-def assign_sfr(cenque, quiet=True, kw_sfr='average', **kwargs):
-    """ Assign star-formation properties to CenQue object
+def assign_sfr(cenque, quiet=True, sf_prop={'name': 'average'}, fq_prop={'name': 'wetzelsmooth'}, **kwargs):
+    """ Assign star-formation properties to CenQue object. 
+
+    The function Goes through mass bins and then classifies unassigned 
+    galaxies into quiescent/star-forming based on quiescent fraction 
+    function. 
+    
+    Then SF properties are assigned to the galaxies. For quiescent 
+    galaxies the sSFR is drawn from a log normal distribution about 
+    some predeterimined mu_sSFR. For star-forming galaxies, SFR is
+    sampled from a designated SF-MS model. 
     
     ----------------------------------------------------------------
     Parameters
@@ -29,6 +40,15 @@ def assign_sfr(cenque, quiet=True, kw_sfr='average', **kwargs):
     if cenque.zsnap == None: 
         raise ValueError()
     
+    if 'sf_prop' not in cenque.keys(): 
+        cenque.sf_prop = sf_prop
+    else: 
+        if cenque.sf_prop != sf_prop 
+    if 'fq_prop' not in cenque.keys():
+        cenque.fq_prop = fq_prop 
+    else: 
+        if cenque.fq_prop != fq_prop 
+    
     mass_bins = cenque.mass_bins
     mass_bin_low = round(mass_bins.mass_low, 2) 
     mass_bin_mid = round(mass_bins.mass_mid, 2) 
@@ -43,30 +63,35 @@ def assign_sfr(cenque, quiet=True, kw_sfr='average', **kwargs):
                 (cenque.child >= 0) 
                 ) 
     
-        self.sample_trim(within_massbin_with_child)
+        cenque.sample_trim(within_massbin_with_child)
 
     ngal_tot = len(within_massbin_with_child[0])
+
+    for attrib in ['gal_type', 'sfr', 'ssfr']: 
+        if attrib not in cenque.data_columns: 
+            cenque.data_columns.append(attrib)
 
     if cenque.gal_type is None:         
         cenque.gal_type = np.array(['' for i in xrange(ngal_tot)], dtype='|S16') 
         cenque.sfr = np.array([-999. for i in xrange(ngal_tot)]) 
         cenque.ssfr = np.array([-999. for i in xrange(ngal_tot)]) 
-
-    for attrib in ['gal_type', 'sfr', 'ssfr']: 
-        if attrib not in cenque.data_columns: 
-            cenque.data_columns.append(attrib)
     
     # simplest SFR assignment for starforming galaxies. Use mu_SFR(M*, z)
     # and randomly sampled normal delta_SFR. 
-    if kw_sfr == 'average': 
+    if sf_prop['name'] == 'average': 
+        sfr_mstar_z, sig_sfr_mstar_z = get_bestfit_sfr_mstar_z(
+                Mrcut = 18, 
+                fid_mass = 10.5
+                )
 
-        self.delta_sfr = np.array([-999. for i in xrange(ngal_tot)])
-
-        for attrib in ['delta_sfr']: 
-            if attrib not in cenque.data_columns: 
-                cenque.data_columns.append(attrib)
+        cenque.delta_sfr = np.array([-999. for i in xrange(ngal_tot)])
+        extra_attr = ['delta_sfr']
     else: 
         raise NotImplementedError() 
+
+    for attrib in extra_attr: 
+        if attrib not in cenque.data_columns: 
+            cenque.data_columns.append(attrib)
 
     for i_m in xrange(mass_bins.nbins):              
 
@@ -79,11 +104,11 @@ def assign_sfr(cenque, quiet=True, kw_sfr='average', **kwargs):
             if ngal_massbin == 0: 
                 continue 
     
-            # quiescent fraction for mass bin at z_snapshot 
-            qf_massbin = util.get_fq(
+            # f_Q(M_*,mid, z_snapshot) 
+            qf_massbin = get_fq(
                     mass_bin_mid[i_m], 
                     cenque.zsnap, 
-                    lit = 'wetzelsmooth'
+                    lit = fq_prop['name']
                     ) 
             """
             mass_bin_qf = util.get_fquenching(mass_bins.mass_mid[i_m], self.zsnap, 
@@ -138,14 +163,10 @@ def assign_sfr(cenque, quiet=True, kw_sfr='average', **kwargs):
                 cenque.gal_type[i_sf_massbin] = 'star-forming'
                 
                 # sample SFR 
-                if  kw_sfr == 'average': 
+                if  sf_prop['name'] == 'average': 
 
-                    mu_sf_sfr, sigma_sf_sfr = util.get_sfr_mstar_z_bestfit(
-                            mass_bin_mid[i_m], 
-                            cenque.zsnap, 
-                            Mrcut=18
-                            ) 
-
+                    mu_sf_sfr = sfr_mstar_z(mass_bind_mid[i_m], cenque.zsnap)
+                    sigma_sf_sfr = sig_sfr_mstar_z(mass_bind_mid[i_m], cenque.zsnap)
 
                     cenque.delta_sfr[i_sf_massbin] = sigma_sf_sfr * np.random.randn(ngal_sf_massbin)
 
@@ -186,5 +207,6 @@ def assign_sfr(cenque, quiet=True, kw_sfr='average', **kwargs):
         raise NameError('Function failed!')
 
     print 'Assign SFR function takes', (start_time - time.time())/60.0, ' minutes'
+    cenque.cenque_type = 'sf_assigned'
 
     return cenque

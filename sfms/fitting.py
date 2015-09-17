@@ -7,13 +7,14 @@ Fit SF-MS
 import os 
 import h5py
 import numpy as np
+import scipy as sp 
 # --- Local ---
 import mpfit
 
 from sf_mainseq import get_sfr_mstar_z_groupcat
 from sf_mainseq import get_sfr_mstar_z_envcount
 
-def get_bestfit_sfr_mstar_z(mstar, z_in, Mrcut=18, fid_mass=10.5, clobber=False):
+def get_bestfit_sfr_mstar_z(Mrcut=18, fid_mass=10.5, clobber=False):
     ''' Calculate average SFR and standard deviation of the SF main sequence as a 
     function of mass and redshift using linear bestfits of SFMS from the SDSS 
     group catalog and qf_env catalogs. See notes for detail.
@@ -49,16 +50,29 @@ def get_bestfit_sfr_mstar_z(mstar, z_in, Mrcut=18, fid_mass=10.5, clobber=False)
     '''
 
     # Best-fit slope and y-int of SF SDSS Group Catalog and EnvCount catalog 
-    gc_zmid, gc_slope, gc_yint = get_bestfit_sfms_groupcat(Mrcut=Mrcut, fid_mass=fid_mass, clobber=clobber)
-    ec_zmid, ec_slope, ec_yint = get_bestfit_sfms_envcount(fid_mass=fid_mass, clobber=clobber)
-    print gc_zmid, gc_slope, gc_yint
-    print ec_zmid, ec_slope, ec_yint
+    gc_zmid, gc_slope, gc_yint = get_bestfit_sfms_groupcat(
+            Mrcut = Mrcut,
+            fid_mass = fid_mass, 
+            clobber = clobber
+            )
+    ec_zmid, ec_slope, ec_yint = get_bestfit_sfms_envcount(
+            fid_mass = fid_mass, 
+            clobber = clobber
+            )
 
-    delta_yint = np.interp(z_in, ec_zmid, ec_yint) - ec_yint[0] 
+    def bestfit_sfms_avgsfr(mstar, z_in): 
 
-    avg_SFR = gc_slope * (mstar - fid_mass) + gc_yint + delta_yint 
+        yint_interp = sp.interpolate.interp1d(ec_zmid, ec_yint)
+        delta_yint = yint_interp(z_in) - ec_yint[0]
+        #np.interp(z_in, ec_zmid, ec_yint) - ec_yint[0] 
+
+        mu_SFR = gc_slope * (mstar - fid_mass) + gc_yint + delta_yint 
+        return mu_SFR
+
+    def bestfit_sfms_sigsfr(mstar, z_in): 
+        return 0.3 
         
-    return [avg_SFR, 0.3] 
+    return [bestfit_sfms_avgsfr, bestfit_sfms_sigsfr] 
 
 def get_bestfit_sfms_groupcat(Mrcut=18, fid_mass=10.5, clobber=False):
     ''' Calculate the linear bestfit parameters for the StarForming 
