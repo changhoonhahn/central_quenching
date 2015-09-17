@@ -6,6 +6,7 @@ Author(s): ChangHoon Hahn
 
 """
 import time
+import numpy as np
 
 from cenque import CenQue
 from quiescent_fraction import get_fq

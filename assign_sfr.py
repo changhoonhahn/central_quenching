@@ -5,9 +5,13 @@ Assign StarFomation properties to CenQue object
 Author(s): ChangHoon Hahn
 
 """
+import time
+import random 
+import numpy as np
 
-#import sf_mainseq as sfms
+# --- Local ----
 from quiescent_fraction import get_fq
+from util import cenque_utility as util
 from sfms.fitting import get_bestfit_sfr_mstar_z
 
 def assign_sfr(cenque, quiet=True, sf_prop={'name': 'average'}, fq_prop={'name': 'wetzelsmooth'}, **kwargs):
@@ -40,19 +44,22 @@ def assign_sfr(cenque, quiet=True, sf_prop={'name': 'average'}, fq_prop={'name':
     if cenque.zsnap == None: 
         raise ValueError()
     
-    if 'sf_prop' not in cenque.keys(): 
+    if 'sf_prop' not in cenque.__dict__.keys(): 
         cenque.sf_prop = sf_prop
     else: 
-        if cenque.sf_prop != sf_prop 
-    if 'fq_prop' not in cenque.keys():
+        if cenque.sf_prop != sf_prop: 
+            raise ValueError()
+
+    if 'fq_prop' not in cenque.__dict__.keys():
         cenque.fq_prop = fq_prop 
     else: 
-        if cenque.fq_prop != fq_prop 
+        if cenque.fq_prop != fq_prop:
+            raise ValueError()
     
     mass_bins = cenque.mass_bins
-    mass_bin_low = round(mass_bins.mass_low, 2) 
-    mass_bin_mid = round(mass_bins.mass_mid, 2) 
-    mass_bin_high = round(mass_bins.mass_high, 2) 
+    mass_bin_low  = mass_bins.mass_low
+    mass_bin_mid  = mass_bins.mass_mid
+    mass_bin_high = mass_bins.mass_high
 
     # remove galaxies below the minimum and maximum mass and galaxies without children 
     if (min(cenque.mass) < mass_bins.mass_low.min()) or (max(cenque.mass) > mass_bins.mass_high.max()): 
@@ -100,7 +107,8 @@ def assign_sfr(cenque, quiet=True, sf_prop={'name': 'average'}, fq_prop={'name':
                     (cenque.mass <= mass_bin_high[i_m]) &
                     (cenque.gal_type == '')
                     )
-
+            
+            ngal_massbin = len(massbin_unassigned[0])
             if ngal_massbin == 0: 
                 continue 
     
@@ -110,13 +118,8 @@ def assign_sfr(cenque, quiet=True, sf_prop={'name': 'average'}, fq_prop={'name':
                     cenque.zsnap, 
                     lit = fq_prop['name']
                     ) 
-            """
-            mass_bin_qf = util.get_fquenching(mass_bins.mass_mid[i_m], self.zsnap, 
-                    yint=kwargs['fqing_yint'])
-            """
 
             # Ngal(M_mid), Ngal,Q(M_mid) and Ngal,SF(M_mid)
-            ngal_massbin = len(massbin_unassigned[0])
             ngal_q_massbin= int( 
                     np.rint(qf_massbin * np.float(ngal_massbin)) 
                     ) 
@@ -133,11 +136,11 @@ def assign_sfr(cenque, quiet=True, sf_prop={'name': 'average'}, fq_prop={'name':
             if ngal_q_massbin > 0: 
 
                 try: 
-                    q_massbin = random.sample(xrange(ngal_massbin), ngal_q_massbin) 
+                    q_massbin = random.sample(range(ngal_massbin), ngal_q_massbin) 
                 except ValueError: 
-                    q_massbin = xrange(ngal_massbin) 
+                    q_massbin = range(ngal_massbin) 
 
-                i_q_massbin = massbin_unassigned[q_massbin]
+                i_q_massbin = (massbin_unassigned[0])[q_massbin]
 
                 cenque.gal_type[i_q_massbin] = 'quiescent'   
 
@@ -146,7 +149,7 @@ def assign_sfr(cenque, quiet=True, sf_prop={'name': 'average'}, fq_prop={'name':
                 mu_q_ssfr = util.get_q_ssfr_mean(
                         cenque.mass[i_q_massbin]
                         ) 
-                cenque.ssfr[i_q_massbin] = 0.18 * np.random.randn(mass_bin_n_q) + q_ssfr_mean
+                cenque.ssfr[i_q_massbin] = 0.18 * np.random.randn(ngal_q_massbin) + mu_q_ssfr 
                 cenque.sfr[i_q_massbin]  = cenque.ssfr[i_q_massbin] + cenque.mass[i_q_massbin]
             
             # ngal_sf_massbin starforming galaxies from the massbin. Assign 
@@ -156,17 +159,17 @@ def assign_sfr(cenque, quiet=True, sf_prop={'name': 'average'}, fq_prop={'name':
                 try: 
                     sf_massbin = [x for x in xrange(ngal_massbin) if x not in q_massbin]
                 except NameError:       
-                    sf_massbin = xrange(ngal_massbin)
+                    sf_massbin = range(ngal_massbin)
 
-                i_sf_massbin = massbin_unassigned[sf_massbin]
+                i_sf_massbin = (massbin_unassigned[0])[np.array(sf_massbin)]
                 
                 cenque.gal_type[i_sf_massbin] = 'star-forming'
                 
                 # sample SFR 
                 if  sf_prop['name'] == 'average': 
 
-                    mu_sf_sfr = sfr_mstar_z(mass_bind_mid[i_m], cenque.zsnap)
-                    sigma_sf_sfr = sig_sfr_mstar_z(mass_bind_mid[i_m], cenque.zsnap)
+                    mu_sf_sfr = sfr_mstar_z(mass_bin_mid[i_m], cenque.zsnap)
+                    sigma_sf_sfr = sig_sfr_mstar_z(mass_bin_mid[i_m], cenque.zsnap)
 
                     cenque.delta_sfr[i_sf_massbin] = sigma_sf_sfr * np.random.randn(ngal_sf_massbin)
 
@@ -201,7 +204,7 @@ def assign_sfr(cenque, quiet=True, sf_prop={'name': 'average'}, fq_prop={'name':
     # double check that SF assign didn't fail anywhere
     assign_fail = np.where(
             (cenque.sfr == -999.0) | 
-            (cenqe.ssfr == -999.0)
+            (cenque.ssfr == -999.0)
             )
     if len(assign_fail[0]) > 0: 
         raise NameError('Function failed!')

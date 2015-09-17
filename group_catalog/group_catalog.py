@@ -14,7 +14,10 @@ import matplotlib.pyplot as plt
 import h5py
 
 #---- Local ----
-import cenque as cq 
+
+class GroupCat: 
+    def __init__(self): 
+        pass
 
 def read_group_catalog_galdata(Mrcut=18): 
     ''' wrapper for reading in group catalog galaxy data 
@@ -87,7 +90,7 @@ def build_group_catalog(Mrcut=18, central=True):
     else: 
         prob_index = prob_data.p_sat > 0.5
     
-    central_catalog = cq.CenQue()       # save as CenQue class
+    central_catalog = GroupCat()       # save as CenQue class
 
     group_catalog_columns = ['mass', 'sfr', 'ssfr', 'z']
     for column in group_catalog_columns: 
@@ -124,7 +127,7 @@ def central_catalog(Mrcut=18, clobber=False):
     #mass, sfr, ssfr = np.loadtxt(catalog_file, skiprows=2, delimiter=',', 
     #        unpack=True, usecols=[0,1,2]) 
 
-    catalog = cq.CenQue() 
+    catalog = GroupCat() 
     setattr(catalog, 'mass', mass) 
     setattr(catalog, 'sfr', sfr) 
     setattr(catalog, 'ssfr', ssfr) 
@@ -154,7 +157,7 @@ def build_groupcat_sf(Mrcut=18):
     # classification motivated by Salim et al. 
     sf_gals = centrals.sfr > -1.30 + 0.65*(centrals.mass-10.0)
 
-    centrals_sfms = cq.CenQue() 
+    centrals_sfms = GroupCat() 
 
     group_catalog_columns = ['mass', 'sfr', 'ssfr']
     for column in group_catalog_columns: 
@@ -204,7 +207,7 @@ def sf_centrals(Mrcut=18, clobber=False):
     sfr = grp['sfr'][:]
     ssfr = grp['ssfr'][:]
 
-    catalog = cq.CenQue() 
+    catalog = GroupCat() 
     setattr(catalog, 'mass', mass) 
     setattr(catalog, 'sfr', sfr) 
     setattr(catalog, 'ssfr', ssfr) 
@@ -234,7 +237,7 @@ def build_groupcat_q(Mrcut=18):
     # classification motivated by Salim et al. 
     sf_gals = centrals.sfr < -1.30 + 0.65*(centrals.mass-10.0)
 
-    centrals_sfms = cq.CenQue() 
+    centrals_sfms = GroupCat() 
 
     group_catalog_columns = ['mass', 'sfr', 'ssfr']
     for column in group_catalog_columns: 
@@ -279,7 +282,7 @@ def q_centrals(Mrcut=18, clobber=False):
     sfr = grp['sfr'][:]
     ssfr = grp['ssfr'][:]
 
-    catalog = cq.CenQue() 
+    catalog = GroupCat() 
     setattr(catalog, 'mass', mass) 
     setattr(catalog, 'sfr', sfr) 
     setattr(catalog, 'ssfr', ssfr) 

@@ -246,34 +246,12 @@ class CenQue:
         to object data columns. 
         '''
 
-        if not quiet: 
-            pass
-            #n_remove = len(bool) - len(bool[bool == True])
-            #print 'Removing ', n_remove, ' elements from ', len(bool)  
-    
-        if columns is None:         # if data columns aren't specified
-            data_columns = ['mass', 'halo_mass', 'sfr', 'ssfr', 'gal_type', 
-                    'parent', 'child', 'ilk', 'snap_index', 'pos']
-        else: 
-            data_columns = columns 
+        for column in self.data_columns:         
+            obj_attr = getattr(self, column) 
 
-        n_list = len(bool) 
-        
-        for column in self.data_columns:         # loop through columns and only keep true values
-            attr_list = getattr(self, column) 
+            new_attr = obj_attr[npwhere]     
 
-            try: 
-                n_attr_list = len(attr_list) 
-            except TypeError: 
-                n_attr_list = 0 
-            
-            if n_list != n_attr_list: 
-                raise TypeError(column+": boolean does not match length!") 
-            else:  
-                # impose boolean so only "true" values are kept
-                new_attr_list = attr_list[bool]     
-
-                setattr(self, column, new_attr_list)    # save to class 
+            setattr(self, column, new_attr)
 
         return None 
     
@@ -295,6 +273,12 @@ def build_cenque_original(i_snap=13, **kwargs):
     snap.writeout(nsnap=i_snap, file_type='sf assign', **kwargs)
 
 if __name__=='__main__': 
+    blah = CenQue()
+    blah.import_treepm(13)
+    blah.writeout()
+    
+    blah = assign_sfr(blah)
+    blah.writeout()
 
 """
     #EvolveCenQue(13, 1, fqing_yint=-5.84, tau='instant')  
