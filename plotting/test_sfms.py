@@ -67,17 +67,18 @@ def qaplot_sfms_groupcat_fitting(Mrcut=18):
             mass_bin,
             Mrcut=Mrcut
             ) 
+    enough_gal = np.where(np.array(avg_sfrs) > -998)
 
     plt.errorbar(
-            mass_bin, 
-            avg_sfrs, 
-            yerr = sig_sfrs, 
+            mass_bin[enough_gal], 
+            np.array(avg_sfrs)[enough_gal], 
+            yerr = np.array(sig_sfrs)[enough_gal], 
             lw = 4, 
             c = pretty_colors[1], 
             label='Average SFR'
             )
     
-    plt.legend()
+    plt.legend(loc='lower right')
     
     fig_name = ''.join(['figure/', 'qaplot_sfms_fitting_groupcat_', str(Mrcut), '.png'])
     plt.savefig(fig_name, bbox_inches='tight')
@@ -164,25 +165,24 @@ def qaplot_sfms_envcount_fitting(Mrcut=18):
             mass_bin,
             [z_mid for i in xrange(len(mass_bin))]
             ) 
+        enough_gal = np.where(np.array(avg_sfrs) > -998)
 
         plt.errorbar(
-                mass_bin, 
-                avg_sfrs, 
-                yerr = sig_sfrs, 
+                mass_bin[enough_gal], 
+                np.array(avg_sfrs)[enough_gal], 
+                yerr = np.array(sig_sfrs)[enough_gal], 
                 lw = 4, 
                 c = pretty_colors[1], 
                 label='Average SFR'
                 )
 
-        plt.legend()
+        plt.legend(loc='lower right')
         
         fig_name = ''.join(['figure/', 'qaplot_sfms_fitting_envcount_z', str(z_mid), '.png'])
         plt.savefig(fig_name, bbox_inches='tight')
         plt.close()
 
     return None
-
-    
 
 if __name__=="__main__":
     qaplot_sfms_groupcat_fitting(Mrcut=18)
