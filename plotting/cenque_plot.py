@@ -913,7 +913,6 @@ def plot_group_cat_bigauss_bestfit():
     plot_sdss_group_cat_bestfit(Mrcut=19)
     plot_sdss_group_cat_bestfit(Mrcut=20)
 
-
 # Group Catalog ------------------------------
 def plot_groupcat_zdist(): 
     ''' Plot redshift distribution of all three group catalogs 

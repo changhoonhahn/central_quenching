@@ -14,7 +14,7 @@ from quiescent_fraction import get_fq
 from util import cenque_utility as util
 from sfms.fitting import get_bestfit_sfr_mstar_z
 
-def assign_sfr(cenque, quiet=True, sf_prop={'name': 'average'}, fq_prop={'name': 'wetzelsmooth'}, **kwargs):
+def assign_sfr(cenque, sf_prop={'name': 'average'}, fq_prop={'name': 'wetzelsmooth'}, quiet=True, **kwargs):
     """ Assign star-formation properties to CenQue object. 
 
     The function Goes through mass bins and then classifies unassigned 
@@ -138,17 +138,21 @@ def assign_sfr(cenque, quiet=True, sf_prop={'name': 'average'}, fq_prop={'name':
             print 'fQ = ', qf_massbin[i_m], ' Ngal = ', ngal_massbin
             print 'Ngal,Q = ', ngal_q_massbin, ' Ngal,SF = ', ngal_sf_massbin 
 
-        shfled_i_massbin = np.random.shuffle(range(ngal_massbin[i_m]))
+        shuffled_massbin_index = np.arange(ngal_massbin[i_m])
+        np.random.shuffle(shuffled_massbin_index)
+        i_q_end = ngal_q_massbin[i_m]
         
         # Randomly select ngal_q_massbin quiescent galaxies from the 
         # massbin. Assign them 'quiescent' gal_type and sSFR and SFR 
         # based on a predetermined gaussian distribution about sSFR.
         if ngal_q_massbin[i_m] > 0: 
 
-            try: 
-                q_massbin = random.sample(range(ngal_massbin[i_m]), ngal_q_massbin[i_m]) 
-            except ValueError: 
-                q_massbin = range(ngal_massbin[i_m]) 
+            q_massbin = shuffled_massbin_index[:i_q_end]
+
+            #try: 
+            #    q_massbin = random.sample(range(ngal_massbin[i_m]), ngal_q_massbin[i_m]) 
+            #except ValueError: 
+            #    q_massbin = range(ngal_massbin[i_m]) 
 
             i_q_massbin = (massbin_unassigned[i_m][0])[q_massbin]
 
@@ -168,17 +172,19 @@ def assign_sfr(cenque, quiet=True, sf_prop={'name': 'average'}, fq_prop={'name':
         # them 'star-forming' gal_type and sSFR and SFR in some manner
         if ngal_sf_massbin[i_m] > 0: 
 
-            try: 
-                sf_massbin = [x for x in range(ngal_massbin[i_m]) if x not in q_massbin]
-            except NameError:       
-                sf_massbin = range(ngal_massbin[i_m])
+            sf_massbin = shuffled_massbin_index[i_q_end:]
+
+            #try: 
+            #    sf_massbin = [x for x in range(ngal_massbin[i_m]) if x not in q_massbin]
+            #except NameError:       
+            #    sf_massbin = range(ngal_massbin[i_m])
 
             try:  
                 print "For loop takes ", time.time() - q_time
             except UnboundLocalError: 
                 print "For loop takes ", time.time() - begin_loop_time 
 
-            i_sf_massbin = (massbin_unassigned[i_m][0])[np.array(sf_massbin)]
+            i_sf_massbin = (massbin_unassigned[i_m][0])[sf_massbin]
             
             cenque.gal_type[i_sf_massbin] = 'star-forming'
             
@@ -221,6 +227,7 @@ def assign_sfr(cenque, quiet=True, sf_prop={'name': 'average'}, fq_prop={'name':
                 print "Starforming assign takes ", time.time() - q_time
             except UnboundLocalError: 
                 print "Starforming assign takes ", time.time() - begin_loop_time 
+
         print time.time()-begin_loop_time
     
     # double check that SF assign didn't fail anywhere
