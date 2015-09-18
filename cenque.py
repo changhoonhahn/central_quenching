@@ -13,7 +13,8 @@ import h5py
 import time
 
 #---- Local ----
-from util import cenque_utility as util
+from assign_sfr import assign_sfr 
+from util.mass_bins import simple_mass_bin
 
 class CenQue: 
 
@@ -105,7 +106,7 @@ class CenQue:
         """ Mass bin of 
         """
 
-        massbins = util.simple_mass_bin() 
+        massbins = simple_mass_bin() 
         # nothing else specified here but this should later be implemented 
         # to change based on kwargs
 
@@ -190,6 +191,8 @@ class CenQue:
                 self.sf_prop = {'name': 'average'}
             if 'fq_prop' not in self.__dict__.keys():
                 self.fq_prop = {'name': 'wetzelsmooth'}
+            if 'mass_evol' not in self.__dict__.keys():
+                self.mass_evol = 'sham'
 
             sfr_str = '_'
             if self.sf_prop['name'] == 'average': 
@@ -212,6 +215,17 @@ class CenQue:
             original_nsnap = int(
                     (self.cenque_type.split('from'))[-1]
                     ) 
+            
+            # default properties
+            if 'sf_prop' not in self.__dict__.keys():
+                self.sf_prop = {'name': 'average'}
+            if 'fq_prop' not in self.__dict__.keys():
+                self.fq_prop = {'name': 'wetzelsmooth'}
+            if 'tau_prop' not in self.__dict__.keys():
+                self.tau_prop = {'name': 'instant'}
+            if 'mass_evol' not in self.__dict__.keys():
+                self.mass_evol = 'sham'
+
         
             if self.mass_evol == 'integrated': 
                 mass_str = '_integ'
@@ -287,7 +301,6 @@ if __name__=='__main__':
     blah = CenQue()
     blah.import_treepm(13)
     blah = assign_sfr(blah)
-    blah = evolve_cq(blah)
     blah.writeout()
 
 """
