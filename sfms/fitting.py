@@ -65,7 +65,7 @@ def get_bestfit_sfr_mstar_z(Mrcut=18, fid_mass=10.5, clobber=False):
         yint_interp = sp.interpolate.interp1d(ec_zmid, ec_yint)
         delta_yint = yint_interp(z_in) - ec_yint[0]
         #np.interp(z_in, ec_zmid, ec_yint) - ec_yint[0] 
-
+        
         mu_SFR = gc_slope * (mstar - fid_mass) + gc_yint + delta_yint 
         return mu_SFR
 

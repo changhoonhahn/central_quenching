@@ -62,16 +62,14 @@ def assign_sfr(cenque, sf_prop={'name': 'average'}, fq_prop={'name': 'wetzelsmoo
     mass_bin_high = mass_bins.mass_high
 
     # remove galaxies below the minimum and maximum mass and galaxies without children 
+    within_massbin_with_child = np.where(
+            (cenque.mass > mass_bins.mass_low.min()) & 
+            (cenque.mass <= mass_bins.mass_high.max()) & 
+            (cenque.child >= 0) 
+            ) 
+
     if (min(cenque.mass) < mass_bins.mass_low.min()) or (max(cenque.mass) > mass_bins.mass_high.max()): 
-        
-        within_massbin_with_child = np.where(
-                (cenque.mass > mass_bins.mass_low.min()) & 
-                (cenque.mass <= mass_bins.mass_high.max()) & 
-                (cenque.child >= 0) 
-                ) 
-    
         cenque.sample_trim(within_massbin_with_child)
-    sample_trim_time = time.time()
 
     ngal_tot = len(within_massbin_with_child[0])
 
@@ -91,8 +89,9 @@ def assign_sfr(cenque, sf_prop={'name': 'average'}, fq_prop={'name': 'wetzelsmoo
                 Mrcut = 18, 
                 fid_mass = 10.5
                 )
+        if 'delta_sfr' not in cenque.__dict__.keys(): 
+            cenque.delta_sfr = np.array([-999. for i in xrange(ngal_tot)])
 
-        cenque.delta_sfr = np.array([-999. for i in xrange(ngal_tot)])
         extra_attr = ['delta_sfr']
     else: 
         raise NotImplementedError() 
@@ -129,6 +128,10 @@ def assign_sfr(cenque, sf_prop={'name': 'average'}, fq_prop={'name': 'wetzelsmoo
     ngal_sf_massbin = ngal_massbin - ngal_q_massbin
 
     for i_m in xrange(mass_bins.nbins):             
+
+        if len(massbin_unassigned[i_m][0]) == 0: 
+            continue
+
         begin_loop_time = time.time()
         if not quiet: 
             print mass_bin_low[i_m], ' < M < ', mass_bin_high[i_m]
@@ -172,7 +175,7 @@ def assign_sfr(cenque, sf_prop={'name': 'average'}, fq_prop={'name': 'wetzelsmoo
 
                 mu_sf_sfr = sfr_mstar_z(mass_bin_mid[i_m], cenque.zsnap)
                 sigma_sf_sfr = sig_sfr_mstar_z(mass_bin_mid[i_m], cenque.zsnap)
-
+                
                 cenque.delta_sfr[i_sf_massbin] = sigma_sf_sfr * np.random.randn(ngal_sf_massbin[i_m])
 
                 cenque.sfr[i_sf_massbin] = mu_sf_sfr + cenque.delta_sfr[i_sf_massbin]
@@ -213,6 +216,9 @@ def assign_sfr(cenque, sf_prop={'name': 'average'}, fq_prop={'name': 'wetzelsmoo
     
     if not quiet: 
         print 'Assign SFR function takes', (time.time()-start_time)/60.0, ' minutes'
-    cenque.cenque_type = 'sf_assigned'
+    if 'evol_from' in cenque.cenque_type: 
+        pass
+    else: 
+        cenque.cenque_type = 'sf_assigned'
 
     return cenque

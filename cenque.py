@@ -13,7 +13,6 @@ import h5py
 import time
 
 #---- Local ----
-from assign_sfr import assign_sfr
 from util import cenque_utility as util
 
 class CenQue: 
@@ -211,7 +210,7 @@ class CenQue:
             # Cenque Object evolved from some n_snap 
 
             original_nsnap = int(
-                    (cenque.cenque_type.split('from'))[-1]
+                    (self.cenque_type.split('from'))[-1]
                     ) 
         
             if self.mass_evol == 'integrated': 
@@ -234,7 +233,7 @@ class CenQue:
             fq_str +='_fq'
 
             # Tau specifier
-            if self.tau_prop['name'] == 'instant': 
+            if self.tau_prop['name'] in ('instant', 'constant'): 
                 tau_str = ''.join(['_', self.tau_prop['name'], 'tau'])
 
             # combine specifiers
@@ -287,7 +286,8 @@ def build_cenque_original(i_snap=13, **kwargs):
 if __name__=='__main__': 
     blah = CenQue()
     blah.import_treepm(13)
-    blah = assign_sfr(blah, quiet=False)
+    blah = assign_sfr(blah)
+    blah = evolve_cq(blah)
     blah.writeout()
 
 """

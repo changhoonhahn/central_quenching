@@ -15,7 +15,7 @@ def test_assign_sfr(n_snap = 13):
     ssfr_fig = plot_cenque_ssfr_dist(snap, lw=2, line_style='--')      # plot!
     
     fig_file = ''.join(['figure/', 
-        'test_assign_sfr_', str(n_snap), '.png'
+        'qaplot_assign_sfr_', str(n_snap), '.png'
         ])
     ssfr_fig.savefig(
             fig_file, bbox_inches='tight'
