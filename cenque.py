@@ -41,14 +41,20 @@ class CenQue:
         self.gal_type = None    # quiescent/star-forming 
     
         # meta data
-        self.nsnap = None       # n_snapshot 
+        if 'n_snap' in self.kwargs.keys(): 
+            self.nsnap = self.kwargs['n_snap']
+        else: 
+            self.nsnap = None       # n_snapshot 
         self.zsnap = None           # z_snapshot
         self.t_cosmic = None    # t_cosmic for snapshot
         self.t_step = None      # t_cosmic step 
 
         self.mass_bins = self.set_mass_bins()
         self.data_columns = None 
-        self.cenque_type = None
+        if 'cenque_type' in self.kwargs.keys(): 
+            self.cenque_type = self.kwargs['cenque_type']
+        else: 
+            self.cenque_type = None
 
     def import_treepm(self, nsnap): 
         """ Import the following snapshot data from TreePM --> SHAM snapshots. Also imports 
@@ -115,22 +121,22 @@ class CenQue:
         overly convoluted way to read in data -.-
         **UPDATED TO hdf5 FILE FORMAT**
         '''
-        # kwargs specifies the input file 
-        input_file = util.cenque_file( **kwargs ) 
-        f = h5py.File(input_file, 'r') 
-        print input_file 
+
+        cq_file = self.file() 
+        f = h5py.File(cq_file, 'r') 
+        print 'Reading ', cq_file 
 
         grp = f['cenque_data']
 
         # save meta data first
         for i_meta, metadatum in enumerate(grp.attrs.keys()): 
             setattr(self, metadatum, (grp.attrs.values())[i_meta]) 
-    
+
         for i_col, column in enumerate(grp.keys()): 
             setattr(self, column, grp[column][:])
         
-        if 'sham_mass' not in grp.keys(): 
-            setattr(self, 'sham_mass', grp['mass'][:])
+        #if 'sham_mass' not in grp.keys(): 
+        #    setattr(self, 'sham_mass', grp['mass'][:])
 
         f.close() 
 
@@ -179,6 +185,12 @@ class CenQue:
             file_type_str = ''
 
         elif self.cenque_type == 'sf_assigned':
+
+            # default properties
+            if 'sf_prop' not in self.__dict__.keys():
+                self.sf_prop = {'name': 'average'}
+            if 'fq_prop' not in self.__dict__.keys():
+                self.fq_prop = {'name': 'wetzelsmooth'}
 
             sfr_str = '_'
             if self.sf_prop['name'] == 'average': 
@@ -275,7 +287,7 @@ def build_cenque_original(i_snap=13, **kwargs):
 if __name__=='__main__': 
     blah = CenQue()
     blah.import_treepm(13)
-    blah = assign_sfr(blah)
+    blah = assign_sfr(blah, quiet=False)
     blah.writeout()
 
 """

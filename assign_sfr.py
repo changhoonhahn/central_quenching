@@ -72,7 +72,6 @@ def assign_sfr(cenque, sf_prop={'name': 'average'}, fq_prop={'name': 'wetzelsmoo
     
         cenque.sample_trim(within_massbin_with_child)
     sample_trim_time = time.time()
-    print 'Sample trim takes ', sample_trim_time - start_time
 
     ngal_tot = len(within_massbin_with_child[0])
 
@@ -128,15 +127,13 @@ def assign_sfr(cenque, sf_prop={'name': 'average'}, fq_prop={'name': 'wetzelsmoo
         for i_m in xrange(mass_bins.nbins)
         ]) 
     ngal_sf_massbin = ngal_massbin - ngal_q_massbin
-    
-    print 'f_Q stuff ', time.time() - sample_trim_time
 
     for i_m in xrange(mass_bins.nbins):             
         begin_loop_time = time.time()
         if not quiet: 
             print mass_bin_low[i_m], ' < M < ', mass_bin_high[i_m]
-            print 'fQ = ', qf_massbin[i_m], ' Ngal = ', ngal_massbin
-            print 'Ngal,Q = ', ngal_q_massbin, ' Ngal,SF = ', ngal_sf_massbin 
+            print 'fQ = ', qf_massbin[i_m], ' Ngal = ', ngal_massbin[i_m]
+            print 'Ngal,Q = ', ngal_q_massbin[i_m], ' Ngal,SF = ', ngal_sf_massbin[i_m]
 
         shuffled_massbin_index = np.arange(ngal_massbin[i_m])
         np.random.shuffle(shuffled_massbin_index)
@@ -148,12 +145,6 @@ def assign_sfr(cenque, sf_prop={'name': 'average'}, fq_prop={'name': 'wetzelsmoo
         if ngal_q_massbin[i_m] > 0: 
 
             q_massbin = shuffled_massbin_index[:i_q_end]
-
-            #try: 
-            #    q_massbin = random.sample(range(ngal_massbin[i_m]), ngal_q_massbin[i_m]) 
-            #except ValueError: 
-            #    q_massbin = range(ngal_massbin[i_m]) 
-
             i_q_massbin = (massbin_unassigned[i_m][0])[q_massbin]
 
             cenque.gal_type[i_q_massbin] = 'quiescent'   
@@ -166,24 +157,12 @@ def assign_sfr(cenque, sf_prop={'name': 'average'}, fq_prop={'name': 'wetzelsmoo
             cenque.ssfr[i_q_massbin] = 0.18 * np.random.randn(ngal_q_massbin[i_m]) + mu_q_ssfr 
             cenque.sfr[i_q_massbin]  = cenque.ssfr[i_q_massbin] + cenque.mass[i_q_massbin]
             q_time = time.time()
-            print "Quiescent assign takes ", q_time - begin_loop_time
         
         # ngal_sf_massbin starforming galaxies from the massbin. Assign 
         # them 'star-forming' gal_type and sSFR and SFR in some manner
         if ngal_sf_massbin[i_m] > 0: 
 
             sf_massbin = shuffled_massbin_index[i_q_end:]
-
-            #try: 
-            #    sf_massbin = [x for x in range(ngal_massbin[i_m]) if x not in q_massbin]
-            #except NameError:       
-            #    sf_massbin = range(ngal_massbin[i_m])
-
-            try:  
-                print "For loop takes ", time.time() - q_time
-            except UnboundLocalError: 
-                print "For loop takes ", time.time() - begin_loop_time 
-
             i_sf_massbin = (massbin_unassigned[i_m][0])[sf_massbin]
             
             cenque.gal_type[i_sf_massbin] = 'star-forming'
@@ -223,12 +202,6 @@ def assign_sfr(cenque, sf_prop={'name': 'average'}, fq_prop={'name': 'wetzelsmoo
                 """
 
             cenque.ssfr[i_sf_massbin] = cenque.sfr[i_sf_massbin] - cenque.mass[i_sf_massbin]
-            try:  
-                print "Starforming assign takes ", time.time() - q_time
-            except UnboundLocalError: 
-                print "Starforming assign takes ", time.time() - begin_loop_time 
-
-        print time.time()-begin_loop_time
     
     # double check that SF assign didn't fail anywhere
     assign_fail = np.where(
@@ -237,8 +210,9 @@ def assign_sfr(cenque, sf_prop={'name': 'average'}, fq_prop={'name': 'wetzelsmoo
             )
     if len(assign_fail[0]) > 0: 
         raise NameError('Function failed!')
-
-    print 'Assign SFR function takes', (time.time()-start_time)/60.0, ' minutes'
+    
+    if not quiet: 
+        print 'Assign SFR function takes', (time.time()-start_time)/60.0, ' minutes'
     cenque.cenque_type = 'sf_assigned'
 
     return cenque
