@@ -275,8 +275,6 @@ def build_cenque_original(i_snap=13, **kwargs):
 if __name__=='__main__': 
     blah = CenQue()
     blah.import_treepm(13)
-    blah.writeout()
-    
     blah = assign_sfr(blah)
     blah.writeout()
 

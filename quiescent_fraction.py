@@ -4,6 +4,7 @@ Code to analyze the quiecsent fraction
 
 
 """
+import numpy as np
 
 def get_fq(Mstar, z_in, lit='cosmosinterp'): 
     ''' Calculate the quiescent fraction as a funcnction of 
@@ -77,10 +78,10 @@ def get_fq(Mstar, z_in, lit='cosmosinterp'):
         alpha = -1.75
 
         output = qf_z0 * ( 1.0 + z_in )**alpha 
-        if output < 0.0: 
-            output = 0.0
-        elif output > 1.0: 
-            output = 1.0 
+        if output.min() < 0.0: 
+            output[np.where(output < 0.0)] = 0.0
+        elif output.max() > 1.0: 
+            output[np.where(output > 1.0)] = 1.0
 
         return output 
 

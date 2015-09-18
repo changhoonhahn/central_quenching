@@ -71,6 +71,8 @@ def assign_sfr(cenque, quiet=True, sf_prop={'name': 'average'}, fq_prop={'name':
                 ) 
     
         cenque.sample_trim(within_massbin_with_child)
+    sample_trim_time = time.time()
+    print 'Sample trim takes ', sample_trim_time - start_time
 
     ngal_tot = len(within_massbin_with_child[0])
 
@@ -100,106 +102,126 @@ def assign_sfr(cenque, quiet=True, sf_prop={'name': 'average'}, fq_prop={'name':
         if attrib not in cenque.data_columns: 
             cenque.data_columns.append(attrib)
 
-    for i_m in xrange(mass_bins.nbins):              
+    # f_Q(M_*,mid, z_snapshot) 
+    qf_massbin = get_fq(
+            mass_bin_mid, 
+            cenque.zsnap, 
+            lit = fq_prop['name']
+            ) 
 
-            massbin_unassigned = np.where(
-                    (cenque.mass > mass_bin_low[i_m]) &
-                    (cenque.mass <= mass_bin_high[i_m]) &
-                    (cenque.gal_type == '')
-                    )
-            
-            ngal_massbin = len(massbin_unassigned[0])
-            if ngal_massbin == 0: 
-                continue 
+    massbin_unassigned = [
+            np.where(
+                (cenque.mass > mass_bin_low[i_m]) &
+                (cenque.mass <= mass_bin_high[i_m]) &
+                (cenque.gal_type == '')
+                )
+            for i_m in xrange(mass_bins.nbins)
+            ]
+
+    ngal_massbin = np.array(
+            [len(x[0]) for x in massbin_unassigned]
+            )
+
+    # Ngal(M_mid), Ngal,Q(M_mid) and Ngal,SF(M_mid)
+    ngal_q_massbin= np.array([
+        int(np.rint(qf_massbin[i_m] * np.float(ngal_massbin[i_m])))
+        for i_m in xrange(mass_bins.nbins)
+        ]) 
+    ngal_sf_massbin = ngal_massbin - ngal_q_massbin
     
-            # f_Q(M_*,mid, z_snapshot) 
-            qf_massbin = get_fq(
-                    mass_bin_mid[i_m], 
-                    cenque.zsnap, 
-                    lit = fq_prop['name']
+    print 'f_Q stuff ', time.time() - sample_trim_time
+
+    for i_m in xrange(mass_bins.nbins):             
+        begin_loop_time = time.time()
+        if not quiet: 
+            print mass_bin_low[i_m], ' < M < ', mass_bin_high[i_m]
+            print 'fQ = ', qf_massbin[i_m], ' Ngal = ', ngal_massbin
+            print 'Ngal,Q = ', ngal_q_massbin, ' Ngal,SF = ', ngal_sf_massbin 
+
+        shfled_i_massbin = np.random.shuffle(range(ngal_massbin[i_m]))
+        
+        # Randomly select ngal_q_massbin quiescent galaxies from the 
+        # massbin. Assign them 'quiescent' gal_type and sSFR and SFR 
+        # based on a predetermined gaussian distribution about sSFR.
+        if ngal_q_massbin[i_m] > 0: 
+
+            try: 
+                q_massbin = random.sample(range(ngal_massbin[i_m]), ngal_q_massbin[i_m]) 
+            except ValueError: 
+                q_massbin = range(ngal_massbin[i_m]) 
+
+            i_q_massbin = (massbin_unassigned[i_m][0])[q_massbin]
+
+            cenque.gal_type[i_q_massbin] = 'quiescent'   
+
+            # sample SSFR from log-normal distribution with a preset
+            # 0.18 dex scatter centered about some predetermined mean
+            mu_q_ssfr = util.get_q_ssfr_mean(
+                    cenque.mass[i_q_massbin]
                     ) 
+            cenque.ssfr[i_q_massbin] = 0.18 * np.random.randn(ngal_q_massbin[i_m]) + mu_q_ssfr 
+            cenque.sfr[i_q_massbin]  = cenque.ssfr[i_q_massbin] + cenque.mass[i_q_massbin]
+            q_time = time.time()
+            print "Quiescent assign takes ", q_time - begin_loop_time
+        
+        # ngal_sf_massbin starforming galaxies from the massbin. Assign 
+        # them 'star-forming' gal_type and sSFR and SFR in some manner
+        if ngal_sf_massbin[i_m] > 0: 
 
-            # Ngal(M_mid), Ngal,Q(M_mid) and Ngal,SF(M_mid)
-            ngal_q_massbin= int( 
-                    np.rint(qf_massbin * np.float(ngal_massbin)) 
-                    ) 
-            ngal_sf_massbin = ngal_massbin - ngal_q_massbin
+            try: 
+                sf_massbin = [x for x in range(ngal_massbin[i_m]) if x not in q_massbin]
+            except NameError:       
+                sf_massbin = range(ngal_massbin[i_m])
 
-            if not quiet: 
-                print mass_bin_low[i_m], ' < M < ', mass_bin_high[i_m]
-                print 'fQ = ', qf_massbin, ' Ngal = ', ngal_massbin
-                print 'Ngal,Q = ', ngal_q_massbin, ' Ngal,SF = ', ngal_sf_massbin 
+            try:  
+                print "For loop takes ", time.time() - q_time
+            except UnboundLocalError: 
+                print "For loop takes ", time.time() - begin_loop_time 
+
+            i_sf_massbin = (massbin_unassigned[i_m][0])[np.array(sf_massbin)]
             
-            # Randomly select ngal_q_massbin quiescent galaxies from the 
-            # massbin. Assign them 'quiescent' gal_type and sSFR and SFR 
-            # based on a predetermined gaussian distribution about sSFR.
-            if ngal_q_massbin > 0: 
-
-                try: 
-                    q_massbin = random.sample(range(ngal_massbin), ngal_q_massbin) 
-                except ValueError: 
-                    q_massbin = range(ngal_massbin) 
-
-                i_q_massbin = (massbin_unassigned[0])[q_massbin]
-
-                cenque.gal_type[i_q_massbin] = 'quiescent'   
-
-                # sample SSFR from log-normal distribution with a preset
-                # 0.18 dex scatter centered about some predetermined mean
-                mu_q_ssfr = util.get_q_ssfr_mean(
-                        cenque.mass[i_q_massbin]
-                        ) 
-                cenque.ssfr[i_q_massbin] = 0.18 * np.random.randn(ngal_q_massbin) + mu_q_ssfr 
-                cenque.sfr[i_q_massbin]  = cenque.ssfr[i_q_massbin] + cenque.mass[i_q_massbin]
+            cenque.gal_type[i_sf_massbin] = 'star-forming'
             
-            # ngal_sf_massbin starforming galaxies from the massbin. Assign 
-            # them 'star-forming' gal_type and sSFR and SFR in some manner
-            if ngal_sf_massbin > 0: 
+            # sample SFR 
+            if  sf_prop['name'] == 'average': 
 
-                try: 
-                    sf_massbin = [x for x in xrange(ngal_massbin) if x not in q_massbin]
-                except NameError:       
-                    sf_massbin = range(ngal_massbin)
+                mu_sf_sfr = sfr_mstar_z(mass_bin_mid[i_m], cenque.zsnap)
+                sigma_sf_sfr = sig_sfr_mstar_z(mass_bin_mid[i_m], cenque.zsnap)
 
-                i_sf_massbin = (massbin_unassigned[0])[np.array(sf_massbin)]
-                
-                cenque.gal_type[i_sf_massbin] = 'star-forming'
-                
-                # sample SFR 
-                if  sf_prop['name'] == 'average': 
+                cenque.delta_sfr[i_sf_massbin] = sigma_sf_sfr * np.random.randn(ngal_sf_massbin[i_m])
 
-                    mu_sf_sfr = sfr_mstar_z(mass_bin_mid[i_m], cenque.zsnap)
-                    sigma_sf_sfr = sig_sfr_mstar_z(mass_bin_mid[i_m], cenque.zsnap)
+                cenque.sfr[i_sf_massbin] = mu_sf_sfr + cenque.delta_sfr[i_sf_massbin]
 
-                    cenque.delta_sfr[i_sf_massbin] = sigma_sf_sfr * np.random.randn(ngal_sf_massbin)
+                if not quiet:
+                    print 'Starforming galaxies: '
+                    print 'Average(SFR) = ', mu_sf_sfr, ' sigma(SFR) = ', sigma_sf_sfr 
+            
+            else:
+                raise NotImplementedError()
+                """
+                # Fluctuating SFR with random amplitude, frequency, and phase 
 
-                    cenque.sfr[i_sf_massbin] = mu_sf_sfr + cenque.delta_sfr[i_sf_massbin]
+                # sfr amplitude, frequency and phase respectively 
+                self.sfr_amp[mass_bin_sf_index] = \
+                        sf_sig_sfr * np.random.randn(mass_bin_n_sf) 
+                self.sfr_freq[mass_bin_sf_index] = \
+                        (2.0 * np.pi)/np.random.uniform(0.01, 0.1, mass_bin_n_sf)  
+                self.sfr_phase[mass_bin_sf_index] = \
+                        np.random.uniform(0.0, 1.0, mass_bin_n_sf)
 
-                    if not quiet:
-                        print 'Starforming galaxies: '
-                        print 'Average(SFR) = ', mu_sf_sfr, ' sigma(SFR) = ', sigma_sf_sfr 
-                
-                else:
-                    raise NotImplementedError()
-                    """
-                    # Fluctuating SFR with random amplitude, frequency, and phase 
+                self.sfr[mass_bin_sf_index] = util.sfr_squarewave(
+                        self.mass[mass_bin_sf_index], self.t_cosmic, 
+                        amp = self.sfr_amp[mass_bin_sf_index], 
+                        freq = self.sfr_freq[mass_bin_sf_index], 
+                        phase = self.sfr_phase[mass_bin_sf_index])
+                """
 
-                    # sfr amplitude, frequency and phase respectively 
-                    self.sfr_amp[mass_bin_sf_index] = \
-                            sf_sig_sfr * np.random.randn(mass_bin_n_sf) 
-                    self.sfr_freq[mass_bin_sf_index] = \
-                            (2.0 * np.pi)/np.random.uniform(0.01, 0.1, mass_bin_n_sf)  
-                    self.sfr_phase[mass_bin_sf_index] = \
-                            np.random.uniform(0.0, 1.0, mass_bin_n_sf)
-
-                    self.sfr[mass_bin_sf_index] = util.sfr_squarewave(
-                            self.mass[mass_bin_sf_index], self.t_cosmic, 
-                            amp = self.sfr_amp[mass_bin_sf_index], 
-                            freq = self.sfr_freq[mass_bin_sf_index], 
-                            phase = self.sfr_phase[mass_bin_sf_index])
-                    """
-
-                cenque.ssfr[i_sf_massbin] = cenque.sfr[i_sf_massbin] - cenque.mass[i_sf_massbin]
+            cenque.ssfr[i_sf_massbin] = cenque.sfr[i_sf_massbin] - cenque.mass[i_sf_massbin]
+            try:  
+                print "Starforming assign takes ", time.time() - q_time
+            except UnboundLocalError: 
+                print "Starforming assign takes ", time.time() - begin_loop_time 
+        print time.time()-begin_loop_time
     
     # double check that SF assign didn't fail anywhere
     assign_fail = np.where(
@@ -209,7 +231,7 @@ def assign_sfr(cenque, quiet=True, sf_prop={'name': 'average'}, fq_prop={'name':
     if len(assign_fail[0]) > 0: 
         raise NameError('Function failed!')
 
-    print 'Assign SFR function takes', (start_time - time.time())/60.0, ' minutes'
+    print 'Assign SFR function takes', (time.time()-start_time)/60.0, ' minutes'
     cenque.cenque_type = 'sf_assigned'
 
     return cenque
