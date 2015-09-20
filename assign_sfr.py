@@ -34,8 +34,10 @@ def assign_sfr(cenque, sf_prop={'name': 'average'}, fq_prop={'name': 'wetzelsmoo
     Notes 
     ----------------------------------------------------------------
     * Re imagine how to set up SFR 
+
     """
 
+    # time the code 
     start_time = time.time()
 
     if cenque.mass == None: 
