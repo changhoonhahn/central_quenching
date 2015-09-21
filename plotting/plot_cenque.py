@@ -11,140 +11,147 @@ import matplotlib.pyplot as plt
 from defutility.plotting import prettyplot
 from defutility.plotting import prettycolors 
 
+class PlotCenque: 
+
+    def __init__(self, cenque=None, **kwargs): 
+        """ Class that describes the sSFR distribution plots for 
+        CenQue objects
+        """
+        self.kwargs = kwargs 
+
+        self.fig = plt.figure(1, figsize=(16,16))
+        self.fig.subplots_adjust(hspace=0., wspace=0.)
+
+        self.panel_mass_bins = self.mass_panels()
+        self.subs = [
+                self.fig.add_subplot(2, 2, i_mass+1) 
+                for i_mass in xrange(len(self.panel_mass_bins))
+                ] # panel subplot 
+        self.pretty_colors = prettycolors()
+
+        if cenque != None: 
+            cenque_ssfr_dist(self, cenque)
+    
+    def cenque_ssfr_dist(self, cenque): 
+        ''' Plot sSFR distribution for CenQue data
+        '''
+    
+        for i_mass, panel_mass in enumerate(self.panel_mass_bins):       # loop through each panel 
+
+            mass_limit = np.where(
+                    (cenque.mass >= panel_mass[0]) & 
+                    (cenque.mass < panel_mass[1])
+                    )
+            ngal_bin = len(mass_limit[0])
+
+            # SSFR histogram 
+            ssfr_hist, ssfr_bin_edges = np.histogram(
+                    cenque.ssfr[mass_limit], 
+                    range = [-13.0, -7], 
+                    bins = 40, 
+                    normed = True
+                    )
+            ssfr_bin_low = ssfr_bin_edges[:-1]
+            ssfr_bin_high = ssfr_bin_edges[1:]
+            ssfr_bin_mid = 0.5 * (ssfr_bin_low + ssfr_bin_high) 
+        
+            if 'label' in self.kwargs: 
+                ssfr_hist_label = self.kwargs['label']
+            else: 
+                try: 
+                    ssfr_hist_label = r'$\mathtt{z='+str(cenque.zsnap)+'}$' 
+                except AttributeError: 
+                    ssfr_hist_label = 'Centrals'
+        
+            if 'line_color' in self.kwargs: 
+                line_color = self.kwargs['line_color']
+            else: 
+                try: 
+                    line_color = self.pretty_colors[cenque.nsnap]
+                except TypeError: 
+                    line_color = 'black'
+
+            if 'line_style' in self.kwargs:
+                line_style = self.kwargs['line_style'] 
+            else: 
+                line_style = '-'
+
+            if 'lw' in self.kwargs: 
+                line_width = self.kwargs['lw'] 
+            else:
+                line_width = 4
+
+            self.subs[i_mass].plot(
+                    ssfr_bin_mid, 
+                    ssfr_hist, 
+                    color = line_color, 
+                    lw = line_width, 
+                    ls = line_style, 
+                    label = ssfr_hist_label) 
+
+        return None   
+
+    def mass_panels(self): 
+        """ Mass bin panels of the figure
+        """
+        panel_mass_bins = [ 
+                [9.7, 10.1], [10.1, 10.5], [10.5, 10.9], [10.9, 11.3]
+                ]
+        return panel_mass_bins
+
+    def set_axes(self): 
+        """ Set up axes
+        """
+        for i_sub in xrange(len(self.subs)): 
+            self.subs[i_sub].set_xlim([-13.0, -7.0])
+            self.subs[i_sub].set_ylim([0.0, 1.6])
+            
+            massbin_str = ''.join([ 
+                r'$\mathtt{log \; M_{*} = [', 
+                str(self.panel_mass_bins[i_sub][0]), ',\;', 
+                str(self.panel_mass_bins[i_sub][1]), ']}$'
+                ])
+            self.subs[i_sub].text(-10.5, 1.4, massbin_str,
+                    fontsize=24
+                    )
+
+            if i_sub == 0: 
+                self.subs[i_sub].set_ylabel(r'$\mathtt{P(log \; SSFR)}$', fontsize=20) 
+                self.subs[i_sub].set_xticklabels([])
+            elif i_sub == 1: 
+                self.subs[i_sub].set_xticklabels([])
+                self.subs[i_sub].set_yticklabels([])
+            elif i_sub == 2:
+                #sub.set_yticklabels([])
+                self.subs[i_sub].set_ylabel(r'$\mathtt{P(log \; SSFR)}$', fontsize=20) 
+                self.subs[i_sub].set_xlabel(r'$\mathtt{log \; SSFR \;[yr^{-1}]}$', fontsize=20) 
+            else: 
+                self.subs[i_sub].set_yticklabels([])
+                self.subs[i_sub].set_xlabel(r'$\mathtt{log \; SSFR \;[yr^{-1}]}$', fontsize=20) 
+
+        return None
+
 def plot_cenque_ssfr_dist(cenque, fig=None, **kwargs): 
     ''' Plot sSFR distribution for CenQue data
     '''
-    #prettyplot()                        #make things pretty 
-    pretty_colors = prettycolors() 
-    
     if fig == None: 
-        fig = plt.figure(1, figsize=(16,16))
-        fig.subplots_adjust(hspace=0., wspace=0.)
-        new_plot = True
+        pltcq = PlotCenque()
     else: 
-        new_plot = False
+        pltcq = fig 
 
-    # mass bins of the panel        ( hardcoded ) 
-    panel_mass_bins = [ 
-            [9.7, 10.1], [10.1, 10.5], [10.5, 10.9], [10.9, 11.3]
-            ]
+    pltcq.cenque_ssfr_dist(cenque)
     
-    for i_mass, panel_mass in enumerate(panel_mass_bins):       # loop through each panel 
+    for i_mass, panel_mass in enumerate(pltcq.panel_mass_bins):       # loop through each panel 
 
-        mass_limit = np.where(
-                (cenque.mass >= panel_mass[0]) & 
-                (cenque.mass < panel_mass[1])
-                )
-        ngal_bin = len(mass_limit[0])
-
-        # SSFR histogram 
-        ssfr_hist, ssfr_bin_edges = np.histogram(
-                cenque.ssfr[mass_limit], 
-                range = [-13.0, -7], 
-                bins = 40, 
-                normed = True
-                )
-        ssfr_bin_low = ssfr_bin_edges[:-1]
-        ssfr_bin_high = ssfr_bin_edges[1:]
-        ssfr_bin_mid = 0.5 * (ssfr_bin_low + ssfr_bin_high) 
-    
-        if 'label' in kwargs: 
-            ssfr_hist_label = kwargs['label']
-        else: 
-            try: 
-                ssfr_hist_label = r'$\mathtt{z='+str(cenque.zsnap)+'}$' 
-            except AttributeError: 
-                ssfr_hist_label = 'Centrals'
-    
-        if 'line_color' in kwargs: 
-            line_color = kwargs['line_color']
-        else: 
-            try: 
-                line_color = pretty_colors[cenque.nsnap]
-            except TypeError: 
-                line_color = 'black'
-
-        if 'line_style' in kwargs:
-            line_style = kwargs['line_style'] 
-        else: 
-            line_style = '-'
-
-        if 'lw' in kwargs: 
-            line_width = kwargs['lw'] 
-        else:
-            line_width = 4
-
-        sub = fig.add_subplot(2, 2, i_mass+1)       # panel subplot 
-        sub.plot(
-                ssfr_bin_mid, 
-                ssfr_hist, 
-                color = line_color, 
-                lw = line_width, 
-                ls = line_style, 
-                label = ssfr_hist_label) 
-
-        if new_plot:        # put mass labels for the panels 
-            plt.text(-11.25, 1.4, 
-                    r'$\mathtt{log \; M_{*} = ['+str(panel_mass[0])+',\;'+str(panel_mass[1])+']}$', 
-                    fontsize=24
-                    )
         ssfr_cut = -11.35 + 0.76*(cenque.zsnap-0.05) - 0.35*((0.5 * np.sum(panel_mass))-10.5)
 
-        sub.vlines(ssfr_cut, 0.0, 10.0, lw=6)
+        pltcq.subs[i_mass].vlines(ssfr_cut, 0.0, 10.0, lw=4, ls='--')
 
-        sub.set_xlim([-13.0, -7.0])
-        sub.set_ylim([0.0, 1.6])
+    pltcq.set_axes()
 
-        if i_mass == 0: 
-            sub.set_ylabel(r'$\mathtt{P(log \; SSFR)}$', fontsize=20) 
-            sub.set_xticklabels([])
-        elif i_mass == 1: 
-            sub.set_xticklabels([])
-            sub.set_yticklabels([])
-        elif i_mass == 2:
-            #sub.set_yticklabels([])
-            sub.set_ylabel(r'$\mathtt{P(log \; SSFR)}$', fontsize=20) 
-            sub.set_xlabel(r'$\mathtt{log \; SSFR \;[yr^{-1}]}$', fontsize=20) 
-        else: 
-            sub.set_yticklabels([])
-            sub.set_xlabel(r'$\mathtt{log \; SSFR \;[yr^{-1}]}$', fontsize=20) 
-                
-            #try: 
-            #    fig_leg.remove() 
-            #except UnboundLocalError: 
-            #    pass
-            #
-            #fig_leg = sub.legend(loc='lower left', prop={'size':'28'})        # legends 
-    ''' 
-    if 'tau' in kwargs.keys(): 
-        sub = fig.add_subplot(1, 5, 5)       # tau panel 
+    return pltcq   
 
-        mass_bin = util.simple_mass_bin()       # mass bin 
-        
-        # satellite quenching fraction 
-        tau_mass = util.get_quenching_efold(np.array(mass_bin.mass_mid), 
-                type='linear') 
-
-        sub.plot(mass_bin.mass_mid, tau_mass, color='black', lw=4, ls='--',
-                label=r'$\tau_\mathtt{satellite}$') 
-        
-        # central quenching fraction 
-        tau_mass = util.get_quenching_efold(np.array(mass_bin.mass_mid), 
-                type=kwargs['tau'], param=kwargs['tau_param']) 
-
-        sub.plot(mass_bin.mass_mid, tau_mass, color=pretty_colors[5], lw=4) 
-        
-        sub.set_xlim([9.0, 12.0])
-        sub.set_ylim([0.05, 2.0])
-        sub.set_yscale('log') 
-        sub.set_xlabel('Mass') 
-        sub.set_ylabel(r'Quenching e-Fold time $\tau$') 
-        sub.yaxis.set_label_position('right')
-        sub.legend(loc='lower left', prop={'size':'24'}) 
-    '''
-    return fig   
-
-def plot_cenque_ssfr_dist_evolution(Mrcut=18, **kwargs): 
+def plot_cenque_ssfr_dist_evolution(n_snaps = [12,11,10,9,8,7,6,5,4,3,2,1], Mrcut=18, **kwargs): 
     ''' Plot evolution of the CenQue SSFR distribution 
 
     Parameters
@@ -156,26 +163,21 @@ def plot_cenque_ssfr_dist_evolution(Mrcut=18, **kwargs):
     '''
     snap = cq.CenQue(n_snap=13, cenque_type = 'sf_assgined') 
     snap.readin()  
-    ssfr_fig = plot_cenque_ssfr_dist(snap, lw=2, line_style='--')      # plot!
-    
-    # determine which snapshots to plot 
-    if 'nsnaps' in kwargs.keys():   
-        nsnaps = kwargs['nsnaps']
-    else: 
-        nsnaps = [1] 
 
-    for i_nsnap in nsnaps:  
-        next_snap = cq.CenQue() 
-        next_snap.readin(nsnap=i_nsnap, file_type='evol from 13', **kwargs) 
+    ssfr_fig = PlotCenque(cenque=snap, lw=2, linestyle='--')
+    
+    # Overplot CenQue of specified Snapshots 
+    for i_nsnap in n_snaps:  
+        next_snap = cq.CenQue(n_snap = i_nsnap, cenque_type = 'evol_from13') 
+        next_snap.readin()
         
-        #ssfr_fig = plot_cenque_ssfr_dist(next_snap, fig=ssfr_fig) 
-        ssfr_fig = plot_cenque_ssfr_dist(next_snap)#, fig=ssfr_fig) 
+        ssfr_fig.cenque_ssfr_dist(next_snap)
     
     # overplot SDSS group catalog sSFR dist
     central_ssfr = cq_group.central_catalog(Mrcut=Mrcut) 
     #ssfr_fig = plot_cenque_ssfr_dist(central_ssfr, fig=ssfr_fig, label= r'$M_\mathtt{r,cut} = '+str(Mrcut)+'$', **kwargs) 
     ssfr_fig = plot_cenque_ssfr_dist(central_ssfr, fig=ssfr_fig, label= r'SDSS Group Catalog', **kwargs) 
-    
+    """ 
     # file name ----------------------------------------------------------------------------
     if 'sfms_slope' in kwargs.keys():       # sfms specifier
         slope_str = str("%.2f" % kwargs['sfms_slope']) 
@@ -227,3 +229,4 @@ def plot_cenque_ssfr_dist_evolution(Mrcut=18, **kwargs):
     ssfr_fig.savefig(fig_file, bbox_inches='tight') 
     ssfr_fig.clear() 
     plt.close(ssfr_fig)
+    """

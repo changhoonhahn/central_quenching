@@ -79,7 +79,8 @@ def evolve_cq(
         parent_cq = child_cq
     
     print 'Total Evolution takes ', time.time() - evo_start_time
-    return None
+
+    return child_cq 
 
 def evolve_onestep(parent_cq, child_cq, quiet=False):
     """ Evolve CenQue class object by one time step 
