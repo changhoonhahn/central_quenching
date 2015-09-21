@@ -60,7 +60,7 @@ def plot_fqobs_snapshot_evol(
         if ngal == 0: 
             continue 
 
-        sfqs = util.sfq_classify( 
+        sfqs = sfq_classify( 
                 snap.mass[mass_bin_index], 
                 snap.sfr[mass_bin_index], 
                 snap.zsnap 
@@ -90,7 +90,7 @@ def plot_fqobs_snapshot_evol(
             if ngal == 0: 
                 continue 
 
-            sfqs = util.sfq_classify( 
+            sfqs = sfq_classify( 
                     snap.mass[mass_bin_index], 
                     snap.sfr[mass_bin_index], 
                     snap.zsnap 
@@ -191,7 +191,7 @@ def plot_fqobs_snapshot(nsnap, fq_type='wetzelsmooth', cenque_type='sf_assigned'
     zbin = np.loadtxt('snapshot_table.dat', unpack=True, usecols=[2])
     zbin = zbin[nsnap]
 
-    mass_bin = np.arange(9.0, 12.0, 0.25)   # mass bin 
+    mass_bin = np.arange(9.0, 12.0, 0.2)   # mass bin 
     mass_low = mass_bin[:-1]
     mass_high = mass_bin[1:]
     mass_mid = 0.5 * (mass_low + mass_high)
@@ -423,5 +423,6 @@ def plot_fq_evol():
     fig.clear() 
 
 if __name__=="__main__":
-    #plot_snapshot_fqobs_evol(nsnaps = [2,3,4,5,6,7,8,9,10,11,12])
-    plot_snapshot_fqobs(13, fq_type='wetzelsmooth', cenque_type='sf_assigned')
+    #plot_fqobs_snapshot_evol(nsnaps = [2,3,4,5,6,7,8,9,10,11,12])
+    for i_nsnap in [12,11,10,9,8,7,6,5,4,3,2]:
+        plot_fqobs_snapshot(i_nsnap, fq_type='wetzelsmooth', cenque_type='evol_from13')

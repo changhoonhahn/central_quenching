@@ -22,10 +22,10 @@ def simple_mass_bin():
     ------
     mass_bin class that contains mass bin information
     '''
-    simple_mass_binsize = 0.2
     simple_mass_bin = MassBin()
-    simple_mass_bin.mass_low  = np.array([ 9.0 + np.float(i)*simple_mass_binsize for i in xrange(13) ])
-    simple_mass_bin.mass_high = simple_mass_bin.mass_low + simple_mass_binsize
+    mb = np.arange(9.0, 12.0, 0.2)
+    simple_mass_bin.mass_low  = mb[:-1]
+    simple_mass_bin.mass_high = mb[1:]
     simple_mass_bin.mass_mid  = 0.5 * (simple_mass_bin.mass_low + simple_mass_bin.mass_high) 
 
     simple_mass_bin.mass_wid = simple_mass_bin.mass_high - simple_mass_bin.mass_low 

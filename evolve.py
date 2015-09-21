@@ -421,6 +421,8 @@ def parent_children_match(parent_snap_index, child_parent_snap_index):
 if __name__=='__main__': 
     blah = CenQue()
     blah.import_treepm(13)
+    blah.writeout()
     blah = assign_sfr(blah)
+    blah.writeout()
     blah = evolve_cq(blah, quiet=True)
     blah.writeout()
