@@ -131,6 +131,8 @@ def assign_sfr(
         for i_m in xrange(mass_bins.nbins)
         ]) 
     ngal_sf_massbin = ngal_massbin - ngal_q_massbin
+    # fail-safe for ngal_q_massbin
+    ngal_q_massbin[np.where(ngal_q_massbin > ngal_massbin)] = ngal_massbin[np.where(ngal_q_massbin > ngal_massbin)]
 
     for i_m in xrange(mass_bins.nbins):             
 
@@ -162,6 +164,11 @@ def assign_sfr(
             mu_q_ssfr = util.get_q_ssfr_mean(
                     cenque.mass[i_q_massbin]
                     ) 
+            if len(i_q_massbin) != ngal_q_massbin[i_m]:
+                print shuffled_massbin_index
+                print q_massbin
+                print i_q_massbin
+                print i_q_end, ngal_q_massbin[i_m]
             cenque.ssfr[i_q_massbin] = 0.18 * np.random.randn(ngal_q_massbin[i_m]) + mu_q_ssfr 
             cenque.sfr[i_q_massbin]  = cenque.ssfr[i_q_massbin] + cenque.mass[i_q_massbin]
             q_time = time.time()

@@ -14,7 +14,7 @@ from util import cenque_utility as util
 from assign_sfr import assign_sfr
 from quiescent_fraction import get_fq
 from util.gal_classify import sfq_classify
-from sfms.fitting import get_bestfit_sfr_mstar_z
+from sfms.fitting import get_param_sfr_mstar_z
 
 def evolve_cq(
         cenque, 
@@ -54,13 +54,18 @@ def evolve_cq(
     start_nsnap = cenque.nsnap 
     parent_cq = cenque
 
-    for i_snap in xrange(final_nsnap, start_nsnap):    
+    for i_snap in range(final_nsnap, start_nsnap)[::-1]:    
+
+        print ''
+        print '---------------------------------------'
+        print 'Evolving to ', str(i_snap) 
+
     
         # Import halo and SHAM properties from TreePM 
         # catalogs and run time evolution on the SF
         # properties of the parent CenQue object.
         child_cq = CenQue() 
-        child_cq.import_treepm(start_nsnap - i_snap) 
+        child_cq.import_treepm(i_snap) 
         child_cq.cenque_type = ''.join(['evol_from', str(start_nsnap)])
         child_cq.sf_prop = sf_prop
         child_cq.fq_prop = fq_prop
@@ -154,10 +159,7 @@ def evolve_onestep(parent_cq, child_cq, quiet=False):
     child_cq.sfr[q_children] = child_cq.ssfr[q_children] + child_cq.mass[q_children]
 
     if child_cq.sf_prop['name'] == 'average': 
-        sfr_mstar_z, sig_sfr_mstar_z = get_bestfit_sfr_mstar_z(
-                Mrcut = 18, 
-                fid_mass = 10.5
-                )
+        sfr_mstar_z, sig_sfr_mstar_z = get_param_sfr_mstar_z()
         child_sfr = sfr_mstar_z(
                 child_cq.mass[sf_children], 
                 child_cq.zsnap
@@ -419,10 +421,10 @@ def parent_children_match(parent_snap_index, child_parent_snap_index):
     return parents, children 
 
 if __name__=='__main__': 
-    blah = CenQue()
-    blah.import_treepm(13)
-    blah.writeout()
-    blah = assign_sfr(blah)
-    blah.writeout()
+    blah = CenQue(n_snap=13, cenque_type='sf_assigned')
+    #blah.import_treepm(13)
+    #blah.writeout()
+    #blah = assign_sfr(blah)
+    #blah.writeout()
+    blah.readin()
     blah = evolve_cq(blah, quiet=True)
-    blah.writeout()
