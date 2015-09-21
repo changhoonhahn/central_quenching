@@ -64,7 +64,7 @@ class CenQue:
         * child index 
         * halo mass 
         """
-        start_time = time.time()
+        #start_time = time.time()
 
         snapshot_file = ''.join([
             'dat/wetzel_tree/', 
@@ -98,7 +98,7 @@ class CenQue:
         self.t_cosmic = t_snap[(n_snaps.tolist()).index(nsnap)] # t_cosmic of snapshot 
         self.t_step = t_wid[(n_snaps.tolist()).index(nsnap)]    # Gyrs until next snapshot
 
-        print "import_treepm takes ", time.time() - start_time
+        #print "import_treepm takes ", time.time() - start_time
 
         return None
 

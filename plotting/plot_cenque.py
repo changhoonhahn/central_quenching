@@ -88,6 +88,9 @@ def plot_cenque_ssfr_dist(cenque, fig=None, **kwargs):
                     r'$\mathtt{log \; M_{*} = ['+str(panel_mass[0])+',\;'+str(panel_mass[1])+']}$', 
                     fontsize=24
                     )
+        ssfr_cut = -11.35 + 0.76*(cenque.zsnap-0.05) - 0.35*((0.5 * np.sum(panel_mass))-10.5)
+
+        sub.vlines(ssfr_cut, 0.0, 10.0, lw=6)
 
         sub.set_xlim([-13.0, -7.0])
         sub.set_ylim([0.0, 1.6])

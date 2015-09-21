@@ -12,10 +12,11 @@ import matplotlib.pyplot as plt
 from cenque import CenQue
 from quiescent_fraction import get_fq
 from util import cenque_utility as util
+from util.gal_classify import sfq_classify
 from defutility.plotting import prettyplot
 from defutility.plotting import prettycolors 
 
-def plot_snapshot_fqobs_evol(
+def plot_fqobs_snapshot_evol(
         nsnaps = [1,2,3,4,5,6,7,8,9,10,11,12],
         fq_type = 'wetzelsmooth', 
         **kwargs
@@ -172,9 +173,9 @@ def plot_snapshot_fqobs_evol(
     plt.close(fig)
     """
 
-def plot_snapshot_fqobs(nsnap, fq_type='wetzelsmooth', cenque_type='sf_assigned', **kwargs): 
+def plot_fqobs_snapshot(nsnap, fq_type='wetzelsmooth', cenque_type='sf_assigned', **kwargs): 
     """ Plot the quiescent fraction of specified CenQue class object
-    along with a parameterized fQ
+    along with a parameterized fQ for given snapshot redshift
 
     ----------------------------------------------------------------
     Parameters
@@ -185,12 +186,12 @@ def plot_snapshot_fqobs(nsnap, fq_type='wetzelsmooth', cenque_type='sf_assigned'
     """
     #prettyplot()        # make pretty 
     pretty_colors = prettycolors() 
-
-    # snapshot redshifts
+    
+    # Corresponding redshift for the snapshot 
     zbin = np.loadtxt('snapshot_table.dat', unpack=True, usecols=[2])
     zbin = zbin[nsnap]
 
-    mass_bin = np.arange(9.0, 12.0, 0.25)       # mass bin 
+    mass_bin = np.arange(9.0, 12.0, 0.25)   # mass bin 
     mass_low = mass_bin[:-1]
     mass_high = mass_bin[1:]
     mass_mid = 0.5 * (mass_low + mass_high)
@@ -202,16 +203,15 @@ def plot_snapshot_fqobs(nsnap, fq_type='wetzelsmooth', cenque_type='sf_assigned'
     snap.cenque_type = cenque_type 
     snap.readin() 
         
-        
     # classify CenQue class object with SF properties using 
     # sfq_classify function 
-    sfqs = util.sfq_classify( 
+    sfqs = sfq_classify( 
             snap.mass, 
             snap.sfr, 
             snap.zsnap 
             ) 
 
-    fq_mass, fq = [], [] 
+    mass_fq, fq = [], [] 
 
     for i_m in xrange(len(mass_mid)): 
 
@@ -227,11 +227,11 @@ def plot_snapshot_fqobs(nsnap, fq_type='wetzelsmooth', cenque_type='sf_assigned'
         
         ngal_q = np.float(np.sum(sfqs[mass_bin_index] == 'quiescent')) 
 
-        fq_mass.append(mass_mid[i_m]) 
+        mass_fq.append(mass_mid[i_m]) 
         fq.append(ngal_q/ngal) 
     
     subs.plot(
-            fq_mass, fq, 
+            mass_fq, fq, 
             color = pretty_colors[3], 
             lw = 4, 
             label='Snapshot '+str(snap.nsnap)
@@ -347,7 +347,7 @@ def plot_fq_geha_groupcat(Mrcut=18):
         if np.sum(mass_bin_bool) < 10: 
             continue 
 
-        sfqs = util.sfq_classify( central.mass[mass_bin_bool], central.sfr[mass_bin_bool], median_z ) 
+        sfqs = sfq_classify( central.mass[mass_bin_bool], central.sfr[mass_bin_bool], median_z ) 
         ngal = np.float(len(sfqs))
         ngal_q = np.float(np.sum(sfqs == 'quiescent')) 
         fq_mass.append(mass_bin_mid) 
@@ -425,4 +425,3 @@ def plot_fq_evol():
 if __name__=="__main__":
     #plot_snapshot_fqobs_evol(nsnaps = [2,3,4,5,6,7,8,9,10,11,12])
     plot_snapshot_fqobs(13, fq_type='wetzelsmooth', cenque_type='sf_assigned')
-

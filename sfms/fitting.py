@@ -14,6 +14,19 @@ import mpfit
 from sf_mainseq import get_sfr_mstar_z_groupcat
 from sf_mainseq import get_sfr_mstar_z_envcount
 
+def get_param_sfr_mstar_z(): 
+    """ Parameterized SFR(M*,z)
+    """
+
+    def avgsfr_sfms(mstar, z_in): 
+        mu_SFR = 0.65*(mstar - 10.5) + 0.76 * (z_in - 0.03)
+        return mu_SFR
+
+    def sigsfr_sfms(mstar, z_in): 
+        return 0.3 
+        
+    return [avgsfr_sfms, sigsfr_sfms] 
+
 def get_bestfit_sfr_mstar_z(Mrcut=18, fid_mass=10.5, clobber=False):
     ''' Calculate average SFR and standard deviation of the SF main sequence as a 
     function of mass and redshift using linear bestfits of SFMS from the SDSS 

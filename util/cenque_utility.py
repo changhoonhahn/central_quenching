@@ -123,57 +123,6 @@ def get_sfr_mstar_z(mstar, z_in, deltamass=0.2, deltaz=0.2, lit='primusfit', mac
     else: 
         raise NameError("Not yet coded") 
 
-def sfq_classify(mstar, sfr, z_in, Mrcut=18, clobber=False):
-    ''' Return SF or Q classification given M* and SFR 
-
-    Parameters
-    ----------
-    mstar : Stellar mass of galaxy (array)
-    sfr : Star-formation rate of galaxies (array)
-    z_in : Redshift 
-    --Mrcut : Absolute magnitude cut that specified the group catalog --
-
-    Returns
-    -------
-    [average SFR, standard deviation SFR]
-
-    Notes
-    -----
-    * Best-fit SFMS y-int offsets for redshift bins determined from EnvCount project 
-    * Slope and SDSS y-int determined from SF Main Sequence of Group Catalog 
-    * Fiducial Mass = 10.5
-    * Assumptions: 
-        * The overall shifts in SFR observed in the iSEDfit sample is equivalent to that of the group catalog  
-
-    '''
-    
-    #fid_mass = 10.5
-
-    ## Best-fit slope and y-int of SF SDSS Group Catalog 
-    #groupcat_fit_param = sfms.get_bestfit_groupcat_sfms(Mrcut=Mrcut, clobber=clobber)
-
-    ## Best-fit slope and y-int of SF EnvCount
-    #envcount_fit_param = sfms.get_bestfit_envcount_sfms()
-    #zmids, slopes, yints = sfms.get_sfmsfit_sfr(
-    #        (envcount_fit_param[0]).item(), (envcount_fit_param[1]).item(), 
-    #        clobber=clobber)
-    #    
-    #d_yints = np.interp(z_in, zmids, yints) - yints[0] 
-    #SFR_amp = groupcat_fit_param[1] + d_yints
-
-    #SFR_cut = groupcat_fit_param[0] * (mstar - fid_mass) + SFR_amp - 1.0
-    #ssfr_cut = -11.35 + 0.76*(z_in-0.05) - 0.49*(mstar-10.5)
-    ssfr_cut = -11.15 + 0.76*(z_in-0.05) - 0.35*(mstar-10.5)
-    sfr_cut = ssfr_cut + mstar 
-
-    sfq = np.empty(len(mstar), dtype=(str,16))
-    sf_index = sfr > sfr_cut 
-    sfq[sf_index] = 'star-forming'
-    q_index = sfr <= sfr_cut
-    sfq[q_index] = 'quiescent'
-
-    return sfq 
-
 '''
 def sdss_sf_ms_fit(): 
 

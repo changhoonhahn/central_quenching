@@ -15,9 +15,11 @@ import h5py
 from scipy import signal
 
 # --- Local ---
+from util.mass_bins import simple_mass_bin
 from group_catalog import group_catalog as cq_group
 from group_catalog.group_catalog import sf_centrals 
 from util import cenque_utility as util 
+from defutility.fitstables import mrdfits
 
 def get_sfr_mstar_z_groupcat(m_stars, Mrcut=18, clobber=False): 
     ''' SFR(M*, z) from SDSS Group Catalog SFMS. calculate 
@@ -43,7 +45,7 @@ def get_sfr_mstar_z_groupcat(m_stars, Mrcut=18, clobber=False):
 
     '''
 
-    massbins = util.simple_mass_bin()
+    massbins = simple_mass_bin()
 
     sf_data = sf_centrals(Mrcut=Mrcut, clobber=clobber) 
     
@@ -136,14 +138,14 @@ def get_sfr_mstar_z_envcount(m_stars, z_ins):
             'envcount_cylr2.5h35_thresh75_active_z0.2_1.0_lit.fits']) 
 
     if np.max(z_ins) < 0.2:
-        sdss_sf_data = util.mrdfits(sdss_file) 
+        sdss_sf_data = mrdfits(sdss_file) 
     elif np.min(z_ins) > 0.2: 
-        primus_sf_data = util.mrdfits(primus_file)
+        primus_sf_data = mrdfits(primus_file)
     else: 
-        sdss_sf_data = util.mrdfits(sdss_file) 
-        primus_sf_data = util.mrdfits(primus_file)
+        sdss_sf_data = mrdfits(sdss_file) 
+        primus_sf_data = mrdfits(primus_file)
     
-    massbins = util.simple_mass_bin()
+    massbins = simple_mass_bin()
     zbins_low = np.array([ 0.0, 0.2, 0.4, 0.6, 0.8 ])
     zbins_high = np.array([ 0.2, 0.4, 0.6, 0.8, 1.0 ])
     
@@ -301,7 +303,7 @@ def get_ssfr_mstar_qgroupcat(m_star, Mrcut=18, clobber=False):
     q_data = q_centrals(Mrcut=Mrcut, clobber=clobber) 
     
     # determine mass bin and redshift bin to splice the data
-    massbins = util.simple_mass_bin()
+    massbins = simple_mass_bin()
     mbin_index = (np.array(massbins.mass_low) <= m_star) & \
             (np.array(massbins.mass_high) > m_star) 
     mass_low = (np.array(massbins.mass_low)[mbin_index])[0]

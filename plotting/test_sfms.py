@@ -5,8 +5,10 @@ Plots to test SF-MS module
 
 '''
 import bovy_plot as bovy
+from util.gal_classify import sfr_cut
 from sfms.sf_mainseq import get_sfr_mstar_z_groupcat
 from sfms.sf_mainseq import get_sfr_mstar_z_envcount
+from sfms.fitting import get_param_sfr_mstar_z
 from sfms.fitting import get_bestfit_sfms_groupcat
 from sfms.fitting import get_bestfit_sfms_envcount
 from group_catalog.group_catalog import sf_centrals
@@ -14,9 +16,12 @@ from defutility.plotting import prettyplot
 from defutility.plotting import prettycolors
 from defutility.fitstables import mrdfits
 
-def qaplot_sfms_groupcat_fitting(Mrcut=18):
+def qaplot_sfms_groupcat_fitting(Mrcut=18, sfq_test=True):
     """ Function tests the SF-MS fitting functions and examines the 
     SF-MS of group catalog altogether as a sanity check. 
+
+    If sfq_test is specified, then SFR(M*,z) cutoff for SF/Q classification
+    is plotted on top of the SF-MS plots
     """
 
     # star-forming central galaxies from the SDSS group catalog
@@ -77,6 +82,10 @@ def qaplot_sfms_groupcat_fitting(Mrcut=18):
             c = pretty_colors[1], 
             label='Average SFR'
             )
+
+    if sfq_test: 
+
+        plt.plot(mass_bin, sfr_cut(mass_bin, 0.05), c='k', lw=4, ls='--')
     
     plt.legend(loc='lower right')
     
@@ -84,8 +93,11 @@ def qaplot_sfms_groupcat_fitting(Mrcut=18):
     plt.savefig(fig_name, bbox_inches='tight')
     plt.close()
     
-def qaplot_sfms_envcount_fitting(Mrcut=18):
+def qaplot_sfms_envcount_fitting(Mrcut=18, sfq_test=True):
     """ Test functions of the SF-MS module that fits the group catalog SFMS
+    
+    If sfq_test is specified, then SFR(M*,z) cutoff for SF/Q classification
+    is plotted on top of the SF-MS plots
     """
     #prettyplot()        
     pretty_colors = prettycolors() 
@@ -177,6 +189,10 @@ def qaplot_sfms_envcount_fitting(Mrcut=18):
                 )
 
         plt.legend(loc='lower right')
+
+        if sfq_test: 
+
+            plt.plot(mass_bin, sfr_cut(mass_bin, z_mid), c='k', lw=4, ls='--')
         
         fig_name = ''.join(['figure/', 'qaplot_sfms_fitting_envcount_z', str(z_mid), '.png'])
         plt.savefig(fig_name, bbox_inches='tight')
@@ -184,6 +200,75 @@ def qaplot_sfms_envcount_fitting(Mrcut=18):
 
     return None
 
+def qaplot_parameterized_sfms(): 
+    """ QAplot comparison for the parameterized SFMS redshift 
+    evolution in comparison to observed SF-MS redshift evolution.
+
+    """
+    gc_zmid, gc_slope, gc_yint = get_bestfit_sfms_groupcat()
+    
+    ec_zmid, ec_slope, ec_yint = get_bestfit_sfms_envcount(
+            fid_mass = 10.5
+            )
+
+    avg_sfr_sfms, sig_sfr_sfms = get_param_sfr_mstar_z()
+
+    mass_bin = np.arange(9.0, 12.0, 0.25)       # mass bin 
+
+    fig = plt.figure()
+    sub = fig.add_subplot(111)
+    
+    sub.scatter(
+            0.03, 
+            gc_yint,
+            c='k', 
+            s=50, 
+            label='Observed GroupCatalog'
+            )
+
+    sub.scatter(
+            ec_zmid, 
+            ec_yint, 
+            c=prettycolors()[3], 
+            label='Observed EnvCount'
+            )
+        
+    sfr_fidmass = np.array([
+        avg_sfr_sfms(10.5, zmid) 
+        for zmid in np.arange(0.0, 1.0, 0.05)
+        ])
+    sub.plot(
+            np.arange(0.0, 1.0, 0.05),
+            sfr_fidmass, 
+            c='k', 
+            lw=4, 
+            ls='--',
+            label='Parameterized'
+            )
+    
+    sub.plot(
+            np.arange(0.0, 1.0, 0.05),
+            sfr_fidmass+0.15, 
+            c=prettycolors()[3], 
+            lw=4, 
+            ls='--'
+            )
+
+    sfr_cutoff = np.array([
+        sfr_cut(10.5, ec_zmid[i_z]) 
+        for i_z in xrange(len(ec_zmid))
+        ])
+    sub.plot(ec_zmid, sfr_cutoff, c='k', lw=3, ls='--', label='SF/Q Classification')
+
+    sub.set_xlim([0.0, 1.0])
+    sub.set_ylim([-1.0, 2.0])
+    sub.set_ylabel('SFR(M=10.5,z)', fontsize=20)
+    sub.set_xlabel('Redshift (z)', fontsize=20)
+    sub.legend(scatterpoints=1, loc='upper left')
+
+    plt.show()
+
 if __name__=="__main__":
-    qaplot_sfms_groupcat_fitting(Mrcut=18)
-    qaplot_sfms_envcount_fitting(Mrcut=18)
+    #qaplot_sfms_groupcat_fitting(Mrcut=18)
+    #qaplot_sfms_envcount_fitting(Mrcut=18)
+    qaplot_parameterized_sfms()

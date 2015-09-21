@@ -12,9 +12,15 @@ import numpy as np
 # --- Local ----
 from quiescent_fraction import get_fq
 from util import cenque_utility as util
-from sfms.fitting import get_bestfit_sfr_mstar_z
+from sfms.fitting import get_param_sfr_mstar_z
 
-def assign_sfr(cenque, sf_prop={'name': 'average'}, fq_prop={'name': 'wetzelsmooth'}, quiet=True, **kwargs):
+def assign_sfr(
+        cenque, 
+        sf_prop={'name': 'average'}, 
+        fq_prop={'name': 'wetzelsmooth'}, 
+        quiet=True, 
+        **kwargs
+        ):
     """ Assign star-formation properties to CenQue object. 
 
     The function Goes through mass bins and then classifies unassigned 
@@ -87,10 +93,8 @@ def assign_sfr(cenque, sf_prop={'name': 'average'}, fq_prop={'name': 'wetzelsmoo
     # simplest SFR assignment for starforming galaxies. Use mu_SFR(M*, z)
     # and randomly sampled normal delta_SFR. 
     if sf_prop['name'] == 'average': 
-        sfr_mstar_z, sig_sfr_mstar_z = get_bestfit_sfr_mstar_z(
-                Mrcut = 18, 
-                fid_mass = 10.5
-                )
+        sfr_mstar_z, sig_sfr_mstar_z = get_param_sfr_mstar_z()
+
         if 'delta_sfr' not in cenque.__dict__.keys(): 
             cenque.delta_sfr = np.array([-999. for i in xrange(ngal_tot)])
 
@@ -118,11 +122,10 @@ def assign_sfr(cenque, sf_prop={'name': 'average'}, fq_prop={'name': 'wetzelsmoo
             for i_m in xrange(mass_bins.nbins)
             ]
 
+    # Ngal(M_mid), Ngal,Q(M_mid) and Ngal,SF(M_mid)
     ngal_massbin = np.array(
             [len(x[0]) for x in massbin_unassigned]
             )
-
-    # Ngal(M_mid), Ngal,Q(M_mid) and Ngal,SF(M_mid)
     ngal_q_massbin= np.array([
         int(np.rint(qf_massbin[i_m] * np.float(ngal_massbin[i_m])))
         for i_m in xrange(mass_bins.nbins)

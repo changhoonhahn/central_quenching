@@ -13,6 +13,7 @@ from cenque import CenQue
 from util import cenque_utility as util
 from assign_sfr import assign_sfr
 from quiescent_fraction import get_fq
+from util.gal_classify import sfq_classify
 from sfms.fitting import get_bestfit_sfr_mstar_z
 
 def evolve_cq(
@@ -20,7 +21,7 @@ def evolve_cq(
         final_nsnap = 1, 
         sf_prop = {'name': 'average'}, 
         fq_prop = {'name': 'wetzelsmooth'}, 
-        tau_prop = {'name': 'constant'}, 
+        tau_prop = {'name': 'instant'}, 
         mass_evol = 'sham', 
         quiet = False, 
         **kwargs
@@ -41,6 +42,7 @@ def evolve_cq(
     overall SF MS SFR decrease
 
     """
+    evo_start_time = time.time()
     
     if cenque.cenque_type != 'sf_assigned': 
         raise ValueError()
@@ -51,10 +53,12 @@ def evolve_cq(
     
     start_nsnap = cenque.nsnap 
     parent_cq = cenque
-    print start_nsnap
-    
+
     for i_snap in xrange(final_nsnap, start_nsnap):    
-        
+    
+        # Import halo and SHAM properties from TreePM 
+        # catalogs and run time evolution on the SF
+        # properties of the parent CenQue object.
         child_cq = CenQue() 
         child_cq.import_treepm(start_nsnap - i_snap) 
         child_cq.cenque_type = ''.join(['evol_from', str(start_nsnap)])
@@ -68,6 +72,9 @@ def evolve_cq(
         child_cq.writeout()        
 
         parent_cq = child_cq
+    
+    print 'Total Evolution takes ', time.time() - evo_start_time
+    return None
 
 def evolve_onestep(parent_cq, child_cq, quiet=False):
     """ Evolve CenQue class object by one time step 
@@ -316,7 +323,6 @@ def evolve_onestep(parent_cq, child_cq, quiet=False):
 
     return child_cq
 
-
 def quenching_galaxies_massbin(cenque, delta_t_cosmic, m_bin_mid, indices, sf_indices, ngal2quench, quiet=False):
     """ Quench a random number of star-forming galaxies in mass bin 
     """
@@ -353,7 +359,7 @@ def quenching_galaxies_massbin(cenque, delta_t_cosmic, m_bin_mid, indices, sf_in
         -1.0 * delta_t_cosmic / pred_taus 
         ))      
 
-    pred_sfqs = util.sfq_classify(
+    pred_sfqs = sfq_classify(
             cenque.mass[sf_indices], 
             cenque.sfr[sf_indices] + pred_tau_quench, 
             cenque.zsnap
