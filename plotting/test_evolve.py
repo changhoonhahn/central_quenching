@@ -28,11 +28,12 @@ def test_evolve(n_snaps=[12,11,10,9,8,7,6,5,4,3,2,1], Mrcut=18, **kwargs):
         
         ssfr_fig.cenque_ssfr_dist(next_snap)
     
-    ssfr_fig.groupcat_ssfr_dist(Mrcut=Mrcut)
+    if Mrcut != None: 
+        ssfr_fig.groupcat_ssfr_dist(Mrcut=Mrcut)
     
     for i_mass, panel_mass in enumerate(ssfr_fig.panel_mass_bins):       # loop through each panel 
 
-        ssfr_cut = -11.35 + 0.76*(0.03-0.05) - 0.35*((0.5 * np.sum(panel_mass))-10.5)
+        ssfr_cut = -11.35 + 0.76*(next_snap.zsnap-0.05) - 0.35*((0.5 * np.sum(panel_mass))-10.5)
 
         ssfr_fig.subs[i_mass].vlines(ssfr_cut, 0.0, 10.0, lw=4)
 
@@ -41,4 +42,5 @@ def test_evolve(n_snaps=[12,11,10,9,8,7,6,5,4,3,2,1], Mrcut=18, **kwargs):
     plt.show()
 
 if __name__=="__main__": 
-    test_evolve(Mrcut=19)
+    for i_snap in [12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1]: 
+        test_evolve(n_snaps=[i_snap], Mrcut=None)

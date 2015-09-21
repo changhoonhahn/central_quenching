@@ -123,61 +123,6 @@ def get_sfr_mstar_z(mstar, z_in, deltamass=0.2, deltaz=0.2, lit='primusfit', mac
     else: 
         raise NameError("Not yet coded") 
 
-'''
-def sdss_sf_ms_fit(): 
-
-    p0 = [0.02]
-    fa = {'x': np.array([10.25, 10.75, 11.25]), 'y': np.array([-0.0777, 0.248, 0.483])}
-    bestfit_pars = mpfit.mpfit(mpfit_line, p0, functkw=fa, nprint=0)
-    print bestfit_pars.params[0]
-    print line_fixedslope(10.25, bestfit_pars.params) 
-    print line_fixedslope(10.75, bestfit_pars.params) 
-    print line_fixedslope(11.0, bestfit_pars.params)
-'''
-
-def get_quenching_efold(mstar, tau_param = {'name': 'instant'}): 
-    ''' get quenching efold based on stellar mass of galaxy 
-    '''
-    type = tau_param['name']
-
-    if type == 'constant':      # constant tau 
-
-        n_arr = len(mstar) 
-        tau = np.array([0.5 for i in xrange(n_arr)]) 
-
-    elif type == 'linear':      # lienar tau(mass) 
-
-        tau = -(0.8 / 1.67) * ( mstar - 9.5) + 1.0
-        #if np.min(tau) < 0.1:
-        #    tau[ tau < 0.1 ] = 0.1
-         
-    elif type == 'instant':     # instant quenching 
-
-        n_arr = len(mstar) 
-        tau = np.array([0.001 for i in range(n_arr)]) 
-
-    elif type == 'discrete': 
-        # param will give 4 discrete tau at the center of mass bins 
-        masses = np.array([9.75, 10.25, 10.75, 11.25]) 
-
-        if param is None: 
-            raise ValueError('asdfasdfa') 
-
-        tau = np.interp(mstar, masses, param) 
-        tau[ tau < 0.05 ] = 0.05
-
-    elif type == 'linefit': 
-        # param will give slope and yint of pivoted tau line 
-        
-        tau = param[0] * (mstar - 11.0) + param[1]
-        #tau = param[0] * (mstar - 10.5) + param[1]  # this was the previous tau linefit (changed on 6/1/2015)
-        tau[ tau < 0.1 ] = 0.1
-
-    else: 
-        raise NotImplementedError('asdf')
-
-    return tau 
-
 def get_q_ssfr_mean(masses, Mrcut=18): 
     ''' Return average/median sSFR of quiscent population of the SDSS Group Catalog for an
     array of mass 
@@ -255,7 +200,6 @@ def get_bestfit_qgroupcat_ssfr(Mrcut=18, fid_mass=10.5, clobber=False):
         f = h5py.File(save_file, 'r') 
 
         return [f['slope_yint/slope'][:], f['slope_yint/yint'][:]] 
-
 
 # integrated mass ---------------------------------------------
 def sfr_avg_residual(mass, z_cosmic, **sfr_param): 
@@ -397,8 +341,6 @@ def get_tsnap(redshift):
 
     return t_of_z(redshift) 
 
-
-# CenQue file treatment ----------------------------------------------------------------------- 
 """
 def cenque_file( **kwargs ): 
     ''' Given kwargs get CenQue file name
@@ -497,20 +439,3 @@ def cenque_file( **kwargs ):
     return cenque_filename
     
 """
-def cenque_file( **kwargs ): 
-    ''' Given kwargs get CenQue file name
-    
-    Parameters (try to keep this up-to-date!)
-    ----------
-    nsnap : snapshot number 
-    file_type : "sf assign", "evol from"
-    tau : "discrete", "linefit", or tau flag
-    sfms_slope : slope of the SF Main Sequence
-    sfms_yint : yint of the SF Main Sequence 
-
-    Notes
-    -----
-    * MORE FILE TYPES WILL BE SPECIFIED
-
-    '''
-

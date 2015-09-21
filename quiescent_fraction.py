@@ -78,9 +78,9 @@ def get_fq(Mstar, z_in, lit='cosmosinterp'):
         alpha = -1.75
 
         output = qf_z0 * ( 1.0 + z_in )**alpha 
-        if output.min() < 0.0: 
+        if min(output) < 0.0: 
             output[np.where(output < 0.0)] = 0.0
-        elif output.max() > 1.0: 
+        if max(output) > 1.0: 
             output[np.where(output > 1.0)] = 1.0
 
         return output 

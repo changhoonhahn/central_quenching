@@ -15,6 +15,7 @@ from assign_sfr import assign_sfr
 from quiescent_fraction import get_fq
 from util.gal_classify import sfq_classify
 from sfms.fitting import get_param_sfr_mstar_z
+from util.tau_quenching import get_quenching_efold
 
 def evolve_cq(
         cenque, 
@@ -288,7 +289,7 @@ def evolve_onestep(parent_cq, child_cq, quiet=False):
         child_cq.gal_type[quench_index] = 'quiescent'  # boom quenched 
         
         # assign quenching e-folds for quenching galaxies
-        child_cq.tau[quench_index] = util.get_quenching_efold(
+        child_cq.tau[quench_index] = get_quenching_efold(
                 child_cq.parent_mass[quench_index], 
                 tau_param = child_cq.tau_prop
                 )
@@ -333,7 +334,6 @@ def quenching_galaxies_massbin(cenque, delta_t_cosmic, m_bin_mid, indices, sf_in
     ngal_sf = len(sf_indices)
 
     if (ngal == 0) or (ngal_sf == 0):
-        print 'No Galaxies in mass bin'
         return [] 
 
     # number of SF galaxies that need to be quenched 
@@ -353,7 +353,7 @@ def quenching_galaxies_massbin(cenque, delta_t_cosmic, m_bin_mid, indices, sf_in
     # if the entire SF population was quenched, taking the ratio of that number over the 'exp_ngal_q_massbin'. 
     # we use that factor as the "quenching fraction" (the fraction of SF galaxies that will be quenched for this mass
     # bin and redshift) 
-    pred_taus = util.get_quenching_efold(
+    pred_taus = get_quenching_efold(
             cenque.parent_mass[sf_indices], 
             tau_param = cenque.tau_prop
             )
@@ -383,6 +383,7 @@ def quenching_galaxies_massbin(cenque, delta_t_cosmic, m_bin_mid, indices, sf_in
             print '####################################### FQING 2 > FQING 1'
     else: 
         f_quenching = fqing2
+    print f_quenching
 
     if f_quenching <= 0.0: 
         f_quenching = 0.0
