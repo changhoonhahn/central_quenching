@@ -247,7 +247,7 @@ class CenQue:
             fq_str +='_fq'
 
             # Tau specifier
-            if self.tau_prop['name'] in ('instant', 'constant'): 
+            if self.tau_prop['name'] in ('instant', 'constant', 'satellite'): 
                 tau_str = ''.join(['_', self.tau_prop['name'], 'tau'])
 
             # combine specifiers

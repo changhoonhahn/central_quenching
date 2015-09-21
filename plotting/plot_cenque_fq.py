@@ -173,7 +173,7 @@ def plot_fqobs_snapshot_evol(
     plt.close(fig)
     """
 
-def plot_fqobs_snapshot(nsnap, fq_type='wetzelsmooth', cenque_type='sf_assigned', **kwargs): 
+def plot_fqobs_snapshot(nsnap, fq_type='wetzelsmooth', cenque_type='sf_assigned', tau_prop={'name': 'instant'}, **kwargs): 
     """ Plot the quiescent fraction of specified CenQue class object
     along with a parameterized fQ for given snapshot redshift
 
@@ -201,6 +201,8 @@ def plot_fqobs_snapshot(nsnap, fq_type='wetzelsmooth', cenque_type='sf_assigned'
 
     snap = CenQue(n_snap = nsnap) 
     snap.cenque_type = cenque_type 
+    snap.fq_prop = {'name': fq_type}
+    snap.tau_prop = tau_prop
     snap.readin() 
         
     # classify CenQue class object with SF properties using 
@@ -441,7 +443,7 @@ def plot_fq_evol():
     fig.clear() 
 
 if __name__=="__main__":
-    plot_fq_evol()
+    #plot_fq_evol()
     #plot_fqobs_snapshot_evol(nsnaps = [2,3,4,5,6,7,8,9,10,11,12])
-    #for i_nsnap in [12,11,10,9,8,7,6,5,4,3,2,1]:
-    #    plot_fqobs_snapshot(i_nsnap, fq_type='wetzelsmooth', cenque_type='evol_from13')
+    for i_nsnap in [12,11,10,9,8,7,6,5,4,3,2,1]:
+        plot_fqobs_snapshot(i_nsnap, fq_type='wetzelsmooth', cenque_type='evol_from13', tau_prop={'name': 'satellite'})

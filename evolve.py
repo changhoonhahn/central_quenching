@@ -13,6 +13,7 @@ from cenque import CenQue
 from util import cenque_utility as util
 from assign_sfr import assign_sfr
 from quiescent_fraction import get_fq
+from util.gal_classify import sfr_cut 
 from util.gal_classify import sfq_classify
 from sfms.fitting import get_param_sfr_mstar_z
 from util.tau_quenching import get_quenching_efold
@@ -216,9 +217,6 @@ def evolve_onestep(parent_cq, child_cq, quiet=False):
 
         child_cq.sfr[still_quenching] = child_cq.parent_sfr[still_quenching] + tau_quench 
         child_cq.ssfr[still_quenching] = child_cq.sfr[still_quenching] - child_cq.mass[still_quenching]
-        
-        # children inherit final quenched SSFR 
-        child_cq.q_ssfr[children] = parent_cq.q_ssfr[parents]
 
     print 'Quenching SF galaxies takes ', time.time() - quenching_time
     
@@ -367,6 +365,9 @@ def quenching_galaxies_massbin(cenque, delta_t_cosmic, m_bin_mid, indices, sf_in
             cenque.sfr[sf_indices] + pred_tau_quench, 
             cenque.zsnap
             )
+    #print cenque.sfr[sf_indices] + pred_tau_quench
+    #print sfr_cut(cenque.mass[sf_indices], cenque.zsnap)
+
     pred_ngal_q = np.float(np.sum(pred_sfqs == 'quiescent'))
 
     if pred_ngal_q == 0: 
@@ -377,12 +378,12 @@ def quenching_galaxies_massbin(cenque, delta_t_cosmic, m_bin_mid, indices, sf_in
     fqing1 = 0.025 * (m_bin_mid - 9.5) * (1.8 - cenque.zsnap)**alpha + 0.15
     fqing2 = np.float(ngal2quench)/np.float(pred_ngal_q)
 
-    if (m_bin_mid < 11.0) and (fqing2 > fqing1): 
-        f_quenching = fqing1
-        if not quiet:
-            print '####################################### FQING 2 > FQING 1'
-    else: 
-        f_quenching = fqing2
+    #if (m_bin_mid < 11.0) and (fqing2 > fqing1): 
+    #    f_quenching = fqing1
+    #    if not quiet:
+    #        print '####################################### FQING 2 > FQING 1'
+    #else: 
+    f_quenching = fqing2
     print f_quenching
 
     if f_quenching <= 0.0: 
@@ -429,4 +430,4 @@ if __name__=='__main__':
     #blah = assign_sfr(blah)
     #blah.writeout()
     blah.readin()
-    blah = evolve_cq(blah, quiet=True)
+    blah = evolve_cq(blah, tau_prop = {'name': 'satellite'}, quiet=True)

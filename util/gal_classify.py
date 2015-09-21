@@ -63,4 +63,4 @@ def sfr_cut(mstar, zin):
     """ Specific SFR cut off used to classify SF or Quiescent 
     galaxies 
     """
-    return -0.85 + 0.76*(zin-0.05) + 0.65*(mstar-10.5)
+    return -0.75 + 0.76*(zin-0.05) + 0.65*(mstar-10.5)
