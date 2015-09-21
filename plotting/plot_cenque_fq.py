@@ -376,38 +376,54 @@ def plot_fq_geha_groupcat(Mrcut=18):
 def plot_fq_evol(): 
     ''' Plot fq evolution comparison
     '''
+    
+    pretty_colors = prettycolors() 
 
     # snapshot redshifts
     zbin = np.loadtxt('snapshot_table.dat', unpack=True, usecols=[2])
-    zbin = zbin[zbin < 1.0]
+    zbin = zbin[np.where(zbin < 1.0)]
+    print zbin
     #zbin = [0.1*np.float(i) for i in range(1,10)]   # zbin 
 
-    mass_bin = util.simple_mass_bin()                    # mass bin 
-       
-    prettyplot()        # make pretty 
-    pretty_colors = prettycolors() 
+    mass_bin = np.arange(9.0, 12.0, 0.2)   # mass bin 
+    mass_low = mass_bin[:-1]
+    mass_high = mass_bin[1:]
+    mass_mid = 0.5 * (mass_low + mass_high)
     
-    # load literature data 
-    # modified tinker
+    # load modified tinker group catalog data from Marla
     mod_tink_file = ''.join(['dat/central_quenching/literature/modified_tinker_fq.dat']) 
-    mod_tink_mass, mod_tink_fq = np.loadtxt(mod_tink_file, unpack=True, usecols=[0,1])   
+    mod_tink_mass, mod_tink_fq = np.loadtxt(
+            mod_tink_file, 
+            unpack=True, 
+            usecols=[0,1]
+            )   
 
-    fq_types = ['cosmosinterp', 'wetzel', 'wetzelsmooth'] 
+    #fq_types = ['cosmosinterp', 'wetzel', 'wetzelsmooth'] 
+    fq_types = ['wetzelsmooth']
     
-    fig, subs = plt.subplots(1, len(fq_types), figsize=[len(fq_types)*5, 5]) 
-    subs = subs.ravel() 
+    fig = plt.figure(figsize=[len(fq_types)*5, 5]) 
+    subs = [fig.add_subplot(1, len(fq_types), i) for i in xrange(len(fq_types))]
 
     for i_fq, fq_type in enumerate(fq_types): 
         for i_z, z in enumerate(zbin): 
 
             # plot fq(Mass) 
-            fq_mass = [util.get_fq(mass_bin.mass_mid[i], z, lit=fq_type) 
-                    for i in range(len(mass_bin.mass_mid))]
-            subs[i_fq].plot(mass_bin.mass_mid, fq_mass, 
-                    color=pretty_colors[i_z], lw=4, label='z = '+str(z) ) 
+            fq_mass = get_fq(mass_mid, z, lit=fq_type) 
+            subs[i_fq].plot(
+                    mass_mid, 
+                    fq_mass, 
+                    color=pretty_colors[i_z], 
+                    lw=4, 
+                    label='z = '+str(z) 
+                    ) 
         
-        subs[i_fq].plot(mod_tink_mass, mod_tink_fq, 
-            color='black', lw=6, label='Modified Tinker Group' ) 
+        subs[i_fq].plot(
+                mod_tink_mass, 
+                mod_tink_fq, 
+                color='black', 
+                lw=6, 
+                label='Modified Tinker Group' 
+                ) 
 
         subs[i_fq].set_title(fq_type) 
 
@@ -417,12 +433,15 @@ def plot_fq_evol():
         subs[i_fq].set_xlabel('Mass') 
 
     subs[0].set_ylabel('Quiescent Fraction') 
-    subs[0].legend(loc='upper left') 
+    #subs[0].legend(loc='upper left') 
+
+    plt.show()
     fig_name = ''.join(['figure/fq_evol_comp_', '_'.join(fq_types), '.png'])
     fig.savefig(fig_name, bbox_inches='tight')
     fig.clear() 
 
 if __name__=="__main__":
+    plot_fq_evol()
     #plot_fqobs_snapshot_evol(nsnaps = [2,3,4,5,6,7,8,9,10,11,12])
-    for i_nsnap in [12,11,10,9,8,7,6,5,4,3,2,1]:
-        plot_fqobs_snapshot(i_nsnap, fq_type='wetzelsmooth', cenque_type='evol_from13')
+    #for i_nsnap in [12,11,10,9,8,7,6,5,4,3,2,1]:
+    #    plot_fqobs_snapshot(i_nsnap, fq_type='wetzelsmooth', cenque_type='evol_from13')

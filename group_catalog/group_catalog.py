@@ -115,7 +115,7 @@ def central_catalog(Mrcut=18, clobber=False):
     catalog_file = ''.join(['dat/group_catalog/', 
         'massSFR_clf_groups_M', str(Mrcut), '_', str(masscut), '_D360.central.hdf5']) 
 
-    if (os.path.isfile(catalog_file) == False) or (clobber == True): 
+    if not os.path.isfile(catalog_file) or clobber: 
         build_group_catalog(Mrcut=Mrcut, central=True)
     
     f = h5py.File(catalog_file, 'r') 

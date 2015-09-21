@@ -4,34 +4,41 @@ from evolve import evolve_cq
 from assign_sfr import assign_sfr 
 from defutility.plotting import prettyplot
 from defutility.plotting import prettycolors 
-from plotting.plot_cenque import plot_cenque_ssfr_dist
+from plotting.plot_cenque import PlotCenque
 
-def test_evolve(nsnap = 13, final_nsnap=1, clobber=False):
-    """
-    """
-    if clobber: 
-        snap = CenQue()
-        snap.import_treepm(nsnap)
-        snap.writeout()
-        snap = assign_sfr(snap)
-        snap.writeout()
-        snap = evolve_cq(snap, quiet=True)
-    else:
-        snap = CenQue(n_snap = final_nsnap, cenque_type='evol_from'+str(nsnap))
-        snap.readin()
+def test_evolve(n_snaps=[12,11,10,9,8,7,6,5,4,3,2,1], Mrcut=18, **kwargs): 
+    ''' Plot evolution of the CenQue SSFR distribution 
+
+    Parameters
+    ----------
+    Mrcut : Absolute magnitude cut that specifies the group catalog 
+    nsnaps : List of snapshot #s to plot  
+    '''
+
+    # Plot original CenQue object with assigned SFR 
+    snap = CenQue(n_snap=13, cenque_type = 'sf_assigned') 
+    snap.readin()  
+
+    ssfr_fig = PlotCenque(cenque=snap, lw=2, linestyle='--')
     
-    ssfr_fig = plot_cenque_ssfr_dist(snap, lw=2, line_style='--')      # plot!
+    # Overplot CenQue of specified Snapshots 
+    for i_nsnap in n_snaps:  
+        next_snap = CenQue(n_snap = i_nsnap, cenque_type = 'evol_from13') 
+        next_snap.readin()
+        
+        ssfr_fig.cenque_ssfr_dist(next_snap)
+    
+    ssfr_fig.groupcat_ssfr_dist(Mrcut=Mrcut)
+    
+    for i_mass, panel_mass in enumerate(ssfr_fig.panel_mass_bins):       # loop through each panel 
+
+        ssfr_cut = -11.35 + 0.76*(0.03-0.05) - 0.35*((0.5 * np.sum(panel_mass))-10.5)
+
+        ssfr_fig.subs[i_mass].vlines(ssfr_cut, 0.0, 10.0, lw=4)
+
+    ssfr_fig.set_axes()
 
     plt.show()
-     
-    #fig_file = ''.join(['figure/', 
-    #    'qaplot_evolve_', str(n_snap), '.png'
-    #    ])
-    #ssfr_fig.savefig(
-    #        fig_file, bbox_inches='tight'
-    #        ) 
-    #ssfr_fig.clear() 
-    #plt.close(ssfr_fig)
 
 if __name__=="__main__": 
-    test_evolve()
+    test_evolve(Mrcut=19)
