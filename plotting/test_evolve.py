@@ -41,6 +41,35 @@ def test_evolve(n_snaps=[12,11,10,9,8,7,6,5,4,3,2,1], Mrcut=18, **kwargs):
 
     plt.show()
 
+def test_quenching_population(n_snaps=[12,11,10,9,8,7,6,5,4,3,2,1], **kwargs): 
+    ''' Plot evolution of the quenching population in the 
+    CenQue SSFR distribution 
+
+    Parameters
+    ----------
+    Mrcut : Absolute magnitude cut that specifies the group catalog 
+    nsnaps : List of snapshot #s to plot  
+    '''
+
+    ssfr_fig = PlotCenque()
+    
+    # Overplot CenQue of specified Snapshots 
+    for i_nsnap in n_snaps:  
+        next_snap = CenQue(n_snap = i_nsnap, cenque_type = 'evol_from13') 
+        next_snap.readin()
+        
+        ssfr_fig.cenque_quenching_ssfr_dist(next_snap)
+    
+    for i_mass, panel_mass in enumerate(ssfr_fig.panel_mass_bins):       # loop through each panel 
+
+        ssfr_cut = -11.35 + 0.76*(next_snap.zsnap-0.05) - 0.35*((0.5 * np.sum(panel_mass))-10.5)
+
+        ssfr_fig.subs[i_mass].vlines(ssfr_cut, 0.0, 10.0, lw=4)
+
+    ssfr_fig.set_axes()
+
+    plt.show()
+
 if __name__=="__main__": 
     for i_snap in [12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1]: 
-        test_evolve(n_snaps=[i_snap], Mrcut=None)
+        test_quenching_population(n_snaps=[i_snap])

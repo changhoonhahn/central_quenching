@@ -46,8 +46,8 @@ def get_quenching_efold(mstar, tau_param = {'name': 'instant'}):
     elif type == 'satellite':   # quenching e-fold of satellite
 
         tau = -0.57 * ( mstar - 9.78) + 0.8
-        if np.min(tau) < 0.0:     
-            tau[np.where( tau < 0.0 )] = 0.0
+        if np.min(tau) < 0.001:     
+            tau[np.where( tau < 0.001 )] = 0.001
     else: 
         raise NotImplementedError('asdf')
 
