@@ -136,6 +136,12 @@ class PlotCenque:
         """
     
         for i_mass, panel_mass in enumerate(self.panel_mass_bins):       # loop through each panel 
+            
+            sf_massbin = np.where(
+                    (cenque.mass >= panel_mass[0]) & 
+                    (cenque.mass < panel_mass[1]) & 
+                    (cenque.gal_type == 'star-forming') 
+                    )
 
             quenching_massbin = np.where(
                     (cenque.mass >= panel_mass[0]) & 
@@ -143,32 +149,49 @@ class PlotCenque:
                     (cenque.tau > 0.0) 
                     )
 
-            notquenching_massbin = np.where(
+            q_notquenching_massbin = np.where(
                     (cenque.mass >= panel_mass[0]) & 
                     (cenque.mass < panel_mass[1]) & 
+                    (cenque.gal_type == 'quiescent') &
                     (cenque.tau < 0.0) 
                     )
 
-            if 'label' in self.kwargs: 
-                ssfr_hist_label = self.kwargs['label']
-            else: 
-                ssfr_hist_label = 'z ='+str(cenque.zsnap) 
             
-            if len(quenching_massbin[0]) == 0: 
+            if len(sf_massbin[0]) > 0: 
                 self.subs[i_mass].hist(
-                        cenque.ssfr[notquenching_massbin], 
+                        cenque.ssfr[sf_massbin], 
                         25, 
+                        stacked=True, 
                         normed = True, 
-                        label = ssfr_hist_label
+                        color = 'blue',
+                        label = 'Star-Forming'
                         )
-            else: 
+
+            if len(quenching_massbin[0]) > 0: 
                 self.subs[i_mass].hist(
-                        [cenque.ssfr[quenching_massbin], cenque.ssfr[notquenching_massbin]], 
+                        cenque.ssfr[quenching_massbin], 
+                        25, 
+                        stacked=True, 
+                        normed = True, 
+                        color = 'orange',
+                        label = 'Quenching' 
+                        )
+
+            if len(q_notquenching_massbin[0]) > 0: 
+                self.subs[i_mass].hist(
+                        cenque.ssfr[q_notquenching_massbin], 
                         25, 
                         stacked=True, 
                         normed=True,
-                        label = ssfr_hist_label
+                        color='red',
+                        label = 'Quiescent' 
                         )
+
+            if panel_mass == self.panel_mass_bins[-1]: 
+                self.subs[i_mass].text(-9.25, 1., 'z ='+str(cenque.zsnap),
+                    fontsize=24
+                    )
+
 
         return None   
 

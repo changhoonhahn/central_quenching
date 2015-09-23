@@ -132,48 +132,23 @@ def evolve_onestep(parent_cq, child_cq, quiet=False):
 
     # Deal with parent to children inheritance (children inherit the parents' attributes)
     inheritance_time = time.time()
-    child_cq.gal_type[children]         = parent_cq.gal_type[parents]
     child_cq.parent_sfr[children]       = parent_cq.sfr[parents]
     child_cq.parent_mass[children]      = parent_cq.mass[parents]
     child_cq.parent_halo_mass[children] = parent_cq.halo_mass[parents]
     
-    for attr in extra_attr: 
-        parent_attr = getattr(parent_cq, attr)[parents]
-        getattr(child_cq, attr)[children] = parent_attr
+    for attr in child_cq.data_columns: 
+        if attr not in ('parent_sfr', 'parent_mass', 'parent_halo_mass'): 
+            try: 
+                parent_attr = getattr(parent_cq, attr)[parents]
+                getattr(child_cq, attr)[children] = parent_attr
+            except AttributeError: 
+                print attr
+                if attr in ('q_ssfr', 'tau'):
+                    pass
+                else: 
+                    raise ValueError()
     print 'Inheritance takes ', time.time() - inheritance_time
-
-    # Evolve Star-forming and Quiescent Children. 
-    # Quiecsent galaxies keep the same sSFR while the quiescent galaxy 
-    # masses are assigned by SHAM masses
-    quiescent_children = np.where(
-            (child_cq.gal_type[children] == 'quiescent') & 
-            (child_cq.tau[children] == -999.0)
-            )
-    q_children = children[quiescent_children]
-    q_children_parents = parents[quiescent_children]
     
-    starforming_children = np.where(
-            child_cq.gal_type[children] == 'star-forming'
-            )
-    sf_children = children[starforming_children] 
-    sf_children_parents = parents[starforming_children]
-
-    child_cq.ssfr[q_children] = parent_cq.ssfr[q_children_parents]
-    child_cq.sfr[q_children] = child_cq.ssfr[q_children] + child_cq.mass[q_children]
-
-    if child_cq.sf_prop['name'] == 'average': 
-        sfr_mstar_z, sig_sfr_mstar_z = get_param_sfr_mstar_z()
-        child_sfr = sfr_mstar_z(
-                child_cq.mass[sf_children], 
-                child_cq.zsnap
-                )
-
-        child_cq.sfr[sf_children] = child_sfr + child_cq.delta_sfr[sf_children]
-    else: 
-        raise NotImplementedError() 
-
-    child_cq.ssfr[sf_children] = child_cq.sfr[sf_children] - child_cq.mass[sf_children]
-
     # Stellar mass evolution of star forming galaxies. Either integrated or 
     # SHAM masses assigned from TreePM 
     if child_cq.mass_evol == 'integrated':
@@ -200,14 +175,44 @@ def evolve_onestep(parent_cq, child_cq, quiet=False):
                 print 'Integrated Mass vs SHAM mass' 
                 print (child_cq.mass)[sf_child_indx] - (child_cq.sham_mass)[sf_child_indx]
 
+    # Evolve Quiescent Children. 
+    # Quiecsent galaxies keep the same sSFR while the quiescent galaxy 
+    # masses are assigned by SHAM masses
+    quiescent_children = np.where(
+            (child_cq.gal_type[children] == 'quiescent') & 
+            (child_cq.tau[children] == -999.0)
+            )
+    q_children = children[quiescent_children]
+    q_children_parents = parents[quiescent_children]
+    
+    child_cq.ssfr[q_children] = parent_cq.ssfr[q_children_parents]
+    child_cq.sfr[q_children] = child_cq.ssfr[q_children] + child_cq.mass[q_children]
+    
+    # Evolve Star-forming Children 
+    starforming_children = np.where(
+            child_cq.gal_type[children] == 'star-forming'
+            )
+    sf_children = children[starforming_children] 
+    sf_children_parents = parents[starforming_children]
+
+    if child_cq.sf_prop['name'] == 'average': 
+        sfr_mstar_z, sig_sfr_mstar_z = get_param_sfr_mstar_z()
+        child_sfr = sfr_mstar_z(
+                child_cq.mass[sf_children], 
+                child_cq.zsnap
+                )
+
+        child_cq.sfr[sf_children] = child_sfr + child_cq.delta_sfr[sf_children]
+    else: 
+        raise NotImplementedError() 
+
+    child_cq.ssfr[sf_children] = child_cq.sfr[sf_children] - child_cq.mass[sf_children]
+
     # Evolve quenching children by exp(- delta t_cosmic / tau)
     quenching_time = time.time()
-    has_tau = np.where(child_cq.tau[children] > 0.0)
+    still_quenching = np.where(child_cq.tau > 0.0)
 
-    if len(has_tau[0]) > 0: 
-        still_quenching = children[has_tau]
-        still_quenching_parent = parents[has_tau]
-        
+    if len(still_quenching[0]) > 0: 
         # for galaxies with tau, keep them quenching!
         tau_quench = np.log10( 
                 np.exp( 
