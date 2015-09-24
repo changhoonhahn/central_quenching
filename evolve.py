@@ -380,7 +380,8 @@ def quenching_galaxies_massbin(cenque, delta_t_cosmic, m_bin_mid, indices, sf_in
     pred_ngal_q = np.float(np.sum(pred_sfqs == 'quiescent'))
 
     if pred_ngal_q == 0: 
-        raise ValueError("What the fuck") 
+        print 'Quenching time-scale is too long'
+        #raise ValueError("What the fuck") 
         
     # Quenching fraction evalutation
     alpha = 1.5
@@ -389,7 +390,10 @@ def quenching_galaxies_massbin(cenque, delta_t_cosmic, m_bin_mid, indices, sf_in
     if ngal2quench == ngal_sf: 
         fqing2 = 1.0
     else: 
-        fqing2 = np.float(ngal2quench)/np.float(pred_ngal_q)
+        try: 
+            fqing2 = np.float(ngal2quench)/np.float(pred_ngal_q)
+        except ZeroDivisionError: 
+            fqing2 = 1.0
 
     #if (m_bin_mid < 11.0) and (fqing2 > fqing1): 
     #    f_quenching = fqing1
@@ -404,7 +408,6 @@ def quenching_galaxies_massbin(cenque, delta_t_cosmic, m_bin_mid, indices, sf_in
         return []
     elif f_quenching > 1.0: 
         f_quenching = 1.0 
-        raise ValueError()
     
     quench_index = random.sample( 
             sf_indices, 
@@ -444,4 +447,4 @@ if __name__=='__main__':
     #blah = assign_sfr(blah)
     #blah.writeout()
     blah.readin()
-    blah = evolve_cq(blah, tau_prop = {'name': 'satellite'}, quiet=True)
+    blah = evolve_cq(blah, tau_prop = {'name': 'constant'}, quiet=True)

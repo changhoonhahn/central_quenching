@@ -86,4 +86,4 @@ def test_quenching_population(
 
 if __name__=="__main__": 
     for i_snap in [12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1]: 
-        test_quenching_population(n_snaps=[i_snap], tau_prop = {'name': 'satellite'})
+        test_quenching_population(n_snaps=[i_snap], tau_prop = {'name': 'constant'})
