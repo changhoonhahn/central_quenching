@@ -6,7 +6,9 @@ from defutility.plotting import prettyplot
 from defutility.plotting import prettycolors 
 from plotting.plot_cenque import PlotCenque
 
-def test_evolve(n_snaps=[12,11,10,9,8,7,6,5,4,3,2,1], Mrcut=18, **kwargs): 
+def test_evolve(n_snaps=[12,11,10,9,8,7,6,5,4,3,2,1], 
+        tau_prop = {'name': 'instant'}, 
+        Mrcut=18, **kwargs): 
     ''' Plot evolution of the CenQue SSFR distribution 
 
     Parameters
@@ -24,6 +26,7 @@ def test_evolve(n_snaps=[12,11,10,9,8,7,6,5,4,3,2,1], Mrcut=18, **kwargs):
     # Overplot CenQue of specified Snapshots 
     for i_nsnap in n_snaps:  
         next_snap = CenQue(n_snap = i_nsnap, cenque_type = 'evol_from13') 
+        next_snap.tau_prop = tau_prop
         next_snap.readin()
         
         ssfr_fig.cenque_ssfr_dist(next_snap)
@@ -79,11 +82,12 @@ def test_quenching_population(
         ''.join([str(i_nsnap) for i_nsnap in n_snaps]), 
         '.png'
         ]) 
-
+        
     ssfr_fig.fig.savefig(fig_file) 
     ssfr_fig.fig.clear()
     plt.close()
 
 if __name__=="__main__": 
     for i_snap in [12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1]: 
-        test_quenching_population(n_snaps=[i_snap], tau_prop = {'name': 'constant'})
+        #test_evolve(n_snaps=[i_snap], tau_prop = {'name': 'satellite'})
+        test_quenching_population(n_snaps=[i_snap], tau_prop = {'name': 'satellite'})

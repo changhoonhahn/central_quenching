@@ -156,36 +156,41 @@ class PlotCenque:
                     (cenque.tau < 0.0) 
                     )
 
-            
-            if len(sf_massbin[0]) > 0: 
-                self.subs[i_mass].hist(
-                        cenque.ssfr[sf_massbin], 
-                        25, 
-                        stacked=True, 
-                        normed = True, 
-                        color = 'blue',
-                        label = 'Star-Forming'
-                        )
-
+            data_list = []  
+            color_list = [] 
+            label_list = [] 
             if len(quenching_massbin[0]) > 0: 
-                self.subs[i_mass].hist(
-                        cenque.ssfr[quenching_massbin], 
-                        25, 
-                        stacked=True, 
-                        normed = True, 
-                        color = 'orange',
-                        label = 'Quenching' 
+                data_list.append(
+                        cenque.ssfr[quenching_massbin]
                         )
+                color_list.append('orange')
+                label_list.append('Quenching')
 
-            if len(q_notquenching_massbin[0]) > 0: 
-                self.subs[i_mass].hist(
-                        cenque.ssfr[q_notquenching_massbin], 
-                        25, 
-                        stacked=True, 
-                        normed=True,
-                        color='red',
-                        label = 'Quiescent' 
+            if len(sf_massbin[0]) > 0: 
+                data_list.append(
+                        cenque.ssfr[sf_massbin]
                         )
+                color_list.append('blue')
+                label_list.append('Star-Forming')
+
+            if len(q_notquenching_massbin[0]) > 0:
+                data_list.append(
+                        cenque.ssfr[q_notquenching_massbin]
+                        )
+                color_list.append('red')
+                label_list.append('Quiescent')
+
+            print i_mass, panel_mass
+            print len(quenching_massbin[0]), len(sf_massbin[0]), len(q_notquenching_massbin[0])
+
+            self.subs[i_mass].hist(
+                    data_list, 
+                    100, 
+                    normed = 1, 
+                    stacked=True, 
+                    color = color_list,
+                    label = label_list 
+                    )
 
             if panel_mass == self.panel_mass_bins[-1]: 
                 self.subs[i_mass].text(-9.25, 1., 'z ='+str(cenque.zsnap),

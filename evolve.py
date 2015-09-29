@@ -8,6 +8,7 @@ Author(s): ChangHoon Hahn
 import time
 import random 
 import numpy as np
+import warnings
 
 from cenque import CenQue
 from util import cenque_utility as util
@@ -131,20 +132,22 @@ def evolve_onestep(parent_cq, child_cq, quiet=False):
     parents, children = parent_children_match(parent_cq.snap_index, child_cq.parent)
 
     # Deal with parent to children inheritance (children inherit the parents' attributes)
+    # This step needs to be thought out more. 
     inheritance_time = time.time()
     child_cq.parent_sfr[children]       = parent_cq.sfr[parents]
     child_cq.parent_mass[children]      = parent_cq.mass[parents]
     child_cq.parent_halo_mass[children] = parent_cq.halo_mass[parents]
     
     for attr in child_cq.data_columns: 
-        if attr not in ('parent_sfr', 'parent_mass', 'parent_halo_mass'): 
+        # Inherit everything but the TreePM and Halo information
+        if attr not in ('mass', 'halo_mass', 'parent', 'child', 'ilk', 'snap_index', 'pos', 
+                'parent_sfr', 'parent_mass', 'parent_halo_mass'): 
             try: 
                 parent_attr = getattr(parent_cq, attr)[parents]
                 getattr(child_cq, attr)[children] = parent_attr
             except AttributeError: 
-                print attr
-                if attr in ('q_ssfr', 'tau'):
-                    pass
+                if 'evol_from' not in parent_cq.cenque_type:
+                    pass 
                 else: 
                     raise ValueError()
     print 'Inheritance takes ', time.time() - inheritance_time
@@ -183,17 +186,21 @@ def evolve_onestep(parent_cq, child_cq, quiet=False):
             (child_cq.tau[children] == -999.0)
             )
     q_children = children[quiescent_children]
-    q_children_parents = parents[quiescent_children]
     
-    child_cq.ssfr[q_children] = parent_cq.ssfr[q_children_parents]
+    # correct the SFR in order to preserve SSFR
+    # this is because the mass evolves through SHAM  
     child_cq.sfr[q_children] = child_cq.ssfr[q_children] + child_cq.mass[q_children]
     
     # Evolve Star-forming Children 
+    # include doucmentation details 
+    # include doucmentation details 
+    # include doucmentation details 
+    # include doucmentation details 
+    # include doucmentation details 
     starforming_children = np.where(
             child_cq.gal_type[children] == 'star-forming'
             )
     sf_children = children[starforming_children] 
-    sf_children_parents = parents[starforming_children]
 
     if child_cq.sf_prop['name'] == 'average': 
         sfr_mstar_z, sig_sfr_mstar_z = get_param_sfr_mstar_z()
@@ -222,6 +229,9 @@ def evolve_onestep(parent_cq, child_cq, quiet=False):
 
         child_cq.sfr[still_quenching] = child_cq.parent_sfr[still_quenching] + tau_quench 
         child_cq.ssfr[still_quenching] = child_cq.sfr[still_quenching] - child_cq.mass[still_quenching]
+    else: 
+        if 'evol_from' in parent_cq.cenque_type:
+            raise ValueError()
 
     print 'Quenching SF galaxies takes ', time.time() - quenching_time
     
@@ -271,6 +281,7 @@ def evolve_onestep(parent_cq, child_cq, quiet=False):
     quenching_start_time = time.time()
     # Quench a number of star-forming galaxies in order to match the 
     # quiescent fraction at the next cosmic time step 
+
     for i_m in xrange(mass_bins.nbins):              
 
         quench_index += quenching_galaxies_massbin(
@@ -283,14 +294,12 @@ def evolve_onestep(parent_cq, child_cq, quiet=False):
                 quiet=quiet
                 )
 
-    print 'Quenching takes ', time.time() - quenching_start_time 
-    
     quench_index = np.array(quench_index)
 
     if len(quench_index) != 0:
 
         child_cq.gal_type[quench_index] = 'quiescent'  # boom quenched 
-        
+
         # assign quenching e-folds for quenching galaxies
         child_cq.tau[quench_index] = get_quenching_efold(
                 child_cq.parent_mass[quench_index], 
@@ -307,21 +316,27 @@ def evolve_onestep(parent_cq, child_cq, quiet=False):
         q_ssfr_mean = util.get_q_ssfr_mean(child_cq.mass[quench_index]) 
         child_cq.q_ssfr[quench_index] = 0.18 * np.random.randn(len(quench_index)) + q_ssfr_mean 
         
+    print 'Quenching takes ', time.time() - quenching_start_time 
+    
     if not quiet: 
         print "Child's redshift = ", child_cq.zsnap
 
     # deal with orphans ------------------------------------------------------------
+    orphan_time = time.time()
     print len(child_cq.gal_type[child_cq.gal_type == '']), ' child galaxies are orphans' 
     child_cq = assign_sfr(child_cq, quiet=quiet)
 
     if len(child_cq.gal_type[child_cq.gal_type == '']) != 0:
         print len(child_cq.gal_type[child_cq.gal_type == '']), ' child galaxies are orphans' 
         raise ValueError() 
-    
+    print 'Orphan care takes ', time.time() - orphan_time
+
     # deal with galaxies that are being quenched beyond the designated final quenching  
+    overquench_time = time.time()
     over_quenched = np.where(child_cq.ssfr < child_cq.q_ssfr)
     child_cq.ssfr[over_quenched] = child_cq.q_ssfr[over_quenched]
     child_cq.tau[over_quenched] = -999.0            # done quenching 
+    print 'Overquenching takes ', time.time() - overquench_time
 
     print 'Evolution for one time step takes ', time.time() - evo_start
 
@@ -331,8 +346,9 @@ def evolve_onestep(parent_cq, child_cq, quiet=False):
     return child_cq
 
 def quenching_galaxies_massbin(cenque, delta_t_cosmic, m_bin_mid, indices, sf_indices, ngal2quench, quiet=False):
-    """ Quench a random number of star-forming galaxies in mass bin 
+    """ Select which star-forming galaxies to quench in a specified mass bin 
     """
+
     ngal = len(indices[0])
     ngal_sf = len(sf_indices)
 
@@ -355,9 +371,10 @@ def quenching_galaxies_massbin(cenque, delta_t_cosmic, m_bin_mid, indices, sf_in
         print 'current fq = ', 1.0 - np.float(ngal_sf)/np.float(ngal)
         print ngal2quench, ' SF galaxies need to be quenched'
 
-    # number of SF galaxies to quench will be determined by first determining how many galaxies will be quenched
-    # if the entire SF population was quenched, taking the ratio of that number over the 'exp_ngal_q_massbin'. 
-    # we use that factor as the "quenching fraction" (the fraction of SF galaxies that will be quenched for this mass
+    # number of SF galaxies to quench will be determined by first determining how many 
+    # galaxies will be quenched if the entire SF population was quenched, taking the 
+    # ratio of that number over the 'exp_ngal_q_massbin'. We use that factor as the 
+    # "quenching fraction" (the fraction of SF galaxies that will be quenched for this mass
     # bin and redshift) 
     pred_taus = get_quenching_efold(
             cenque.parent_mass[sf_indices], 
@@ -367,7 +384,6 @@ def quenching_galaxies_massbin(cenque, delta_t_cosmic, m_bin_mid, indices, sf_in
     pred_tau_quench = np.log10(np.exp( 
         -1.0 * delta_t_cosmic / pred_taus 
         ))      
-    print max(pred_tau_quench)
 
     pred_sfqs = sfq_classify(
             cenque.mass[sf_indices], 
@@ -380,7 +396,7 @@ def quenching_galaxies_massbin(cenque, delta_t_cosmic, m_bin_mid, indices, sf_in
     pred_ngal_q = np.float(np.sum(pred_sfqs == 'quiescent'))
 
     if pred_ngal_q == 0: 
-        print 'Quenching time-scale is too long'
+        warnings.warn('Quenching time-scale is too long')
         #raise ValueError("What the fuck") 
         
     # Quenching fraction evalutation
@@ -417,7 +433,8 @@ def quenching_galaxies_massbin(cenque, delta_t_cosmic, m_bin_mid, indices, sf_in
 
 def parent_children_match(parent_snap_index, child_parent_snap_index):
     """ Match snapshot index of parents to the parent snapshot index of
-    childrens 
+    childrens by matching (index, parent), (index, child) key pairs 
+    Takes approximately < 1 second
     """
     parent_child_start_time = time.time()
     parent_index_dict = dict( 
@@ -447,4 +464,4 @@ if __name__=='__main__':
     #blah = assign_sfr(blah)
     #blah.writeout()
     blah.readin()
-    blah = evolve_cq(blah, tau_prop = {'name': 'constant'}, quiet=True)
+    blah = evolve_cq(blah, tau_prop = {'name': 'satellite'}, quiet=True)
