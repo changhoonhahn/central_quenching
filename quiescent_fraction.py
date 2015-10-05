@@ -88,6 +88,26 @@ def get_fq(Mstar, z_in, lit='cosmosinterp'):
     else: 
         raise NameError('Not yet coded') 
 
+def get_fq_nsnap(Mstar, nsnap, **kwargs): 
+    ''' Calculate the quiescent fraction as a funcnction of 
+    stellar mass and redshift. Different methods of calculating 
+    quiescent fraction is implemented. 
+
+    f_Q ( M_star, z) 
+
+    ----------------------------------------------------------------
+    Parameters
+    ----------------------------------------------------------------
+    Mstar : stellar mass
+    nsnap : redshift 
+    lit : 'cosmosinterp', 
+
+    '''
+    z_snap = np.loadtxt('snapshot_table.dat', unpack=True, usecols=[2])
+
+    return get_fq(Mstar, z_snap[nsnap], **kwargs) 
+
+
 def get_fq_alpha(Mstar, z_in, alpha): 
     ''' Quiescent fraction evolved from z = 0.88 by (1+z)^alpha where alpha is a free parameter
     '''

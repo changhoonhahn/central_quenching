@@ -28,6 +28,9 @@ def PlotFq(object):
         
         self.kwargs = kwargs
         
+        # Corresponding redshift for the snapshot 
+        self.zbin = np.loadtxt('snapshot_table.dat', unpack=True, usecols=[2])
+        
         self.mass_bin = np.arange(9.0, 12.0, 0.2)   # mass bin 
         self.mass_low = self.mass_bin[:-1]
         self.mass_high= self.mass_bin[1:]
@@ -46,10 +49,7 @@ def PlotFq(object):
         fq_type : type of queiscent fraction  
 
         """
-    
-        # Corresponding redshift for the snapshot 
-        zbin = np.loadtxt('snapshot_table.dat', unpack=True, usecols=[2])
-        zbin = zbin[nsnap]
+        zbin = self.zbin[nsnap]
 
         self.subs = self.fig.add_subplot(111)
 
@@ -115,13 +115,8 @@ def PlotFq(object):
         plt.show()
 
 
-
-
-def plot_fqobs_snapshot_evol(
-        nsnaps = [1,2,3,4,5,6,7,8,9,10,11,12],
-        fq_type = 'wetzelsmooth', 
-        **kwargs
-        ): 
+def plot_fqobs_snapshot_evol( 
+        nsnaps = [1,2,3,4,5,6,7,8,9,10,11,12], fq_type='wetzelsmooth', cenque_type='sf_assigned', tau_prop={'name': 'instant'}, **kwargs): 
     ''' Plot the observed quiescent fraction of snapshots
 
     Parameters
@@ -129,7 +124,6 @@ def plot_fqobs_snapshot_evol(
     nsnaps : list of snapshots
     fqtype : type of queiscent fraction  
     '''
-
     #prettyplot()        # make pretty 
     pretty_colors = prettycolors() 
 
@@ -140,43 +134,50 @@ def plot_fqobs_snapshot_evol(
     mass_low = mass_bin[:-1]
     mass_high = mass_bin[1:]
     mass_mid = 0.5 * (mass_low + mass_high)
-    print mass_mid
        
     fig, subs = plt.subplots(1,2, figsize=[10, 5]) 
     subs = subs.ravel() 
 
-    snap = CenQue(n_snap = 13) 
-    snap.cenque_type = 'sf_assigned'
-    snap.readin()
+    if 'evol_from' in cenque_type: 
 
-    fq_mass, fq = [], [] 
-    for i_m in xrange(len(mass_mid)): 
+        start_nsnap = cenque_type.split('evol_from')[-1]
+
+        snap = CenQue(n_snap = start_nsnap) 
+        snap.cenque_type = 'sf_assigned'
+        snap.readin()
+
+        fq_mass, fq = [], [] 
+
+        for i_m in xrange(len(mass_mid)): 
+
+            mass_bin_index = np.where(
+                    (snap.mass > mass_low[i_m]) & 
+                    (snap.mass <= mass_high[i_m])
+                    )
+            ngal = len(mass_bin_index[0])
+            
+            if ngal == 0: 
+                continue 
+
+            sfqs = sfq_classify( 
+                    snap.mass[mass_bin_index], 
+                    snap.sfr[mass_bin_index], 
+                    snap.zsnap 
+                    ) 
+
+            ngal_q = np.float(np.sum(sfqs == 'quiescent')) 
+
+            fq_mass.append(mass_mid[i_m]) 
+            fq.append(ngal_q/ngal) 
         
-        mass_bin_index = np.where(
-                (snap.mass > mass_low[i_m]) & 
-                (snap.mass <= mass_high[i_m])
-                )
-        ngal = len(mass_bin_index[0])
-        
-        if ngal == 0: 
-            continue 
-
-        sfqs = sfq_classify( 
-                snap.mass[mass_bin_index], 
-                snap.sfr[mass_bin_index], 
-                snap.zsnap 
-                ) 
-
-        ngal_q = np.float(np.sum(sfqs == 'quiescent')) 
-
-        fq_mass.append(mass_mid[i_m]) 
-        fq.append(ngal_q/ngal) 
-    
-    subs[0].plot(fq_mass, fq, color='black', ls='--', lw=4, label='z= '+str(snap.zsnap)) 
+        subs[0].plot(fq_mass, fq, color='black', ls='--', lw=4) 
     
     for i_nsnap in nsnaps: 
+
         snap = CenQue(n_snap = i_nsnap ) 
-        snap.cenque_type = 'evol_from13'
+        snap.cenque_type = cenque_type
+        snap.fq_prop = {'name': fq_type}
+        snap.tau_prop = tau_prop
         snap.readin() 
 
         fq_mass, fq = [], [] 
@@ -200,7 +201,7 @@ def plot_fqobs_snapshot_evol(
             fq_mass.append(mass_mid[i_m]) 
             fq.append(ngal_q/ngal) 
         
-        subs[0].plot(fq_mass, fq, color=pretty_colors[i_nsnap-1], lw=4, label='z= '+str(snap.zsnap)) 
+        subs[0].plot(fq_mass, fq, color=pretty_colors[i_nsnap-1], lw=4) 
     
     subs[0].set_title('Snapshots')
     subs[0].set_xlim([9.0, 12.0])
@@ -215,7 +216,7 @@ def plot_fqobs_snapshot_evol(
                 fq_mass, 
                 color=pretty_colors[i_z], 
                 lw=4, 
-                label='z = '+str(z) 
+                label=str(z) 
                 ) 
     
     subs[1].set_title(fq_type) 
@@ -226,7 +227,7 @@ def plot_fqobs_snapshot_evol(
     subs[1].set_xlabel('Mass') 
 
     subs[0].set_ylabel('Quiescent Fraction') 
-    plt.legend()
+    #plt.legend(loc='upper left')
     plt.show()
 
 def plot_fqobs_snapshot(nsnap, fq_type='wetzelsmooth', cenque_type='sf_assigned', tau_prop={'name': 'instant'}, **kwargs): 
@@ -455,6 +456,7 @@ def plot_fq_evol():
 
 if __name__=="__main__":
     #plot_fq_evol()
-    #plot_fqobs_snapshot_evol(nsnaps = [2,3,4,5,6,7,8,9,10,11,12])
+    #plot_fqobs_snapshot_evol(nsnaps = [1,2,3,4,5,6,7,8,9,10,11,12], fq_type='wetzelsmooth', cenque_type='evol_from13', tau_prop={'name': 'satellite'})
+    
     for i_nsnap in [12,11,10,9,8,7,6,5,4,3,2,1]:
         plot_fqobs_snapshot(i_nsnap, fq_type='wetzelsmooth', cenque_type='evol_from13', tau_prop={'name': 'satellite'})

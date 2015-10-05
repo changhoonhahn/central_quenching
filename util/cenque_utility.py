@@ -341,6 +341,40 @@ def get_tsnap(redshift):
 
     return t_of_z(redshift) 
 
+def get_z_nsnap(nsnap): 
+    ''' Given redshift, return cosmic time using spline interpolation of snapshot table
+
+    Parameters
+    ----------
+    redshift : redshift 
+
+    Notes
+    -----
+    * Only worry is that it may take too long
+
+    '''
+    # read in snapshot table file 
+    z = np.loadtxt('snapshot_table.dat', unpack=True, usecols=[2]) 
+
+    return z[nsnap]
+
+def get_t_nsnap(nsnap): 
+    ''' Given redshift, return cosmic time using spline interpolation of snapshot table
+
+    Parameters
+    ----------
+    redshift : redshift 
+
+    Notes
+    -----
+    * Only worry is that it may take too long
+
+    '''
+    # read in snapshot table file 
+    t = np.loadtxt('snapshot_table.dat', unpack=True, usecols=[3]) 
+
+    return t[nsnap]
+
 """
 def cenque_file( **kwargs ): 
     ''' Given kwargs get CenQue file name
