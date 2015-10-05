@@ -131,8 +131,8 @@ class PlotCenque:
         return None   
     
     def cenque_quenching_ssfr_dist(self, cenque): 
-        """ Plot sSFR distribution for CenQue data that 
-        highlights the quenching population 
+        """ Plot stacked sSFR distribution for CenQue data that 
+        differentiates the quiescent, quenching, and star-forming populations
         """
     
         for i_mass, panel_mass in enumerate(self.panel_mass_bins):       # loop through each panel 
@@ -180,12 +180,9 @@ class PlotCenque:
                 color_list.append('red')
                 label_list.append('Quiescent')
 
-            print i_mass, panel_mass
-            print len(quenching_massbin[0]), len(sf_massbin[0]), len(q_notquenching_massbin[0])
-
             self.subs[i_mass].hist(
                     data_list, 
-                    100, 
+                    50, 
                     normed = 1, 
                     stacked=True, 
                     color = color_list,
@@ -196,7 +193,6 @@ class PlotCenque:
                 self.subs[i_mass].text(-9.25, 1., 'z ='+str(cenque.zsnap),
                     fontsize=24
                     )
-
 
         return None   
 

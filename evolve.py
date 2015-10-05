@@ -361,8 +361,8 @@ def quenching_galaxies_massbin(cenque, delta_t_cosmic, m_bin_mid, indices, sf_in
     # number of SF galaxies that need to be quenched 
     if ngal2quench <= 0: 
         # quenching, overshot in previous snapshot  move onto next mass bin 
-        if not quiet: 
-            print "No SF galaxies need to be quenched"
+        #if not quiet: 
+        print "No SF galaxies need to be quenched"
         return [] 
 
     if not quiet: 
@@ -417,7 +417,8 @@ def quenching_galaxies_massbin(cenque, delta_t_cosmic, m_bin_mid, indices, sf_in
     #        print '####################################### FQING 2 > FQING 1'
     #else: 
     f_quenching = fqing2
-    print f_quenching
+    print 'Fqing_1 = ', fqing1
+    print 'Quenching fraction = ', f_quenching
 
     if f_quenching <= 0.0: 
         f_quenching = 0.0
@@ -458,10 +459,10 @@ def parent_children_match(parent_snap_index, child_parent_snap_index):
     return parents, children 
 
 if __name__=='__main__': 
-    blah = CenQue(n_snap=13, cenque_type='sf_assigned')
-    #blah.import_treepm(13)
-    #blah.writeout()
-    #blah = assign_sfr(blah)
-    #blah.writeout()
+    blah = CenQue(n_snap=20, cenque_type='sf_assigned')
+    blah.import_treepm(20)
+    blah.writeout()
+    blah = assign_sfr(blah)
+    blah.writeout()
     blah.readin()
     blah = evolve_cq(blah, tau_prop = {'name': 'satellite'}, quiet=True)

@@ -23,7 +23,7 @@ def build_centrals_snapshot():
 
     '''
 
-    snap_range = range(1,16)    # snapshot range
+    snap_range = range(1,21)    # snapshot range
 
     # read in TreePM Subhalo snapshots from z~0.0502 to z~1.0833
     sub = subhalo_io.Treepm.read('subhalo', 250, zis=snap_range) 
@@ -163,4 +163,4 @@ def build_centrals_snapshot_scatter(scatter=0.2):
 
 if __name__=="__main__": 
     build_centrals_snapshot()
-    build_centrals_snapshot_scatter(scatter=0.2)
+    #build_centrals_snapshot_scatter(scatter=0.2)

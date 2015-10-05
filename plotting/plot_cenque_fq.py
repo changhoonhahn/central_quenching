@@ -16,6 +16,107 @@ from util.gal_classify import sfq_classify
 from defutility.plotting import prettyplot
 from defutility.plotting import prettycolors 
 
+
+def PlotFq(object): 
+
+    def __init__(self, **kwargs): 
+        """ Class that describes the quiescent fraction plots 
+        for CenQue objects
+        """
+        #prettyplot()        # make pretty 
+        pretty_colors = prettycolors() 
+        
+        self.kwargs = kwargs
+        
+        self.mass_bin = np.arange(9.0, 12.0, 0.2)   # mass bin 
+        self.mass_low = self.mass_bin[:-1]
+        self.mass_high= self.mass_bin[1:]
+        self.mass_mid = 0.5 * (self.mass_low + self.mass_high)
+
+        self.fig = plt.figure(figsize=[7,7])
+
+    def snapshot(self, nsnap):
+        """ Plot the quiescent fraction of specified CenQue class object
+        along with a parameterized fQ for SINGLE given snapshot redshift
+
+        ----------------------------------------------------------------
+        Parameters
+        ----------------------------------------------------------------
+        nsnap : (int) snapshot #
+        fq_type : type of queiscent fraction  
+
+        """
+    
+        # Corresponding redshift for the snapshot 
+        zbin = np.loadtxt('snapshot_table.dat', unpack=True, usecols=[2])
+        zbin = zbin[nsnap]
+
+        self.subs = self.fig.add_subplot(111)
+
+        snap = CenQue(n_snap = nsnap) 
+        snap.cenque_type = cenque_type 
+        snap.fq_prop = {'name': fq_type}
+        snap.tau_prop = tau_prop
+        snap.readin() 
+            
+        # classify CenQue class object with SF properties using 
+        # sfq_classify function 
+        sfqs = sfq_classify( 
+                snap.mass, 
+                snap.sfr, 
+                snap.zsnap 
+                ) 
+
+        mass_fq, fq = [], [] 
+
+        for i_m in xrange(len(mass_mid)): 
+
+            mass_bin_index = np.where(
+                    (snap.mass > mass_low[i_m]) & 
+                    (snap.mass <= mass_high[i_m])
+                    )
+            
+            ngal = np.float(len(mass_bin_index[0]))
+
+            if ngal <= 0.: 
+                continue 
+            
+            ngal_q = np.float(np.sum(sfqs[mass_bin_index] == 'quiescent')) 
+
+            mass_fq.append(mass_mid[i_m]) 
+            fq.append(ngal_q/ngal) 
+        
+        subs.plot(
+                mass_fq, fq, 
+                color = pretty_colors[3], 
+                lw = 4, 
+                label='Snapshot '+str(snap.nsnap)
+                ) 
+        
+        # parameterized fq 
+        fq_mass = get_fq(
+                mass_mid, zbin, 
+                lit = fq_type
+                )
+        subs.plot(
+                mass_mid, fq_mass, 
+                color = 'black',  
+                lw = 4, 
+                ls = '--', 
+                label = fq_type+'; z = '+str(zbin) 
+                ) 
+
+        subs.set_xlim([9.0, 12.0])
+        subs.set_ylim([0.0, 1.0])
+        subs.set_xlabel('Mass') 
+        subs.set_ylabel('Quiescent Fraction') 
+        subs.legend(loc='upper left') 
+
+        plt.show()
+
+
+
+
 def plot_fqobs_snapshot_evol(
         nsnaps = [1,2,3,4,5,6,7,8,9,10,11,12],
         fq_type = 'wetzelsmooth', 
@@ -127,55 +228,10 @@ def plot_fqobs_snapshot_evol(
     subs[0].set_ylabel('Quiescent Fraction') 
     plt.legend()
     plt.show()
-    """    
-    # file name ----------------------------------------------------------------
-    # Quenching Fraction specifier 
-    if 'fqing_slope' in kwargs.keys(): 
-        fqing_slope_str = str(kwargs['fqing_slope'])
-    else: 
-        fqing_slope_str = str(0.63)
-
-    if 'fqing_yint' in kwargs.keys(): 
-        fqing_yint_str = str(kwargs['fqing_yint'])
-    else: 
-        fqing_yint_str = str(-6.04) 
-
-    fqing_str = ''.join([fqing_slope_str, '_', fqing_yint_str, 'fqing']) 
-
-    # tau specifier
-    if kwargs['tau'] == 'discrete': 
-        tau_str = '_'.join( [str("%.1f" % t) for t in kwargs['tau_param']] )+'tau'
-    elif kwargs['tau'] == 'linefit':
-        tau_str = '_'.join( [str("%.2f" % t) for t in kwargs['tau_param']] )+'tau'
-    else: 
-        tau_str = kwargs['tau']+'tau'
-
-    # Stellar mass specifier 
-    if kwargs['stellmass'].lower() == 'integrated': 
-        mass_str = '_integ'
-    elif kwargs['stellmass'].lower() == 'sham': 
-        mass_str = '_sham'
-    else: 
-        raise NotImplementedError('asdfalkjlkjasdf') 
-
-    # SFR specifier
-    if kwargs['sfr'] == 'sfr_avg': 
-        file_type_str = mass_str+'_sfravg'
-    elif kwargs['sfr'] == 'sfr_func': 
-        file_type_str = mass_str+'_sfrfunc'
-    else: 
-        raise NotImplementedError('asdfasdflkjasdf;lkjasdf') 
-
-    fig_file = ''.join(['../figure/', 
-        'fq_obs_snapshots_', tau_str, '_', fqing_str, file_type_str, '.png'])
-    fig.savefig(fig_file, bbox_inches='tight')
-    fig.clear()
-    plt.close(fig)
-    """
 
 def plot_fqobs_snapshot(nsnap, fq_type='wetzelsmooth', cenque_type='sf_assigned', tau_prop={'name': 'instant'}, **kwargs): 
     """ Plot the quiescent fraction of specified CenQue class object
-    along with a parameterized fQ for given snapshot redshift
+    along with a parameterized fQ for SINGLE given snapshot redshift
 
     ----------------------------------------------------------------
     Parameters
@@ -259,51 +315,6 @@ def plot_fqobs_snapshot(nsnap, fq_type='wetzelsmooth', cenque_type='sf_assigned'
     subs.legend(loc='upper left') 
 
     plt.show()
-    
-    """
-    # Quenching Fraction specifier 
-    if 'fqing_slope' in kwargs.keys(): 
-        fqing_slope_str = str(kwargs['fqing_slope'])
-    else: 
-        fqing_slope_str = str(0.63)
-
-    if 'fqing_yint' in kwargs.keys(): 
-        fqing_yint_str = str(kwargs['fqing_yint'])
-    else: 
-        fqing_yint_str = str(-6.04) 
-
-    fqing_str = ''.join([fqing_slope_str, '_', fqing_yint_str, 'fqing']) 
-
-    # tau specifier
-    if kwargs['tau'] == 'discrete': 
-        tau_str = '_'.join( [str("%.1f" % t) for t in kwargs['tau_param']] )+'tau'
-    elif kwargs['tau'] == 'linefit':
-        tau_str = '_'.join( [str("%.2f" % t) for t in kwargs['tau_param']] )+'tau'
-    else: 
-        tau_str = kwargs['tau']+'tau'
-    
-    # Stellar mass specifier 
-    if kwargs['stellmass'].lower() == 'integrated': 
-        mass_str = '_integ'
-    elif kwargs['stellmass'].lower() == 'sham': 
-        mass_str = '_sham'
-    else: 
-        raise NotImplementedError('asdfalkjlkjasdf') 
-
-    # SFR specifier
-    if kwargs['sfr'] == 'sfr_avg': 
-        file_type_str = mass_str+'_sfravg'
-    elif kwargs['sfr'] == 'sfr_func': 
-        file_type_str = mass_str+'_sfrfunc'
-    else: 
-        raise NotImplementedError('asdfasdflkjasdf;lkjasdf') 
-
-    fig_file = ''.join(['figure/', 
-        'fq_obs_snapshot', str(nsnap), '_', tau_str, '_', fqing_str, file_type_str, '.png'])
-    fig.savefig(fig_file, bbox_inches='tight')
-    fig.clear()
-    plt.close(fig)
-    """
 
 def plot_fq_geha_groupcat(Mrcut=18): 
     ''' Plot comparison of Modified Tinker Catalog fq from Geha and SDSS group catalog 
