@@ -28,6 +28,7 @@ def evolve_cq(
         tau_prop = {'name': 'instant'}, 
         mass_evol = 'sham', 
         quiet = False, 
+        writeout = False,
         **kwargs
         ): 
     """ Evolve SF properties and stellar mass properties of galaxies 
@@ -38,6 +39,13 @@ def evolve_cq(
     ----------------------------------------------------------------
     cenque : CenQue class object
     final_nsnap : final snapshot number 
+    sf_prop : dictionary specifying the SF properties  
+    fq_prop : dictionary specifying the f_Q properties
+    tau_prop : dictionary specifying the quenching e-fold (tau) 
+        properties
+    mass_evol : mass evolution 
+    quiet : yak or not  
+    writeout : write out each snapshot step  
 
     ----------------------------------------------------------------
     Notes
@@ -59,11 +67,11 @@ def evolve_cq(
     parent_cq = cenque
 
     for i_snap in range(final_nsnap, start_nsnap)[::-1]:    
-
-        print ''
-        print '---------------------------------------'
-        print 'Evolving to ', str(i_snap) 
-
+        
+        if not quiet: 
+            print ''
+            print '---------------------------------------'
+            print 'Evolving to ', str(i_snap) 
     
         # Import halo and SHAM properties from TreePM 
         # catalogs and run time evolution on the SF
@@ -77,16 +85,17 @@ def evolve_cq(
         child_cq.mass_evol = mass_evol
 
         child_cq = evolve_onestep(parent_cq, child_cq, quiet=quiet)
-
-        child_cq.writeout()        
+        
+        if writeout: 
+            child_cq.writeout()        
 
         parent_cq = child_cq
     
-    print 'Total Evolution takes ', time.time() - evo_start_time
+    # print 'Total Evolution takes ', time.time() - evo_start_time
 
     return child_cq 
 
-def evolve_onestep(parent_cq, child_cq, quiet=False):
+def evolve_onestep(parent_cq, child_cq, predict_step = 3, quiet=False):
     """ Evolve CenQue class object by one time step 
     """
     evo_start = time.time()
@@ -134,7 +143,9 @@ def evolve_onestep(parent_cq, child_cq, quiet=False):
 
     # Deal with parent to children inheritance (children inherit the parents' attributes)
     # This step needs to be thought out more. 
-    inheritance_time = time.time()
+    if not quiet: 
+        inheritance_time = time.time()
+
     child_cq.parent_sfr[children]       = parent_cq.sfr[parents]
     child_cq.parent_mass[children]      = parent_cq.mass[parents]
     child_cq.parent_halo_mass[children] = parent_cq.halo_mass[parents]
@@ -151,7 +162,8 @@ def evolve_onestep(parent_cq, child_cq, quiet=False):
                     pass 
                 else: 
                     raise ValueError()
-    print 'Inheritance takes ', time.time() - inheritance_time
+    if not quiet: 
+        print 'Inheritance takes ', time.time() - inheritance_time
     
     # Stellar mass evolution of star forming galaxies. Either integrated or 
     # SHAM masses assigned from TreePM 
@@ -204,7 +216,9 @@ def evolve_onestep(parent_cq, child_cq, quiet=False):
     sf_children = children[starforming_children] 
 
     if child_cq.sf_prop['name'] == 'average': 
+
         sfr_mstar_z, sig_sfr_mstar_z = get_param_sfr_mstar_z()
+
         child_sfr = sfr_mstar_z(
                 child_cq.mass[sf_children], 
                 child_cq.zsnap
@@ -221,6 +235,7 @@ def evolve_onestep(parent_cq, child_cq, quiet=False):
     still_quenching = np.where(child_cq.tau > 0.0)
 
     if len(still_quenching[0]) > 0: 
+
         # for galaxies with tau, keep them quenching!
         tau_quench = np.log10( 
                 np.exp( 
@@ -232,9 +247,11 @@ def evolve_onestep(parent_cq, child_cq, quiet=False):
         child_cq.ssfr[still_quenching] = child_cq.sfr[still_quenching] - child_cq.mass[still_quenching]
     else: 
         if 'evol_from' in parent_cq.cenque_type:
-            raise ValueError()
-
-    print 'Quenching SF galaxies takes ', time.time() - quenching_time
+            if child_cq.tau_prop['name'] != 'instant': 
+                raise ValueError()
+    
+    if not quiet: 
+        print 'Quenching SF galaxies takes ', time.time() - quenching_time
     
     # numpy.where of mass bins 
     mass_bin_indices = np.array([
@@ -261,12 +278,14 @@ def evolve_onestep(parent_cq, child_cq, quiet=False):
             ) 
     
     # f_Q of descendant 
+    child_cq.predict_nsnap = child_cq.nsnap - predict_step
+
     descendant_fq = get_fq_nsnap(
             mass_bins.mass_mid, 
-            child_cq.nsnap - 2, 
+            child_cq.predict_nsnap, 
             lit = child_cq.fq_prop['name']
             )
-    descendant_tcosmic = util.get_t_nsnap(child_cq.nsnap - 2)
+    descendant_tcosmic = util.get_t_nsnap(child_cq.predict_nsnap)
     
     # expected number of quiescent galaxies = Ngal * f_Q
     # N_gal,exp * f_Q(M_bin)
@@ -330,31 +349,34 @@ def evolve_onestep(parent_cq, child_cq, quiet=False):
         q_ssfr_mean = util.get_q_ssfr_mean(child_cq.mass[quench_index]) 
         child_cq.q_ssfr[quench_index] = 0.18 * np.random.randn(len(quench_index)) + q_ssfr_mean 
         
-    print 'Quenching takes ', time.time() - quenching_start_time 
-    
     if not quiet: 
+        print 'Quenching takes ', time.time() - quenching_start_time 
+
         print "Child's redshift = ", child_cq.zsnap
 
     # deal with orphans ------------------------------------------------------------
-    orphan_time = time.time()
-    print len(child_cq.gal_type[child_cq.gal_type == '']), ' child galaxies are orphans' 
+    if not quiet: 
+        orphan_time = time.time()
+        print len(child_cq.gal_type[child_cq.gal_type == '']), ' child galaxies are orphans' 
     child_cq = assign_sfr(child_cq, quiet=quiet)
 
     if len(child_cq.gal_type[child_cq.gal_type == '']) != 0:
         print len(child_cq.gal_type[child_cq.gal_type == '']), ' child galaxies are orphans' 
         raise ValueError() 
-    print 'Orphan care takes ', time.time() - orphan_time
+
+    if not quiet:
+        print 'Orphan care takes ', time.time() - orphan_time
 
     # deal with galaxies that are being quenched beyond the designated final quenching  
     overquench_time = time.time()
     over_quenched = np.where(child_cq.ssfr < child_cq.q_ssfr)
     child_cq.ssfr[over_quenched] = child_cq.q_ssfr[over_quenched]
     child_cq.tau[over_quenched] = -999.0            # done quenching 
-    print 'Overquenching takes ', time.time() - overquench_time
-
-    print 'Evolution for one time step takes ', time.time() - evo_start
-
     if not quiet: 
+        print 'Overquenching takes ', time.time() - overquench_time
+
+        print 'Evolution for one time step takes ', time.time() - evo_start
+
         print 'Quiescent Fraction = ', np.float(len(parent_cq.gal_type[parent_cq.gal_type == 'quiescent']))/np.float(len(parent_cq.gal_type)) 
 
     return child_cq
@@ -375,8 +397,8 @@ def quenching_galaxies_massbin(cenque, delta_t_cosmic, descendant_t, m_bin_mid, 
     # number of SF galaxies that need to be quenched 
     if ngal2quench <= 0: 
         # quenching, overshot in previous snapshot  move onto next mass bin 
-        #if not quiet: 
-        print "No SF galaxies need to be quenched"
+        if not quiet: 
+            print "No SF galaxies need to be quenched"
         return [] 
 
     if not quiet: 
@@ -414,7 +436,7 @@ def quenching_galaxies_massbin(cenque, delta_t_cosmic, descendant_t, m_bin_mid, 
     predpred_sfqs = sfq_classify(
             cenque.mass[sf_indices], 
             cenque.sfr[sf_indices] + predpred_tau_quench, 
-            util.get_z_nsnap(cenque.nsnap - 2) 
+            util.get_z_nsnap(cenque.predict_nsnap) 
             )
     predpred_ngal_q = np.float(np.sum(predpred_sfqs == 'quiescent'))
 
@@ -459,24 +481,38 @@ def parent_children_match(parent_snap_index, child_parent_snap_index):
     childrens by matching (index, parent), (index, child) key pairs 
     Takes approximately < 1 second
     """
-    parent_child_start_time = time.time()
-    parent_index_dict = dict( 
-            (k, i) 
-            for i, k in enumerate(parent_snap_index) 
-            )
-    child_index_dict = dict( 
-            (k, i) 
-            for i, k in enumerate(child_parent_snap_index) 
-            )
+    # too slow
+    #parent_child_start_time = time.time()
+    #parent_index_dict = dict( 
+    #        (k, i) 
+    #        for i, k in enumerate(parent_snap_index) 
+    #        )
+    #child_index_dict = dict( 
+    #        (k, i) 
+    #        for i, k in enumerate(child_parent_snap_index) 
+    #        )
+    #parent_child_meet = np.intersect1d( parent_snap_index, child_parent_snap_index ) 
 
-    parent_child_meet = np.intersect1d( parent_snap_index, child_parent_snap_index ) 
-    parents = np.array([
-            parent_index_dict[k] for k in parent_child_meet
-            ])
-    children = np.array([
-            child_index_dict[k] for k in parent_child_meet
-            ])
-    print 'Parent Child match takes ', time.time() - parent_child_start_time, ' seconds'
+    #parents = np.array([
+    #        parent_index_dict[k] for k in parent_child_meet
+    #        ])
+    #children = np.array([
+    #        child_index_dict[k] for k in parent_child_meet
+    #        ])
+    #print 'Parent Child match takes ', time.time() - parent_child_start_time, ' seconds'
+    
+    #parent_child_start_time = time.time()
+    parent_sort_index = np.argsort(parent_snap_index)
+    child_sort_index = np.argsort(child_parent_snap_index)
+    sorted_parent_snap_index = parent_snap_index[parent_sort_index]
+    sorted_child_parent_snap_index = child_parent_snap_index[child_sort_index]
+
+    parent_child_in1d = np.in1d(sorted_parent_snap_index, sorted_child_parent_snap_index)
+    child_parent_in1d = np.in1d(sorted_child_parent_snap_index, sorted_parent_snap_index)
+    
+    parents = parent_sort_index[parent_child_in1d]
+    children = child_sort_index[child_parent_in1d]
+    #print 'Parent Child match takes ', time.time() - parent_child_start_time, ' seconds'
 
     return parents, children 
 
@@ -487,4 +523,4 @@ if __name__=='__main__':
     #blah = assign_sfr(blah)
     #blah.writeout()
     blah.readin()
-    blah = evolve_cq(blah, tau_prop = {'name': 'satellite'}, quiet=True)
+    blah = evolve_cq(blah, tau_prop = {'name': 'instant'}, quiet=True)

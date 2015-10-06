@@ -8,6 +8,7 @@ Author(s): ChangHoon Hahn
 import time
 import random 
 import numpy as np
+import warnings
 
 # --- Local ----
 from quiescent_fraction import get_fq
@@ -56,13 +57,13 @@ def assign_sfr(
         cenque.sf_prop = sf_prop
     else: 
         if cenque.sf_prop != sf_prop: 
-            raise ValueError()
+            warnings.warn("SF properties do not match")
 
     if 'fq_prop' not in cenque.__dict__.keys():
         cenque.fq_prop = fq_prop 
     else: 
         if cenque.fq_prop != fq_prop:
-            raise ValueError()
+            warnings.warn("fQ properties do not match")
     
     mass_bins = cenque.mass_bins
     mass_bin_low  = mass_bins.mass_low
@@ -118,25 +119,21 @@ def assign_sfr(
                 (cenque.mass > mass_bin_low[i_m]) &
                 (cenque.mass <= mass_bin_high[i_m]) &
                 (cenque.gal_type == '')
-                )
+                )[0]
             for i_m in xrange(mass_bins.nbins)
             ]
 
     # Ngal(M_mid), Ngal,Q(M_mid) and Ngal,SF(M_mid)
-    ngal_massbin = np.array(
-            [len(x[0]) for x in massbin_unassigned]
-            )
-    ngal_q_massbin= np.array([
-        int(np.rint(qf_massbin[i_m] * np.float(ngal_massbin[i_m])))
-        for i_m in xrange(mass_bins.nbins)
-        ]) 
+    ngal_massbin = np.array([x.size for x in massbin_unassigned])
+    ngal_q_massbin = np.rint(qf_massbin * ngal_massbin.astype(float)).astype(int)
     ngal_sf_massbin = ngal_massbin - ngal_q_massbin
     # fail-safe for ngal_q_massbin
-    ngal_q_massbin[np.where(ngal_q_massbin > ngal_massbin)] = ngal_massbin[np.where(ngal_q_massbin > ngal_massbin)]
+    if len(np.where(ngal_q_massbin > ngal_massbin)[0]) > 0: 
+        ngal_q_massbin[np.where(ngal_q_massbin > ngal_massbin)] = ngal_massbin[np.where(ngal_q_massbin > ngal_massbin)]
 
     for i_m in xrange(mass_bins.nbins):             
 
-        if len(massbin_unassigned[i_m][0]) == 0: 
+        if len(massbin_unassigned[i_m]) == 0: 
             continue
 
         begin_loop_time = time.time()
@@ -146,6 +143,7 @@ def assign_sfr(
             print 'Ngal,Q = ', ngal_q_massbin[i_m], ' Ngal,SF = ', ngal_sf_massbin[i_m]
 
         shuffled_massbin_index = np.arange(ngal_massbin[i_m])
+        np.random.seed()
         np.random.shuffle(shuffled_massbin_index)
         i_q_end = ngal_q_massbin[i_m]
         
@@ -155,7 +153,7 @@ def assign_sfr(
         if ngal_q_massbin[i_m] > 0: 
 
             q_massbin = shuffled_massbin_index[:i_q_end]
-            i_q_massbin = (massbin_unassigned[i_m][0])[q_massbin]
+            i_q_massbin = (massbin_unassigned[i_m])[q_massbin]
 
             cenque.gal_type[i_q_massbin] = 'quiescent'   
 
@@ -169,16 +167,16 @@ def assign_sfr(
                 print q_massbin
                 print i_q_massbin
                 print i_q_end, ngal_q_massbin[i_m]
+
             cenque.ssfr[i_q_massbin] = 0.18 * np.random.randn(ngal_q_massbin[i_m]) + mu_q_ssfr 
             cenque.sfr[i_q_massbin]  = cenque.ssfr[i_q_massbin] + cenque.mass[i_q_massbin]
-            q_time = time.time()
         
         # ngal_sf_massbin starforming galaxies from the massbin. Assign 
         # them 'star-forming' gal_type and sSFR and SFR in some manner
         if ngal_sf_massbin[i_m] > 0: 
 
             sf_massbin = shuffled_massbin_index[i_q_end:]
-            i_sf_massbin = (massbin_unassigned[i_m][0])[sf_massbin]
+            i_sf_massbin = (massbin_unassigned[i_m])[sf_massbin]
             
             cenque.gal_type[i_sf_massbin] = 'star-forming'
             
