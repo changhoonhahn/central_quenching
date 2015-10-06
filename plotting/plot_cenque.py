@@ -8,6 +8,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 # --- Local --- 
+from ssfr import Ssfr
 from cenque import CenQue
 from defutility.plotting import prettyplot
 from defutility.plotting import prettycolors 
@@ -37,33 +38,15 @@ class PlotCenque:
     def cenque_ssfr_dist(self, cenque): 
         ''' Plot sSFR distribution for CenQue data
         '''
+        ssfr_dist = Ssfr()
+        ssfr_bin_mid, ssfr_hist = ssfr_dist.cenque(cenque)
     
         for i_mass, panel_mass in enumerate(self.panel_mass_bins):       # loop through each panel 
 
-            mass_limit = np.where(
-                    (cenque.mass >= panel_mass[0]) & 
-                    (cenque.mass < panel_mass[1])
-                    )
-            ngal_bin = len(mass_limit[0])
-
-            # SSFR histogram 
-            ssfr_hist, ssfr_bin_edges = np.histogram(
-                    cenque.ssfr[mass_limit], 
-                    range = [-13.0, -7], 
-                    bins = 40, 
-                    normed = True
-                    )
-            ssfr_bin_low = ssfr_bin_edges[:-1]
-            ssfr_bin_high = ssfr_bin_edges[1:]
-            ssfr_bin_mid = 0.5 * (ssfr_bin_low + ssfr_bin_high) 
-        
             if 'label' in self.kwargs: 
                 ssfr_hist_label = self.kwargs['label']
             else: 
-                try: 
-                    ssfr_hist_label = 'z ='+str(cenque.zsnap) 
-                except AttributeError: 
-                    ssfr_hist_label = 'Centrals'
+                ssfr_hist_label = 'z ='+str(cenque.zsnap) 
         
             if 'line_color' in self.kwargs: 
                 line_color = self.kwargs['line_color']
@@ -84,8 +67,8 @@ class PlotCenque:
                 line_width = 4
 
             self.subs[i_mass].plot(
-                    ssfr_bin_mid, 
-                    ssfr_hist, 
+                    ssfr_bin_mid[i_mass], 
+                    ssfr_hist[i_mass], 
                     color = line_color, 
                     lw = line_width, 
                     ls = line_style, 
@@ -93,39 +76,47 @@ class PlotCenque:
 
         return None   
 
-    def groupcat_ssfr_dist(self, Mrcut=18): 
+    def groupcat_ssfr_dist(self, Mrcut=18, **kwargs): 
         ''' Plot sSFR distribution for Group Catalog data
         '''
     
-        groupcat = central_catalog(Mrcut=Mrcut)
+        ssfr_dist = Ssfr()
+        ssfr_bin_mid, ssfr_hist = ssfr_dist.groupcat(Mrcut=Mrcut)
     
         for i_mass, panel_mass in enumerate(self.panel_mass_bins):       # loop through each panel 
 
-            mass_limit = np.where(
-                    (groupcat.mass >= panel_mass[0]) & 
-                    (groupcat.mass < panel_mass[1])
-                    )
-            ngal_bin = len(mass_limit[0])
+            if Mrcut == 18: 
+                z_med = 0.03
+            elif Mrcut == 19: 
+                z_med = 0.05
+            elif Mrcut == 20:
+                z_med = 0.08
 
-            # SSFR histogram 
-            ssfr_hist, ssfr_bin_edges = np.histogram(
-                    groupcat.ssfr[mass_limit], 
-                    range = [-13.0, -7], 
-                    bins = 40, 
-                    normed = True
-                    )
-            ssfr_bin_low = ssfr_bin_edges[:-1]
-            ssfr_bin_high = ssfr_bin_edges[1:]
-            ssfr_bin_mid = 0.5 * (ssfr_bin_low + ssfr_bin_high) 
+            ssfr_label= ''.join([
+                'SDSS Mr =', str(Mrcut), ', z = ', str(z_med)
+                ]) 
 
-            ssfr_label= 'SDSS Group Catalog Mr ='+str(Mrcut)
-        
+            if 'lw' in kwargs.keys(): 
+                lwid = kwargs['lw']
+            else: 
+                lwid = 4
+
+            if 'ls' in kwargs.keys(): 
+                lsty = kwargs['ls']
+            else: 
+                lsty = '--'
+
+            if 'color' in kwargs.keys(): 
+                col = kwargs['color']
+            else: 
+                col = 'k' 
+
             self.subs[i_mass].plot(
-                    ssfr_bin_mid, 
-                    ssfr_hist, 
-                    color = 'k', 
-                    lw = 4, 
-                    ls = '--', 
+                    ssfr_bin_mid[i_mass],
+                    ssfr_hist[i_mass], 
+                    color = col, 
+                    lw = lwid, 
+                    ls = lsty, 
                     label = ssfr_label) 
 
         return None   

@@ -19,7 +19,7 @@ def get_param_sfr_mstar_z():
     """
 
     def avgsfr_sfms(mstar, z_in): 
-        mu_SFR = 0.65*(mstar - 10.5) + 0.76 * (z_in - 0.03)
+        mu_SFR = 0.65*(mstar - 10.5) + 0.76 * (z_in - 0.01)
         return mu_SFR
 
     def sigsfr_sfms(mstar, z_in): 
@@ -110,6 +110,13 @@ def get_bestfit_sfms_groupcat(Mrcut=18, fid_mass=10.5, clobber=False):
         'sf_ms_fit_starforming_groupcat_', str(Mrcut), '.hdf5'
         ]) 
 
+    if Mrcut == 18: 
+        z_med = 0.03
+    elif Mrcut == 19: 
+        z_med = 0.05
+    elif Mrcut == 20: 
+        z_med = 0.08
+
     if not os.path.isfile(bestfit_file) or clobber: 
 
         print 'Writing '
@@ -143,7 +150,7 @@ def get_bestfit_sfms_groupcat(Mrcut=18, fid_mass=10.5, clobber=False):
         grp = f.create_group('slope_yint')
         grp.attrs['fid_mass'] = fid_mass 
 
-        grp.create_dataset('zmid', data=[0.1]) 
+        grp.create_dataset('zmid', data=[z_med]) 
         grp.create_dataset('slope', data=[0.65])
         grp.create_dataset('yint', data=[0.0]) 
         #grp.create_dataset('slope', data=[bestfit.params[0]]) 
@@ -152,7 +159,7 @@ def get_bestfit_sfms_groupcat(Mrcut=18, fid_mass=10.5, clobber=False):
         f.close() 
 
         #return [0.1, bestfit.params[0], bestfit.params[1]]
-        return [0.1, 0.65, 0.0]
+        return [z_med, 0.65, 0.0]
 
     else: 
         f = h5py.File(bestfit_file, 'r') 
