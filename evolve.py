@@ -54,7 +54,9 @@ def evolve_cq(
     overall SF MS SFR decrease
 
     """
-    evo_start_time = time.time()
+    
+    if not quiet: 
+        evo_start_time = time.time()
     
     if cenque.cenque_type != 'sf_assigned': 
         raise ValueError()
@@ -91,7 +93,8 @@ def evolve_cq(
 
         parent_cq = child_cq
     
-    # print 'Total Evolution takes ', time.time() - evo_start_time
+    if not quiet: 
+        print 'Total Evolution takes ', time.time() - evo_start_time
 
     return child_cq 
 
@@ -523,4 +526,4 @@ if __name__=='__main__':
     #blah = assign_sfr(blah)
     #blah.writeout()
     blah.readin()
-    blah = evolve_cq(blah, tau_prop = {'name': 'instant'}, quiet=True)
+    blah = evolve_cq(blah, tau_prop = {'name': 'line', 'fid_mass': 10.75, 'slope': -0.57, 'yint': 0.5}, quiet=True, writeout=True)

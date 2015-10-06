@@ -249,6 +249,13 @@ class CenQue:
             # Tau specifier
             if self.tau_prop['name'] in ('instant', 'constant', 'satellite', 'long'): 
                 tau_str = ''.join(['_', self.tau_prop['name'], 'tau'])
+            elif self.tau_prop['name'] in ('line'):
+                tau_str = ''.join([
+                    '_', self.tau_prop['name'], 'tau', 
+                    '_Mfid', str(self.tau_prop['fid_mass']), 
+                    '_slope', str(round(self.tau_prop['slope'], 4)), 
+                    '_yint', str(round(self.tau_prop['yint'],4))
+                    ])
 
             # combine specifiers
             file_type_str = ''.join([tau_str, fq_str, sfr_str, '_', self.cenque_type]) 
@@ -297,13 +304,13 @@ def build_cenque_original(i_snap=13, **kwargs):
     snap.AssignSFR(i_snap, **kwargs) 
     snap.writeout(nsnap=i_snap, file_type='sf assign', **kwargs)
 
+"""
 if __name__=='__main__': 
     blah = CenQue()
     blah.import_treepm(13)
     blah = assign_sfr(blah)
     blah.writeout()
 
-"""
     #EvolveCenQue(13, 1, fqing_yint=-5.84, tau='instant')  
     #tau='linefit', tau_param=[-0.5, 0.4]) 
     #EvolveCenQue(13, 1, fqing_yint=-5.84, tau='linefit', tau_param=[-0.4, 0.2])
