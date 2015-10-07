@@ -5,10 +5,12 @@ sSFR distribution of galaxy catalogs
 '''
 
 import warnings
+import os
 import numpy as np
 
 # -- Local --
 from cenque import CenQue
+from evolve import evolve_cq
 from util.cenque_utility import get_q_ssfr_mean
 from sfms.fitting import get_param_sfr_mstar_z
 from group_catalog.group_catalog import central_catalog
@@ -198,14 +200,14 @@ def rho_ssfr_cq_evol(
 
         sfr_mstar_z, sig_sfr_mstar_z = get_param_sfr_mstar_z()
 
-        sf_ssfr_massbin = sfr_mstar_z(massbin[0], z_med) - massbin[0]
+        sf_ssfr_massbin = sfr_mstar_z(massbin[1], z_med) - massbin[1]
 
         green_range = np.where(
                 (evol_cq_ssfr_bin[i_massbin] > q_ssfr_massbin) &
                 (evol_cq_ssfr_bin[i_massbin] < sf_ssfr_massbin)
                 )
 
-        print np.sum((evol_cq_ssfr_hist[i_massbin][green_range] - group_ssfr_hist[i_massbin][green_range])**2)
+        #print np.sum((evol_cq_ssfr_hist[i_massbin][green_range] - group_ssfr_hist[i_massbin][green_range])**2)
 
         l2_ssfr += np.sum((evol_cq_ssfr_hist[i_massbin][green_range] - group_ssfr_hist[i_massbin][green_range])**2)
 

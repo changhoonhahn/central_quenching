@@ -27,7 +27,7 @@ def evolve_cq(
         fq_prop = {'name': 'wetzelsmooth'}, 
         tau_prop = {'name': 'instant'}, 
         mass_evol = 'sham', 
-        quiet = False, 
+        quiet = True, 
         writeout = False,
         **kwargs
         ): 
@@ -282,6 +282,8 @@ def evolve_onestep(parent_cq, child_cq, predict_step = 3, quiet=False):
     
     # f_Q of descendant 
     child_cq.predict_nsnap = child_cq.nsnap - predict_step
+    if child_cq.predict_nsnap < 0: 
+        child_cq.predict_nsnap = 0
 
     descendant_fq = get_fq_nsnap(
             mass_bins.mass_mid, 
@@ -525,6 +527,15 @@ if __name__=='__main__':
     blah = evolve_cq(
             blah, 
             tau_prop = {'name': 'line', 'fid_mass': 10.75, 'slope': -0.6, 'yint': 0.6}, 
+            quiet=True, 
+            writeout=True
+            )
+    
+    blah = CenQue(n_snap=13, cenque_type='sf_assigned')
+    blah.readin()
+    blah = evolve_cq(
+            blah, 
+            tau_prop = {'name': 'line', 'fid_mass': 10.75, 'slope': -0.57, 'yint': 0.5}, 
             quiet=True, 
             writeout=True
             )

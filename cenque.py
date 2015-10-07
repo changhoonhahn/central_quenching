@@ -124,7 +124,7 @@ class CenQue:
 
         cq_file = self.file() 
         f = h5py.File(cq_file, 'r') 
-        print 'Reading ', cq_file 
+        #print 'Reading ', cq_file 
 
         grp = f['cenque_data']
 
