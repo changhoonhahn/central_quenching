@@ -521,9 +521,10 @@ def parent_children_match(parent_snap_index, child_parent_snap_index):
 
 if __name__=='__main__': 
     blah = CenQue(n_snap=13, cenque_type='sf_assigned')
-    #blah.import_treepm(20)
-    #blah.writeout()
-    #blah = assign_sfr(blah)
-    #blah.writeout()
     blah.readin()
-    blah = evolve_cq(blah, tau_prop = {'name': 'line', 'fid_mass': 10.75, 'slope': -0.57, 'yint': 0.5}, quiet=True, writeout=True)
+    blah = evolve_cq(
+            blah, 
+            tau_prop = {'name': 'line', 'fid_mass': 10.75, 'slope': -0.6, 'yint': 0.6}, 
+            quiet=True, 
+            writeout=True
+            )

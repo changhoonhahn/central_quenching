@@ -152,7 +152,6 @@ def ssfr_cq_evol(
 
     return evolved_cq_ssfr.cenque(evolved_cq)
 
-
 def rho_ssfr_cq_evol(
         start_nsnap = 13, 
         final_nsnap = 1, 
@@ -199,20 +198,21 @@ def rho_ssfr_cq_evol(
 
         sfr_mstar_z, sig_sfr_mstar_z = get_param_sfr_mstar_z()
 
-        sf_ssfr_massbin = sfr_mstar_z(np.mean(massbin), z_med) - np.mean(massbin)
+        sf_ssfr_massbin = sfr_mstar_z(massbin[0], z_med) - massbin[0]
 
-        ssfr_range = np.where(
-                (evol_cq_ssfr_bin > q_ssfr_massbin) &
-                (evol_cq_ssfr_bin < sf_ssfr_massbin)
+        green_range = np.where(
+                (evol_cq_ssfr_bin[i_massbin] > q_ssfr_massbin) &
+                (evol_cq_ssfr_bin[i_massbin] < sf_ssfr_massbin)
                 )
 
-        l2_ssfr += np.sum((evol_cq_ssfr_hist[i_massbin] - group_ssfr_hist[i_massbin])**2)
+        print np.sum((evol_cq_ssfr_hist[i_massbin][green_range] - group_ssfr_hist[i_massbin][green_range])**2)
 
-    print l2_ssfr
+        l2_ssfr += np.sum((evol_cq_ssfr_hist[i_massbin][green_range] - group_ssfr_hist[i_massbin][green_range])**2)
+
     return l2_ssfr
 
 if __name__ == "__main__":
-    rho_ssfr_cq_evol(
+    print rho_ssfr_cq_evol(
         start_nsnap = 13, 
         final_nsnap = 1, 
         sf_prop = {'name': 'average'}, 
@@ -222,7 +222,7 @@ if __name__ == "__main__":
         Mrcut=18
         ) 
 
-    rho_ssfr_cq_evol(
+    print rho_ssfr_cq_evol(
         start_nsnap = 13, 
         final_nsnap = 1, 
         sf_prop = {'name': 'average'}, 
@@ -232,12 +232,22 @@ if __name__ == "__main__":
         Mrcut=18
         ) 
 
-    rho_ssfr_cq_evol(
+    print rho_ssfr_cq_evol(
         start_nsnap = 13, 
         final_nsnap = 1, 
         sf_prop = {'name': 'average'}, 
         fq_prop = {'name': 'wetzelsmooth'}, 
         tau_prop = {'name': 'line', 'fid_mass': 10.75, 'slope': -0.57, 'yint': 0.5}, 
+        mass_evol = 'sham', 
+        Mrcut=18
+        ) 
+    
+    print rho_ssfr_cq_evol(
+        start_nsnap = 13, 
+        final_nsnap = 1, 
+        sf_prop = {'name': 'average'}, 
+        fq_prop = {'name': 'wetzelsmooth'}, 
+        tau_prop = {'name': 'line', 'fid_mass': 10.75, 'slope': -0.6, 'yint': 0.6}, 
         mass_evol = 'sham', 
         Mrcut=18
         ) 
