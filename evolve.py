@@ -317,10 +317,24 @@ def evolve_onestep(parent_cq, child_cq, predict_step = 3, quiet=False):
     quenching_start_time = time.time()
     # Quench a number of star-forming galaxies in order to match the 
     # quiescent fraction at the next cosmic time step 
+            
+    # Tau specifier
+    if child_cq.tau_prop['name'] in ('instant', 'constant', 'satellite', 'long'): 
+        tau_str = ''.join(['_', child_cq.tau_prop['name'], 'tau'])
+    elif child_cq.tau_prop['name'] in ('line'):
+        tau_str = ''.join([
+            '_', child_cq.tau_prop['name'], 'tau', 
+            '_Mfid', str(child_cq.tau_prop['fid_mass']), 
+            '_slope', str(round(child_cq.tau_prop['slope'], 4)), 
+            '_yint', str(round(child_cq.tau_prop['yint'],4))
+            ])
+
+    f = open(''.join(['dat/quenching_fraction', tau_str, '_nsnap', str(child_cq.nsnap), '.dat']), 'w')
+    f.write('# mass, f_quenching\n')
 
     for i_m in xrange(mass_bins.nbins):              
 
-        quench_index += quenching_galaxies_massbin(
+        quench_is, f_quenching = quenching_galaxies_massbin(
                 child_cq, 
                 child_cq.t_cosmic - parent_cq.t_cosmic, 
                 descendant_tcosmic - parent_cq.t_cosmic, 
@@ -332,6 +346,11 @@ def evolve_onestep(parent_cq, child_cq, predict_step = 3, quiet=False):
                 quiet=quiet
                 )
 
+        quench_index += quench_is
+        f.write(
+                '\t'.join([str(mass_bins.mass_mid[i_m]), str(f_quenching), '\n'])
+                )
+    f.close()
     quench_index = np.array(quench_index)
 
     if len(quench_index) != 0:
@@ -397,14 +416,15 @@ def quenching_galaxies_massbin(cenque, delta_t_cosmic, descendant_t, m_bin_mid, 
         raise ValueError()
 
     if (ngal == 0) or (ngal_sf == 0):
-        return [] 
+        return [], 0.0
 
     # number of SF galaxies that need to be quenched 
     if ngal2quench <= 0: 
+        f_quenching = 0.0
         # quenching, overshot in previous snapshot  move onto next mass bin 
         if not quiet: 
             print "No SF galaxies need to be quenched"
-        return [] 
+        return [], f_quenching
 
     if not quiet: 
         print '--------------------------------------------------------------------------------'
@@ -471,7 +491,7 @@ def quenching_galaxies_massbin(cenque, delta_t_cosmic, descendant_t, m_bin_mid, 
 
     if f_quenching <= 0.0: 
         f_quenching = 0.0
-        return []
+        return [], f_quenching
     elif f_quenching > 1.0: 
         f_quenching = 1.0 
     
@@ -479,7 +499,7 @@ def quenching_galaxies_massbin(cenque, delta_t_cosmic, descendant_t, m_bin_mid, 
             sf_indices, 
             int(np.rint(f_quenching * np.float(ngal_sf))) 
             )
-    return quench_index
+    return quench_index, f_quenching
 
 def parent_children_match(parent_snap_index, child_parent_snap_index):
     """ Match snapshot index of parents to the parent snapshot index of
@@ -526,16 +546,9 @@ if __name__=='__main__':
     blah.readin()
     blah = evolve_cq(
             blah, 
-            tau_prop = {'name': 'line', 'fid_mass': 10.75, 'slope': -0.6, 'yint': 0.6}, 
+            tau_prop = {'name': 'instant'}, 
             quiet=True, 
             writeout=True
             )
-    
-    blah = CenQue(n_snap=13, cenque_type='sf_assigned')
-    blah.readin()
-    blah = evolve_cq(
-            blah, 
-            tau_prop = {'name': 'line', 'fid_mass': 10.75, 'slope': -0.57, 'yint': 0.5}, 
-            quiet=True, 
-            writeout=True
-            )
+
+    #{'name': 'line', 'fid_mass': 10.75, 'slope': -0.45, 'yint': 0.7}, 

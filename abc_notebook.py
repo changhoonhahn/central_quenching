@@ -123,7 +123,7 @@ def plot_thetas(theta , w , t):
     plt.close()
     np.savetxt("theta_t"+str(t)+".dat" , theta.T)
     
-    np.savetxt("theta_t"+str(t)+".dat" , w.T)
+    np.savetxt("w_t"+str(t)+".dat" , w.T)
 
 def initial_pool_sampling(i_particle): 
     """ Sample theta_star from prior distribution for the initial pool
