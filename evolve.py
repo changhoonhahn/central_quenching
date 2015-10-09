@@ -546,9 +546,10 @@ if __name__=='__main__':
     blah.readin()
     blah = evolve_cq(
             blah, 
-            tau_prop = {'name': 'instant'}, 
+            tau_prop = {'name': 'line', 'fid_mass': 10.75, 'slope': -0.45, 'yint': 0.7},
             quiet=True, 
             writeout=True
             )
 
-    #{'name': 'line', 'fid_mass': 10.75, 'slope': -0.45, 'yint': 0.7}, 
+    #        {'name': 'instant'}, 
+     
