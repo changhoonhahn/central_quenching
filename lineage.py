@@ -3,8 +3,9 @@
 Lineage CenQue object ancestor and descendants
 
 """
-import time
+import os
 import json 
+import h5py
 import random 
 import numpy as np
 import warnings
@@ -287,18 +288,3 @@ class Lineage(object):
         f.close() 
 
         return None 
-
-
-
-
-
-
-if __name__=="__main__":
-
-    line = Lineage(nsnap_ancestor = 13, nsnap_descendant = 1)
-    line.ancestor()
-    line.descend()
-    line.writeout()
-
-    line = Lineage(nsnap_ancestor = 13, nsnap_descendant = 1)
-    line.readin()
