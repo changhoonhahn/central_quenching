@@ -20,7 +20,6 @@ def assign_sfr(
         cenque, 
         sf_prop={'name': 'average'}, 
         fq_prop={'name': 'wetzelsmooth'}, 
-        tau_prop={'name': 'instant'}, 
         quiet=True, 
         **kwargs
         ):
@@ -68,14 +67,6 @@ def assign_sfr(
         if cenque.fq_prop != fq_prop:
             warnings.warn("fQ properties do not match")
     
-    if 'tau_prop' not in cenque.__dict__.keys():
-        cenque.tau_prop = tau_prop 
-    else: 
-        if cenque.tau_prop != tau_prop:
-            warnings.warn("tau properties do not match")
-
-        tau_prop = cenque.tau_prop
-    
     mass_bins = cenque.mass_bins
     mass_bin_low  = mass_bins.mass_low
     mass_bin_mid  = mass_bins.mass_mid
@@ -93,7 +84,11 @@ def assign_sfr(
 
     ngal_tot = len(within_massbin_with_child[0])
 
-    for attrib in ['gal_type', 'sfr', 'ssfr', 'tau', 'q_ssfr']: 
+    for attrib in ['sf_prop', 'fq_prop']:
+        if attrib not in cenque.metadata: 
+            cenque.metadata.append(attrib)
+
+    for attrib in ['gal_type', 'sfr', 'ssfr']: 
         if attrib not in cenque.data_columns: 
             cenque.data_columns.append(attrib)
 
@@ -101,8 +96,6 @@ def assign_sfr(
         cenque.gal_type = np.array(['' for i in xrange(ngal_tot)], dtype='|S16') 
         cenque.sfr      = np.array([-999. for i in xrange(ngal_tot)]) 
         cenque.ssfr     = np.array([-999. for i in xrange(ngal_tot)]) 
-        cenque.q_ssfr   = np.array([-999. for i in xrange(ngal_tot)]) 
-        cenque.tau      = np.array([-999. for i in xrange(ngal_tot)]) 
     
     # simplest SFR assignment for starforming galaxies. Use mu_SFR(M*, z)
     # and randomly sampled normal delta_SFR. 
@@ -226,6 +219,7 @@ def assign_sfr(
     
     if not quiet: 
         print 'Assign SFR function takes', (time.time()-start_time)/60.0, ' minutes'
+
     if 'evol_from' in cenque.cenque_type: 
         pass
     else: 
@@ -233,10 +227,17 @@ def assign_sfr(
 
     return cenque
 
-
 """
 Attempt at adding the green valley to the assign SFR code. 
 ----------------------------------------------------------
+    if 'tau_prop' not in cenque.__dict__.keys():
+        cenque.tau_prop = tau_prop 
+    else: 
+        if cenque.tau_prop != tau_prop:
+            warnings.warn("tau properties do not match")
+
+        tau_prop = cenque.tau_prop
+    
     if 'prev_fquenching' not in cenque.__dict__.keys():
         cenque.prev_fquenching = 0.01*(mass_bin_mid - 9.2)
         #0.03*(mass_bin_mid - 9.4)

@@ -11,24 +11,13 @@ import numpy as np
 import warnings
 
 from cenque import CenQue
-from util import cenque_utility as util
 from assign_sfr import assign_sfr
-from quiescent_fraction import get_fq
-from quiescent_fraction import get_fq_nsnap
-from util.gal_classify import sfr_cut 
-from util.gal_classify import sfq_classify
-from sfms.fitting import get_param_sfr_mstar_z
-from util.tau_quenching import get_quenching_efold
 
-def evolve_cq( 
-        nsnap_0 = 13, 
-        nsnap_f = 1,
-        quiet = True, 
-        **kwargs
-        ): 
-    """ Evolve SF properties and stellar mass properties of galaxies 
-    in the CenQue class object over cosmic time until final_nsnap.
-    
+def ancestor_finder(nsnap_0 = 13, nsnap_f = 1, quiet = True, **kwargs): 
+    """ Match SF assigned ancestor at specified initial snapshot 
+    nsnap_0 to descendants at snapshot nsnap_f. Both ancestor and
+    descendant information is written to file.
+
     ----------------------------------------------------------------
     Parameters
     ----------------------------------------------------------------
@@ -47,9 +36,14 @@ def evolve_cq(
     if not quiet: 
         evo_start_time = time.time()
 
-    original_cq = CenQue() 
-    original_cq.import_treepm(nsnap_0) 
-
+    original_cq = CenQue(n_snap = nsnap_0) 
+    original_cq.cenque_type = 'sf_assigned'
+    if os.path.isfile(original_cq.file()): 
+        original_cq.readin()
+    else: 
+        original_cq.import_treepm(nsnap_0)
+        original_cq = assign_sfr(original_cq)
+    
     parent_cq = original_cq
 
     for i_snap in range(nsnap_f, nsnap_0)[::-1]:    
@@ -68,13 +62,25 @@ def evolve_cq(
     
     if not quiet: 
         print 'Total Evolution takes ', time.time() - evo_start_time
+
     has_ancestor = np.where(child_cq.ancestor13_index >= 0)
-    ancestor, descendant = parent_children_match(original_cq.snap_index, child_cq.ancestor13_index[has_ancestor])
+    ancestor, descend = parent_children_match(original_cq.snap_index, child_cq.ancestor13_index[has_ancestor])
+
+    descendant = has_ancestor[0][descend]
+
+    for metadatum in original_cq.metadata:
+        print metadatum 
+        print getattr(original_cq, metadatum)
+
+    print original_cq.data_columns
+    #print original_cq.gal_type
+    #print original_cq.sfr
 
     print original_cq.snap_index[ancestor]
-    print child_cq.ancestor13_index[has_ancestor[0][descendant]]
+    print child_cq.ancestor13_index[descendant]
     print original_cq.mass[ancestor]
-    print child_cq.mass[has_ancestor[0][descendant]]
+    print child_cq.mass[descendant]
+
     return child_cq 
 
 def evolve_onestep(parent_cq, child_cq, nsnap_0 = 13, quiet=False):
@@ -139,7 +145,4 @@ def parent_children_match(parent_snap_index, child_parent_snap_index):
     return parents, children 
 
 if __name__=='__main__': 
-    evolve_cq( 
-        nsnap_0 = 13, 
-        nsnap_f = 1
-        )
+    ancestor_finder(nsnap_0 = 13, nsnap_f = 1)

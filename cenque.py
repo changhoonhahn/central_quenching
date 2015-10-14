@@ -12,6 +12,7 @@ import random
 import h5py
 import time
 import os 
+import json 
 
 #---- Local ----
 from assign_sfr import assign_sfr 
@@ -76,8 +77,7 @@ class CenQue:
         grp = f['cenque_data'] 
 
         self.data_columns = ['mass', 'halo_mass', 'parent', 'child', 'ilk', 'snap_index', 'pos']
-        self.cenque_type = 'treepm_import'
-
+        
         self.mass = grp['mass'][:] 
         self.parent = grp['parent'][:]
         self.child = grp['child'][:]
@@ -89,15 +89,18 @@ class CenQue:
         # maximum halo mass from halo merger tree.
         # this halo mass is used for SHAM rather
         self.halo_mass = grp['halo.m.max'][:]       
-
+    
+        # Meta data of snapshot 
+        self.metadata = [ 'nsnap', 'zsnap', 't_cosmic', 't_step', 'cenque_type']
         # get snapshot redshift/cosmic time data using Andrew's table
         n_snaps, z_snap, t_snap, t_wid = np.loadtxt('snapshot_table.dat', 
                 unpack=True, usecols=[0, 2, 3, 4])
-
+    
         self.nsnap = nsnap 
         self.zsnap = z_snap[(n_snaps.tolist()).index(nsnap)]        # redshift of snapshot
         self.t_cosmic = t_snap[(n_snaps.tolist()).index(nsnap)] # t_cosmic of snapshot 
         self.t_step = t_wid[(n_snaps.tolist()).index(nsnap)]    # Gyrs until next snapshot
+        self.cenque_type = 'treepm_import'
 
         #print "import_treepm takes ", time.time() - start_time
 
@@ -134,12 +137,33 @@ class CenQue:
 
         grp = f['cenque_data']
 
-        # save meta data first
+        # read in meta data first
         for i_meta, metadatum in enumerate(grp.attrs.keys()): 
-            setattr(self, metadatum, (grp.attrs.values())[i_meta]) 
+            if isinstance((grp.attrs.values())[i_meta], str):
+                try: 
+                    json_dict = json.load((grp.attrs.values())[i_meta])
+                    setattr(self, metadatum, json_dict) 
+                except ValueError: 
+                    setattr(self, metadatum, (grp.attrs.values())[i_meta]) 
+            else:  
+                setattr(self, metadatum, (grp.attrs.values())[i_meta]) 
+
+        self.metadata = grp.attrs.keys()
 
         for i_col, column in enumerate(grp.keys()): 
             setattr(self, column, grp[column][:])
+
+        if self.cenque_type == 'treepm_import': 
+            self.data_columns = [
+                    'mass', 'halo_mass', 'parent', 'child', 'ilk', 'snap_index', 'pos'
+                    ]
+        elif self.cenque_type == 'sf_assigned': 
+            self.data_columns = [
+                    'mass', 'halo_mass', 'parent', 'child', 'ilk', 'snap_index', 'pos', 
+                    'gal_type', 'sfr', 'ssfr'
+                    ]
+        else: 
+            raise NotImplementedError
         
         #if 'sham_mass' not in grp.keys(): 
         #    setattr(self, 'sham_mass', grp['mass'][:])
@@ -168,9 +192,11 @@ class CenQue:
             grp.create_dataset( column, data=column_attr ) 
         
         # save metadata 
-        metadata = [ 'nsnap', 'zsnap', 't_cosmic', 't_step' ]
-        for metadatum in metadata: 
-            grp.attrs[metadatum] = getattr(self, metadatum) 
+        for metadatum in self.metadata: 
+            if isinstance(getattr(self, metadatum), dict): 
+                grp.attrs[metadatum] = json.dumps(getattr(self, metadatum))
+            else: 
+                grp.attrs[metadatum] = getattr(self, metadatum) 
         
         f.close()  
         return None 
@@ -214,18 +240,19 @@ class CenQue:
                 fq_str += 'wetzelsmooth' 
             fq_str +='_fq'
 
-            if self.tau_prop['name'] in ('instant', 'constant', 'satellite', 'long'): 
-                tau_str = ''.join(['_', self.tau_prop['name'], 'tau'])
-            elif self.tau_prop['name'] in ('line'):
-                tau_str = ''.join([
-                    '_', self.tau_prop['name'], 'tau', 
-                    '_Mfid', str(self.tau_prop['fid_mass']), 
-                    '_slope', str(round(self.tau_prop['slope'], 4)), 
-                    '_yint', str(round(self.tau_prop['yint'],4))
-                    ])
+            #if self.tau_prop['name'] in ('instant', 'constant', 'satellite', 'long'): 
+            #    tau_str = ''.join(['_', self.tau_prop['name'], 'tau'])
+            #elif self.tau_prop['name'] in ('line'):
+            #    tau_str = ''.join([
+            #        '_', self.tau_prop['name'], 'tau', 
+            #        '_Mfid', str(self.tau_prop['fid_mass']), 
+            #        '_slope', str(round(self.tau_prop['slope'], 4)), 
+            #        '_yint', str(round(self.tau_prop['yint'],4))
+            #        ])
 
             # combine specifiers
-            file_type_str = ''.join([tau_str, fq_str, sfr_str])
+            file_type_str = ''.join([fq_str, sfr_str])
+            #file_type_str = ''.join([tau_str, fq_str, sfr_str])
                 
         elif 'evol_from' in self.cenque_type:
             # Cenque Object evolved from some n_snap 
