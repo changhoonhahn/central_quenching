@@ -13,12 +13,14 @@ import warnings
 # --- Local ----
 from quiescent_fraction import get_fq
 from util import cenque_utility as util
+from util.tau_quenching import get_quenching_efold
 from sfms.fitting import get_param_sfr_mstar_z
 
 def assign_sfr(
         cenque, 
         sf_prop={'name': 'average'}, 
         fq_prop={'name': 'wetzelsmooth'}, 
+        tau_prop={'name': 'instant'}, 
         quiet=True, 
         **kwargs
         ):
@@ -65,6 +67,14 @@ def assign_sfr(
         if cenque.fq_prop != fq_prop:
             warnings.warn("fQ properties do not match")
     
+    if 'tau_prop' not in cenque.__dict__.keys():
+        cenque.tau_prop = tau_prop 
+    else: 
+        if cenque.tau_prop != tau_prop:
+            warnings.warn("tau properties do not match")
+
+        tau_prop = cenque.tau_prop
+    
     mass_bins = cenque.mass_bins
     mass_bin_low  = mass_bins.mass_low
     mass_bin_mid  = mass_bins.mass_mid
@@ -82,14 +92,16 @@ def assign_sfr(
 
     ngal_tot = len(within_massbin_with_child[0])
 
-    for attrib in ['gal_type', 'sfr', 'ssfr']: 
+    for attrib in ['gal_type', 'sfr', 'ssfr', 'tau', 'q_ssfr']: 
         if attrib not in cenque.data_columns: 
             cenque.data_columns.append(attrib)
 
     if cenque.gal_type is None:         
         cenque.gal_type = np.array(['' for i in xrange(ngal_tot)], dtype='|S16') 
-        cenque.sfr = np.array([-999. for i in xrange(ngal_tot)]) 
-        cenque.ssfr = np.array([-999. for i in xrange(ngal_tot)]) 
+        cenque.sfr      = np.array([-999. for i in xrange(ngal_tot)]) 
+        cenque.ssfr     = np.array([-999. for i in xrange(ngal_tot)]) 
+        cenque.q_ssfr   = np.array([-999. for i in xrange(ngal_tot)]) 
+        cenque.tau      = np.array([-999. for i in xrange(ngal_tot)]) 
     
     # simplest SFR assignment for starforming galaxies. Use mu_SFR(M*, z)
     # and randomly sampled normal delta_SFR. 
@@ -122,11 +134,21 @@ def assign_sfr(
                 )[0]
             for i_m in xrange(mass_bins.nbins)
             ]
+    if 'prev_fquenching' not in cenque.__dict__.keys():
+        cenque.prev_fquenching = 0.01*(mass_bin_mid - 9.2)
+        #0.03*(mass_bin_mid - 9.4)
+        #0.001+0.0*mass_bin_mid #* (mass_bin_mid - 9.4)
+
+        f_g = (0.1/2.3) * (mass_bin_mid - 9.2) #1.5 * 0.1 + 0.0 * mass_bin_mid  #0.01*(mass_bin_mid - 9.0)#cenque.prev_fquenching
+        f_g[np.isnan(f_g)] = 0.0
+    else: 
+        f_g = 0.0
 
     # Ngal(M_mid), Ngal,Q(M_mid) and Ngal,SF(M_mid)
     ngal_massbin = np.array([x.size for x in massbin_unassigned])
-    ngal_q_massbin = np.rint(qf_massbin * ngal_massbin.astype(float)).astype(int)
-    ngal_sf_massbin = ngal_massbin - ngal_q_massbin
+    ngal_g_massbin = np.rint(f_g * ngal_massbin.astype(float)).astype(int)
+    ngal_q_massbin = np.rint(qf_massbin * (ngal_massbin - ngal_g_massbin).astype(float)).astype(int)
+    ngal_sf_massbin = ngal_massbin - ngal_g_massbin - ngal_q_massbin
     # fail-safe for ngal_q_massbin
     if len(np.where(ngal_q_massbin > ngal_massbin)[0]) > 0: 
         ngal_q_massbin[np.where(ngal_q_massbin > ngal_massbin)] = ngal_massbin[np.where(ngal_q_massbin > ngal_massbin)]
@@ -146,6 +168,7 @@ def assign_sfr(
         np.random.seed()
         np.random.shuffle(shuffled_massbin_index)
         i_q_end = ngal_q_massbin[i_m]
+        i_sf_end = ngal_q_massbin[i_m] + ngal_sf_massbin[i_m]
         
         # Randomly select ngal_q_massbin quiescent galaxies from the 
         # massbin. Assign them 'quiescent' gal_type and sSFR and SFR 
@@ -175,7 +198,7 @@ def assign_sfr(
         # them 'star-forming' gal_type and sSFR and SFR in some manner
         if ngal_sf_massbin[i_m] > 0: 
 
-            sf_massbin = shuffled_massbin_index[i_q_end:]
+            sf_massbin = shuffled_massbin_index[i_q_end:i_sf_end]
             i_sf_massbin = (massbin_unassigned[i_m])[sf_massbin]
             
             cenque.gal_type[i_sf_massbin] = 'star-forming'
@@ -185,6 +208,8 @@ def assign_sfr(
 
                 mu_sf_sfr = sfr_mstar_z(mass_bin_mid[i_m], cenque.zsnap)
                 sigma_sf_sfr = sig_sfr_mstar_z(mass_bin_mid[i_m], cenque.zsnap)
+
+                mu_sf_ssfr = mu_sf_sfr - mass_bin_mid[i_m]
                 
                 cenque.delta_sfr[i_sf_massbin] = sigma_sf_sfr * np.random.randn(ngal_sf_massbin[i_m])
 
@@ -195,26 +220,29 @@ def assign_sfr(
                     print 'Average(SFR) = ', mu_sf_sfr, ' sigma(SFR) = ', sigma_sf_sfr 
             
             else:
-                raise NotImplementedError()
-                """
-                # Fluctuating SFR with random amplitude, frequency, and phase 
-
-                # sfr amplitude, frequency and phase respectively 
-                self.sfr_amp[mass_bin_sf_index] = \
-                        sf_sig_sfr * np.random.randn(mass_bin_n_sf) 
-                self.sfr_freq[mass_bin_sf_index] = \
-                        (2.0 * np.pi)/np.random.uniform(0.01, 0.1, mass_bin_n_sf)  
-                self.sfr_phase[mass_bin_sf_index] = \
-                        np.random.uniform(0.0, 1.0, mass_bin_n_sf)
-
-                self.sfr[mass_bin_sf_index] = util.sfr_squarewave(
-                        self.mass[mass_bin_sf_index], self.t_cosmic, 
-                        amp = self.sfr_amp[mass_bin_sf_index], 
-                        freq = self.sfr_freq[mass_bin_sf_index], 
-                        phase = self.sfr_phase[mass_bin_sf_index])
-                """
+                raise NotImplementedError
 
             cenque.ssfr[i_sf_massbin] = cenque.sfr[i_sf_massbin] - cenque.mass[i_sf_massbin]
+
+        # artificial green valley 
+        if ngal_g_massbin[i_m] > 0: 
+            g_massbin = shuffled_massbin_index[i_sf_end:]
+            i_g_massbin = (massbin_unassigned[i_m])[g_massbin]
+            
+            cenque.gal_type[i_g_massbin] = 'quiescent'
+
+            mu_q_ssfr = util.get_q_ssfr_mean(cenque.mass[i_g_massbin]) 
+            #mu_g_ssfr = 0.5 * (mu_q_ssfr + mu_sf_ssfr)
+            #sigma_g_ssfr = (mu_sf_ssfr - mu_q_ssfr)/3.
+        
+            #cenque.ssfr[i_g_massbin] = sigma_g_ssfr * np.random.randn(ngal_g_massbin[i_m]) + mu_g_ssfr 
+            #cenque.sfr[i_g_massbin]  = cenque.ssfr[i_g_massbin] + cenque.mass[i_g_massbin]
+            
+            cenque.ssfr[i_g_massbin] = (mu_sf_ssfr - mu_q_ssfr) * np.random.uniform(size=len(mu_q_ssfr)) + mu_q_ssfr
+            cenque.sfr[i_g_massbin]  = cenque.ssfr[i_g_massbin] + cenque.mass[i_g_massbin]
+
+            cenque.tau[i_g_massbin] = get_quenching_efold(cenque.mass[i_g_massbin], tau_param = tau_prop)
+            cenque.q_ssfr[i_g_massbin] = 0.18 * np.random.randn(ngal_g_massbin[i_m]) + mu_q_ssfr 
     
     # double check that SF assign didn't fail anywhere
     assign_fail = np.where(

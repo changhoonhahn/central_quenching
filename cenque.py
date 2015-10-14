@@ -11,6 +11,7 @@ import numpy as np
 import random
 import h5py
 import time
+import os 
 
 #---- Local ----
 from assign_sfr import assign_sfr 
@@ -123,6 +124,11 @@ class CenQue:
         '''
 
         cq_file = self.file() 
+        if os.path.isfile(cq_file): 
+            pass
+        else: 
+            raise ValueError(cq_file+' does not exist') 
+
         f = h5py.File(cq_file, 'r') 
         #print 'Reading ', cq_file 
 
@@ -191,6 +197,8 @@ class CenQue:
                 self.sf_prop = {'name': 'average'}
             if 'fq_prop' not in self.__dict__.keys():
                 self.fq_prop = {'name': 'wetzelsmooth'}
+            if 'tau_prop' not in self.__dict__.keys():
+                self.tau_prop = {'name': 'instant'}
             if 'mass_evol' not in self.__dict__.keys():
                 self.mass_evol = 'sham'
 
@@ -206,8 +214,18 @@ class CenQue:
                 fq_str += 'wetzelsmooth' 
             fq_str +='_fq'
 
+            if self.tau_prop['name'] in ('instant', 'constant', 'satellite', 'long'): 
+                tau_str = ''.join(['_', self.tau_prop['name'], 'tau'])
+            elif self.tau_prop['name'] in ('line'):
+                tau_str = ''.join([
+                    '_', self.tau_prop['name'], 'tau', 
+                    '_Mfid', str(self.tau_prop['fid_mass']), 
+                    '_slope', str(round(self.tau_prop['slope'], 4)), 
+                    '_yint', str(round(self.tau_prop['yint'],4))
+                    ])
+
             # combine specifiers
-            file_type_str = ''.join([fq_str, sfr_str])
+            file_type_str = ''.join([tau_str, fq_str, sfr_str])
                 
         elif 'evol_from' in self.cenque_type:
             # Cenque Object evolved from some n_snap 

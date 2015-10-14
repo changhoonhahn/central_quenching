@@ -85,8 +85,6 @@ def evolve_cq(
         child_cq.fq_prop = fq_prop
         child_cq.tau_prop = tau_prop
         child_cq.mass_evol = mass_evol
-        
-        child_cq.prev_fquenching = parent_cq.prev_fquenching
 
         child_cq = evolve_onestep(parent_cq, child_cq, quiet=quiet)
         
@@ -310,26 +308,10 @@ def evolve_onestep(parent_cq, child_cq, predict_step = 3, quiet=False):
             len(sf_massbin_indices[i_m]) 
             for i_m in xrange(mass_bins.nbins)
             ]
-    
-    # quiescent + quenching galaxies
-    q_massbin_indices = [ 
-            (mass_bin_indices[i_m][0])[np.where(child_galtype_list[i_m] == 'quiescent')]
-            for i_m in xrange(mass_bins.nbins)
-            ]
-    ngal_q_obs = [ 
-            len(np.where(sfq_classify(
-                child_cq.mass[q_massbin_index], 
-                child_cq.sfr[q_massbin_index], 
-                child_cq.zsnap) == 'quiescent'
-                )[0])
-            for q_massbin_index in q_massbin_indices
-            ]
-    ngal2quench = exp_ngal_q - ngal_q_obs 
-    print ngal2quench
-    #ngal2quench = exp_ngal_q - ngal_mass_bin + ngal_sf_mass_bin 
+    ngal2quench = exp_ngal_q - ngal_mass_bin + ngal_sf_mass_bin 
     
     exp_exp_ngal_q = np.rint( descendant_fq * ngal_mass_bin ).astype(int)
-    ngal2quenchfuture = exp_exp_ngal_q - ngal_q_obs 
+    ngal2quenchfuture = exp_exp_ngal_q - ngal_mass_bin + ngal_sf_mass_bin 
 
     quench_index = [] 
     quenching_start_time = time.time()
@@ -349,15 +331,13 @@ def evolve_onestep(parent_cq, child_cq, predict_step = 3, quiet=False):
 
     f = open(''.join(['dat/f_quenching/quenching_fraction', tau_str, '_nsnap', str(child_cq.nsnap), '.dat']), 'w')
     f.write('# mass, f_quenching\n')
-    
-    f_quenchings = [] 
+
     for i_m in xrange(mass_bins.nbins):              
 
         quench_is, f_quenching = quenching_galaxies_massbin(
                 child_cq, 
                 child_cq.t_cosmic - parent_cq.t_cosmic, 
                 descendant_tcosmic - parent_cq.t_cosmic, 
-                child_cq.prev_fquenching[i_m], 
                 mass_bins.mass_mid[i_m], 
                 mass_bin_indices[i_m], 
                 sf_massbin_indices[i_m], 
@@ -365,9 +345,6 @@ def evolve_onestep(parent_cq, child_cq, predict_step = 3, quiet=False):
                 ngal2quenchfuture[i_m], 
                 quiet=quiet
                 )
-        print mass_bins.mass_mid[i_m], f_quenching, child_cq.prev_fquenching[i_m]
-
-        f_quenchings.append(f_quenching)
 
         quench_index += quench_is
         f.write(
@@ -375,8 +352,6 @@ def evolve_onestep(parent_cq, child_cq, predict_step = 3, quiet=False):
                 )
     f.close()
     quench_index = np.array(quench_index)
-
-    child_cq.prev_fquenching = f_quenchings
 
     if len(quench_index) != 0:
 
@@ -407,7 +382,7 @@ def evolve_onestep(parent_cq, child_cq, predict_step = 3, quiet=False):
     if not quiet: 
         orphan_time = time.time()
         print len(child_cq.gal_type[child_cq.gal_type == '']), ' child galaxies are orphans' 
-    child_cq = assign_sfr(child_cq, tau_prop = child_cq.tau_prop, quiet=quiet)
+    child_cq = assign_sfr(child_cq, quiet=quiet)
 
     if len(child_cq.gal_type[child_cq.gal_type == '']) != 0:
         print len(child_cq.gal_type[child_cq.gal_type == '']), ' child galaxies are orphans' 
@@ -430,7 +405,7 @@ def evolve_onestep(parent_cq, child_cq, predict_step = 3, quiet=False):
 
     return child_cq
 
-def quenching_galaxies_massbin(cenque, delta_t_cosmic, descendant_t, prev_f_quenching, m_bin_mid, indices, sf_indices, ngal2quench, ngal2quench_future, quiet=False):
+def quenching_galaxies_massbin(cenque, delta_t_cosmic, descendant_t, m_bin_mid, indices, sf_indices, ngal2quench, ngal2quench_future, quiet=False):
     """ Select which star-forming galaxies to quench in a specified mass bin 
     """
 
@@ -438,17 +413,18 @@ def quenching_galaxies_massbin(cenque, delta_t_cosmic, descendant_t, prev_f_quen
     ngal_sf = len(sf_indices)
 
     if ngal_sf > ngal: 
-        raise ValueError
+        raise ValueError()
 
     if (ngal == 0) or (ngal_sf == 0):
         return [], 0.0
 
-    #if ngal2quench <= 0: 
-    #    f_quenching = 0.0
-    #    # quenching, overshot in previous snapshot  move onto next mass bin 
-    #    if not quiet: 
-    #        print "No SF galaxies need to be quenched"
-    #    return [], f_quenching
+    # number of SF galaxies that need to be quenched 
+    if ngal2quench <= 0: 
+        f_quenching = 0.0
+        # quenching, overshot in previous snapshot  move onto next mass bin 
+        if not quiet: 
+            print "No SF galaxies need to be quenched"
+        return [], f_quenching
 
     if not quiet: 
         print '--------------------------------------------------------------------------------'
@@ -510,23 +486,8 @@ def quenching_galaxies_massbin(cenque, delta_t_cosmic, descendant_t, prev_f_quen
             predpred_fqing = np.float(ngal2quench_future)/np.float(predpred_ngal_q)
         except ZeroDivisionError: 
             predpred_fqing = 1.0
+
     f_quenching = min(pred_fqing, predpred_fqing)
-    #f_quenching = max(min(pred_fqing, predpred_fqing), 1.1*prev_f_quenching)
-    #print pred_fqing
-    #f_quenching = max(pred_fqing, 1.1*prev_f_quenching)
-    #f_quenching = 1.3*prev_f_quenching
-
-    try: 
-        if pred_fqing/prev_f_quenching > 1.5:
-            f_quenching = 1.5*prev_f_quenching
-        elif pred_fqing/prev_f_quenching < 1.0: 
-            f_quenching = prev_f_quenching
-
-        #print pred_fqing, predpred_fqing, f_quenching
-        #print f_quenching/prev_f_quenching
-        #    f_quenching = 1.1*prev_f_quenching
-    except: 
-        pass
 
     if f_quenching <= 0.0: 
         f_quenching = 0.0
@@ -581,18 +542,14 @@ def parent_children_match(parent_snap_index, child_parent_snap_index):
     return parents, children 
 
 if __name__=='__main__': 
-    #tau_prop = {'name': 'line', 'fid_mass': 10.75, 'slope': -0.6, 'yint': 0.6}
-    tau_prop = {'name': 'satellite'}
-    blah = CenQue(n_snap=13)
-    blah.import_treepm(13)
-    blah = assign_sfr(blah, tau_prop = tau_prop)
-    blah.writeout()
+    blah = CenQue(n_snap=13, cenque_type='sf_assigned')
+    blah.readin()
     blah = evolve_cq(
-            blah, tau_prop = tau_prop,
+            blah, 
+            tau_prop = {'name': 'satellite'}, 
             quiet=True, 
             writeout=True
             )
     #       {'name': 'line', 'fid_mass': 10.75, 'slope': -0.6, 'yint': 0.6},
-    #       {'name': 'instant'}, 
-    #       {'name': 'satellite'}, 
+    #        {'name': 'instant'}, 
      
