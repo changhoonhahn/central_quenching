@@ -141,7 +141,7 @@ class CenQue:
         for i_meta, metadatum in enumerate(grp.attrs.keys()): 
             if isinstance((grp.attrs.values())[i_meta], str):
                 try: 
-                    json_dict = json.load((grp.attrs.values())[i_meta])
+                    json_dict = json.loads((grp.attrs.values())[i_meta])
                     setattr(self, metadatum, json_dict) 
                 except ValueError: 
                     setattr(self, metadatum, (grp.attrs.values())[i_meta]) 
