@@ -6,18 +6,25 @@ import time
 plt.switch_backend("Agg")
 
 from ssfr import rho_ssfr_cq_evol
+from evolve_lineage import rho_ssfr_lineage_evol
 
 
 def distance(theta, Mrcut=18): 
-    rho = rho_ssfr_cq_evol(
+    rho = rho_ssfr_lineage_evol(
         start_nsnap = 13, 
         final_nsnap = 1, 
-        sf_prop = {'name': 'average'}, 
-        fq_prop = {'name': 'wetzelsmooth'}, 
         tau_prop = {'name': 'line', 'fid_mass': 10.75, 'slope': theta[0], 'yint': theta[1]}, 
-        mass_evol = 'sham', 
         Mrcut=Mrcut
-        ) 
+        )
+    #rho = rho_ssfr_cq_evol(
+    #    start_nsnap = 13, 
+    #    final_nsnap = 1, 
+    #    sf_prop = {'name': 'average'}, 
+    #    fq_prop = {'name': 'wetzelsmooth'}, 
+    #    tau_prop = {'name': 'line', 'fid_mass': 10.75, 'slope': theta[0], 'yint': theta[1]}, 
+    #    mass_evol = 'sham', 
+    #    Mrcut=Mrcut
+    #    ) 
     return rho
 
 """covariance matrix in abc sampler"""
@@ -41,6 +48,7 @@ def covariance(theta , w , type = 'weighted'):
 
 from scipy.stats import uniform
 from scipy.stats import norm 
+
 class Prior(object): 
     def __init__(self, prior_dict): 
         self.prior_dict = prior_dict.copy()
@@ -76,8 +84,8 @@ prior_dict = {
 n_params = len(prior_dict.keys())
 prior_obj = Prior(prior_dict) 
 
-N_threads = 1
-N_particles = 20 
+N_threads = 10
+N_particles = 500
 N_iter = 30
 eps0 = 5.0
 
@@ -108,7 +116,7 @@ plot_range, plot_labels = [], []
 for key in prior_obj.ordered_keys: 
     plot_labels.append(key)
     plot_range.append([prior_dict[key]['min'], prior_dict[key]['max']])
-print plot_range
+#print plot_range
 
 def plot_thetas(theta , w , t): 
     fig = corner.corner(
@@ -119,11 +127,11 @@ def plot_thetas(theta , w , t):
         labels = plot_labels
         )
     
-    plt.savefig("theta_t"+str(t)+".png")
+    plt.savefig("dat/pmc_abc/theta_t"+str(t)+".png")
     plt.close()
-    np.savetxt("theta_t"+str(t)+".dat" , theta.T)
+    np.savetxt("dat/pmc_abc/theta_t"+str(t)+".dat" , theta.T)
     
-    np.savetxt("w_t"+str(t)+".dat" , w.T)
+    np.savetxt("dat/pmc_abc/w_t"+str(t)+".dat" , w.T)
 
 def initial_pool_sampling(i_particle): 
     """ Sample theta_star from prior distribution for the initial pool
@@ -194,7 +202,6 @@ def better_multinorm(theta_stst, theta_before, cov):
     multinorm = nrmliz * np.exp(-0.5 * np.sum( (x_mu.dot(sig_inv[None,:])[:,0,:]) * x_mu, axis=1 ) )
 
     return multinorm
-
 
 
 def importance_pool_sampling(args): 

@@ -154,6 +154,7 @@ def ssfr_cq_evol(
 
     return evolved_cq_ssfr.cenque(evolved_cq)
 
+# distance measurement between SSFR distribution data and model
 def rho_ssfr_cq_evol(
         start_nsnap = 13, 
         final_nsnap = 1, 
@@ -214,6 +215,9 @@ def rho_ssfr_cq_evol(
     return l2_ssfr
 
 if __name__ == "__main__":
+    pass
+
+"""
     print rho_ssfr_cq_evol(
         start_nsnap = 13, 
         final_nsnap = 1, 
@@ -253,3 +257,4 @@ if __name__ == "__main__":
         mass_evol = 'sham', 
         Mrcut=18
         ) 
+"""

@@ -6,6 +6,7 @@ from scipy.stats import norm
 from interruptible_pool import InterruptiblePool
 # --- Local --- 
 from ssfr import rho_ssfr_cq_evol
+from evolve_lineage import rho_ssfr_lineage_evol
 
 def covariance(theta , w , type = 'weighted'):
     """ covariance matrix in abc sampler
@@ -24,7 +25,6 @@ def covariance(theta , w , type = 'weighted'):
       tmm  = theta - mean.reshape(theta.shape[0] , 1)
       sigma2 = 1./(w.sum()) * (tmm*w[None,:]).dot(tmm.T)
       return sigma2  
-
 
 class Prior(object): 
     def __init__(self, prior_dict): 
@@ -93,15 +93,22 @@ class Prior(object):
         return p_theta 
 
 def distance(theta, Mrcut=18): 
-    rho = rho_ssfr_cq_evol(
+    rho = rho_ssfr_lineage_evol(
         start_nsnap = 13, 
         final_nsnap = 1, 
-        sf_prop = {'name': 'average'}, 
-        fq_prop = {'name': 'wetzelsmooth'}, 
         tau_prop = {'name': 'line', 'fid_mass': 10.75, 'slope': theta[0], 'yint': theta[1]}, 
-        mass_evol = 'sham', 
         Mrcut=Mrcut
-        ) 
+        )
+
+    #rho = rho_ssfr_cq_evol(
+    #    start_nsnap = 13, 
+    #    final_nsnap = 1, 
+    #    sf_prop = {'name': 'average'}, 
+    #    fq_prop = {'name': 'wetzelsmooth'}, 
+    #    tau_prop = {'name': 'line', 'fid_mass': 10.75, 'slope': theta[0], 'yint': theta[1]}, 
+    #    mass_evol = 'sham', 
+    #    Mrcut=Mrcut
+    #    ) 
     return rho
 
 def initial_pool_sampling(args):

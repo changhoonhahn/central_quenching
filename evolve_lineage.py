@@ -5,12 +5,14 @@ Evolve Lineage CenQue object ancestor and descendants
 """
 import time
 import numpy as np
-    
+
+from ssfr import Ssfr
 from cenque import CenQue
 from lineage import Lineage
 from quiescent_fraction import get_fq
 from util.cenque_utility import get_zsnap
 from plotting.plot_cenque import PlotCenque
+from sfms.fitting import get_param_sfr_mstar_z
 from util.cenque_utility import get_q_ssfr_mean
 from util.tau_quenching import get_quenching_efold
 
@@ -18,17 +20,15 @@ def evolve_lineage(
         nsnap_ancestor = 13, 
         nsnap_descendant = 1, 
         tau_prop = {'name': 'line', 'fid_mass': 10.75, 'slope': -0.6, 'yint': 0.6}, 
-        quiet = True):
-    """ Evolve lienage 
+        quiet = True, 
+        qaplot = False):
+    """ For Linage object class, evolve star forming properties of ancestors based on 
+    quenching timescale 
     """
-    start_time = time.time()
 
     # read in the lineage (< 0.05 seconds)
     bloodline = Lineage(nsnap_ancestor = nsnap_ancestor, nsnap_descendant = nsnap_descendant)
     bloodline.readin()
-
-    print 'Reading in the lineage takes', time.time() - start_time, ' seconds'
-    start_time = time.time()
     
     ancestor = bloodline.ancestor_cq 
     descendant = bloodline.descendant_cq
@@ -41,9 +41,7 @@ def evolve_lineage(
     descendant.sfr    = np.array([-999. for i in xrange(n_descendant)])
     descendant.ssfr   = np.array([-999. for i in xrange(n_descendant)])
     descendant.q_ssfr = np.array([-999. for i in xrange(n_descendant)])
-
-    #qaplot = PlotCenque()
-    #qaplot.cenque_ssfr_dist(ancestor, line_color='b')
+    
     
     q_ancestors = np.where( ancestor.gal_type == 'quiescent' )[0]
     sf_ancestors = np.where( ancestor.gal_type == 'star-forming' )[0]
@@ -52,9 +50,6 @@ def evolve_lineage(
     descendant.ssfr[q_ancestors] = ancestor.ssfr[q_ancestors]
     descendant.sfr[q_ancestors] = descendant.mass[q_ancestors] + descendant.ssfr[q_ancestors]
     
-    print 'Reading in the lineage takes', time.time() - start_time, ' seconds'
-    start_time = time.time()
-    
     # star-forming evolution 
     # quenching probability (just quiescent fraction)
     P_q = get_fq(
@@ -62,8 +57,6 @@ def evolve_lineage(
             lit = ancestor.fq_prop['name'])
     np.random.seed()
     randoms = np.random.uniform(0, 1, len(sf_ancestors)) 
-    print 'Reading in the lineage takes', time.time() - start_time, ' seconds'
-    start_time = time.time()
     
     # which SF galaxies are quenching or not 
     is_qing = np.where(P_q > randoms) 
@@ -77,8 +70,6 @@ def evolve_lineage(
     descendant.ssfr[sf_ancestors[is_notqing]] = \
             descendant.sfr[sf_ancestors[is_notqing]] - \
             descendant.mass[sf_ancestors[is_notqing]]
-    print 'Reading in the lineage takes', time.time() - start_time, ' seconds'
-    start_time = time.time()
 
     # star forming decendants that ARE quenching
     # determine time at which the decendant start quenching based on some PDF 
@@ -97,15 +88,13 @@ def evolve_lineage(
             tau_param = tau_prop
             )
 
-    start_time = time.time()
-    #q_ssfr_final
+    # q_ssfr_final (final quenched SSFR. This is specified due to the fact that 
+    # there's a lower bound on the SSFR)
     q_ssfr_mean = get_q_ssfr_mean(descendant.mass[sf_ancestors[is_qing]])
     descendant.q_ssfr[sf_ancestors[is_qing]] = \
             0.18 * np.random.randn(len(is_qing[0])) + q_ssfr_mean 
-
-    print 'Calculating tau takes', time.time() - start_time, ' seconds'
-    start_time = time.time()
-
+    
+    # apply SFR quenching evolution
     descendant.sfr[sf_ancestors[is_qing]] = \
             ancestor.sfr[sf_ancestors[is_qing]] + \
             0.76 * (descendant.zsnap - z_q) + \
@@ -120,23 +109,105 @@ def evolve_lineage(
     descendant.ssfr[sf_ancestors[is_qing[0][overquenched]]] =\
             descendant.q_ssfr[sf_ancestors[is_qing[0][overquenched]]]
 
-    #qaplot.cenque_ssfr_dist(descendant, line_color='r')
-    #qaplot.groupcat_ssfr_dist(Mrcut=18)
-    #plt.show()
+    if qaplot: 
+        cqplot = PlotCenque()
+        cqplot.cenque_ssfr_dist(ancestor, line_color='b')
+        cqplot.cenque_ssfr_dist(descendant, line_color='r')
+        cqplot.groupcat_ssfr_dist(Mrcut=18)
+        plt.show()
     
-    print time.time() - start_time, ' seconds'
-    return None
+    return descendant
+
+def ssfr_lineage_evol(
+        start_nsnap = 13, 
+        final_nsnap = 1, 
+        tau_prop = {'name': 'instant'}, 
+        **kwargs
+        ): 
+    """ Calculate sSFR distribution of evolved Lineage
+    """
+
+    evolved_cq = evolve_lineage(
+            nsnap_ancestor = start_nsnap, 
+            nsnap_descendant = final_nsnap, 
+            tau_prop = tau_prop
+            )
+    
+    evolved_ssfr = Ssfr()
+
+    return evolved_ssfr.cenque(evolved_cq)
+
+def rho_ssfr_lineage_evol(
+        start_nsnap = 13, 
+        final_nsnap = 1, 
+        tau_prop = {'name': 'instant'}, 
+        Mrcut=18, 
+        **kwargs
+        ): 
+    """ Compare sSFR distribution of evolved CenQue and
+    SDSS Group Catalog in the green valley
+    """
+
+    if Mrcut == 18: 
+        z_med = 0.03
+    elif Mrcut == 19: 
+        z_med = 0.05
+    elif Mrcut == 20: 
+        z_med = 0.08
+
+    evol_cq_ssfr_bin, evol_cq_ssfr_hist = ssfr_lineage_evol(
+            start_nsnap = start_nsnap, 
+            final_nsnap = final_nsnap, 
+            tau_prop = tau_prop
+            )
+
+    group_ssfr = Ssfr()
+    group_ssfr_bin, group_ssfr_hist = group_ssfr.groupcat(Mrcut=Mrcut)
+    
+    l2_ssfr = 0.0
+    for i_massbin, massbin in enumerate(group_ssfr.mass_bins): 
+
+        if not np.array_equal(evol_cq_ssfr_bin[i_massbin], group_ssfr_bin[i_massbin]):
+            raise ValueError()
+
+        # sSFR comparison range
+
+        q_ssfr_massbin = np.mean(get_q_ssfr_mean(massbin)) 
+
+        sfr_mstar_z, sig_sfr_mstar_z = get_param_sfr_mstar_z()
+
+        sf_ssfr_massbin = sfr_mstar_z(massbin[1], z_med) - massbin[1]
+
+        green_range = np.where(
+                (evol_cq_ssfr_bin[i_massbin] > q_ssfr_massbin) &
+                (evol_cq_ssfr_bin[i_massbin] < sf_ssfr_massbin)
+                )
+
+        #print np.sum((evol_cq_ssfr_hist[i_massbin][green_range] - group_ssfr_hist[i_massbin][green_range])**2)
+
+        l2_ssfr += np.sum((evol_cq_ssfr_hist[i_massbin][green_range] - group_ssfr_hist[i_massbin][green_range])**2)
+
+    return l2_ssfr
 
 if __name__=="__main__":
-    evolve_lineage(
-            nsnap_ancestor = 13, 
-            nsnap_descendant = 1, 
-            tau_prop = {'name': 'line', 'fid_mass': 10.75, 'slope': -0.6, 'yint': 0.6}, 
-            )
+    print rho_ssfr_lineage_evol( 
+            start_nsnap = 13, 
+            final_nsnap = 1, 
+            tau_prop = {'name': 'line', 'fid_mass': 10.75, 'slope': -0.6, 'yint': 0.6},
+            Mrcut=18
+            ) 
+    
+    print rho_ssfr_lineage_evol( 
+            start_nsnap = 13, 
+            final_nsnap = 1, 
+            tau_prop = {'name': 'satellite'},
+            Mrcut=18
+            ) 
 
-    evolve_lineage(
-            nsnap_ancestor = 13, 
-            nsnap_descendant = 1, 
-            tau_prop = {'name': 'satellite'}, 
-            )
+    print rho_ssfr_lineage_evol( 
+            start_nsnap = 13, 
+            final_nsnap = 1, 
+            tau_prop = {'name': 'instant'},
+            Mrcut=18
+            ) 
 
