@@ -16,7 +16,7 @@ from util.cenque_utility import intersection_index
 
 class Lineage(object): 
 
-    def __init__(self, nsnap_ancestor = 13, nsnap_descendant = 1, quiet = True, **kwargs):
+    def __init__(self, nsnap_ancestor = 13, quiet = True, **kwargs):
         """
         Class that describes the galaxy ancestors and descendants of 
         CenQue snapshots. 
@@ -25,7 +25,7 @@ class Lineage(object):
         self.kwargs = kwargs.copy()
         self.quiet = quiet
         self.nsnap_ancestor = nsnap_ancestor
-        self.nsnap_descendant = nsnap_descendant
+        #self.nsnap_descendant = nsnap_descendant
 
         self.ancestor_cq = None
         self.descendant_cq = None
@@ -52,85 +52,6 @@ class Lineage(object):
             self.ancestor_sf_prop = self.ancestor_cq.sf_prop
             self.ancestor_fq_prop = self.ancestor_cq.fq_prop
 
-        return None
-
-    def descend(self):
-        """
-        Find descendants 
-        """
-        
-        if not self.ancestor_cq: 
-            raise ValueError('specify ancestor')
-
-        parent_cq = self.ancestor_cq 
-    
-        for i_snap in range(self.nsnap_descendant, self.nsnap_ancestor)[::-1]:    
-    
-            # import CenQue object from TreePM
-            child_cq = CenQue() 
-            child_cq.import_treepm(i_snap) 
-    
-            # remove galaxies below the min and max mass
-            mass_bins = child_cq.mass_bins
-            within_massbin = np.where((child_cq.mass > min(mass_bins.mass_low))) 
-            child_cq.sample_trim(within_massbin)                   
-    
-            n_child = len(within_massbin[0])     
-            
-            if not self.quiet: 
-                print n_parent, ' parents ', n_child, ' children'
-        
-            setattr(
-                    child_cq, 
-                    'ancestor'+str(self.nsnap_ancestor)+'_index', 
-                    np.array([-999 for i in xrange(n_child)])
-                    )
-
-            # parent children match which assigns indices into dictionaries and then get dictionary values
-            parents, children = intersection_index(parent_cq.snap_index, child_cq.parent)
-
-            # Deal with parent to children inheritance (children inherit the parents' attributes)
-            try: 
-                ancestor_index = getattr(
-                        parent_cq, 
-                        'ancestor'+str(self.nsnap_ancestor)+'_index'
-                        )[parents]
-                getattr(
-                        child_cq, 
-                        'ancestor'+str(self.nsnap_ancestor)+'_index'
-                        )[children] = ancestor_index
-
-                if not self.quiet: 
-                    print ''
-                    print child_cq.nsnap, '---------' 
-                    print 'Parent with ancestors ', len(np.where(parent_cq.ancestor13_index >= 0)[0]) 
-                    print 'Children with ancestors ', len(np.where(child_cq.ancestor13_index >= 0)[0])
-                    print len(np.where(parent_cq.ancestor13_index >= 0)[0]) -\
-                            len(np.where(child_cq.ancestor13_index >= 0)[0]), ' ancestors lost'
-
-            except AttributeError: 
-
-                ancestor_index = parent_cq.snap_index[parents]
-                getattr(
-                        child_cq, 
-                        'ancestor'+str(self.nsnap_ancestor)+'_index'
-                        )[children] = ancestor_index
-
-            parent_cq = child_cq
-        
-        child_cq.data_columns.append('ancestor'+str(self.nsnap_ancestor)+'_index')
-        child_ancestor_index = getattr(child_cq, 'ancestor'+str(self.nsnap_ancestor)+'_index') 
-
-        has_ancestor = np.where(child_ancestor_index >= 0)
-        ancestor, descend = intersection_index(self.ancestor_cq.snap_index, child_ancestor_index[has_ancestor])
-
-        descendant = has_ancestor[0][descend]
-
-        # trim both ancestor and descendants to only keep ones that have lineage
-        self.descendant_cq = child_cq 
-        self.descendant_cq.sample_trim(descendant)
-        self.ancestor_cq.sample_trim(ancestor)
-        
         return None
 
     def file(self): 
@@ -173,8 +94,7 @@ class Lineage(object):
             'lineage_ancestor_', 
             str(self.nsnap_ancestor), 
             ancestor_str, 
-            '_descendant', 
-            str(self.nsnap_descendant), 
+            '_descendants', 
             '.hdf5'
             ]) 
 
@@ -190,14 +110,20 @@ class Lineage(object):
 
         f = h5py.File(output_file, 'w')    
         
-        for l_grp in ['ancestor', 'descendant']: 
+        cq_grps = ['ancestor']
+        for i_snap in xrange(1, self.nsnap_ancestor):
+            cq_grps.append('descendant_cq_snapshot'+str(i_snap))
+        
+        print cq_grps
+
+        for l_grp in cq_grps: 
             grp = f.create_group(l_grp)
 
             if l_grp == 'ancestor': 
                 grp_cq = self.ancestor_cq
-            elif l_grp == 'descendant': 
-                grp_cq = self.descendant_cq
-    
+            else: 
+                grp_cq = getattr(self, l_grp)
+            
             # data columsn
             n_cols = len(grp_cq.data_columns)      
     
@@ -288,3 +214,118 @@ class Lineage(object):
         f.close() 
 
         return None 
+
+    def descend(self):
+        """
+        Find descendants by tracking parents and children through TreePM's halos. 
+        (Really only has to run once)
+        """
+        
+        if not self.ancestor_cq: 
+            raise ValueError('specify ancestor')
+
+        parent_cq = self.ancestor_cq 
+    
+        for i_snap in range(1, self.nsnap_ancestor)[::-1]:    
+    
+            # import CenQue object from TreePM
+            child_cq = CenQue() 
+            child_cq.import_treepm(i_snap) 
+    
+            # remove galaxies below the min and max mass
+            mass_bins = child_cq.mass_bins
+            within_massbin = np.where((child_cq.mass > min(mass_bins.mass_low))) 
+            child_cq.sample_trim(within_massbin)                   
+    
+            n_child = len(within_massbin[0])     
+            
+            if not self.quiet: 
+                print n_parent, ' parents ', n_child, ' children'
+        
+            setattr(
+                    child_cq, 
+                    'ancestor'+str(self.nsnap_ancestor)+'_index', 
+                    np.array([-999 for i in xrange(n_child)])
+                    )
+
+            # parent children match which assigns indices into dictionaries and then get dictionary values
+            parents, children = intersection_index(parent_cq.snap_index, child_cq.parent)
+
+            # Deal with parent to children inheritance (children inherit the parents' attributes)
+            try: 
+                ancestor_index = getattr(
+                        parent_cq, 
+                        'ancestor'+str(self.nsnap_ancestor)+'_index'
+                        )[parents]
+                getattr(
+                        child_cq, 
+                        'ancestor'+str(self.nsnap_ancestor)+'_index'
+                        )[children] = ancestor_index
+
+                if not self.quiet: 
+                    print ''
+                    print child_cq.nsnap, '---------' 
+                    print 'Parent with ancestors ', len(np.where(parent_cq.ancestor13_index >= 0)[0]) 
+                    print 'Children with ancestors ', len(np.where(child_cq.ancestor13_index >= 0)[0])
+                    print len(np.where(parent_cq.ancestor13_index >= 0)[0]) -\
+                            len(np.where(child_cq.ancestor13_index >= 0)[0]), ' ancestors lost'
+
+            except AttributeError: 
+
+                ancestor_index = parent_cq.snap_index[parents]
+                getattr(
+                        child_cq, 
+                        'ancestor'+str(self.nsnap_ancestor)+'_index'
+                        )[children] = ancestor_index
+
+            setattr(self, 'descendant_cq_snapshot'+str(i_snap), child_cq)
+
+            parent_cq = child_cq
+        
+        child_cq.data_columns.append('ancestor'+str(self.nsnap_ancestor)+'_index')
+        child_ancestor_index = getattr(child_cq, 'ancestor'+str(self.nsnap_ancestor)+'_index') 
+
+        has_ancestor = np.where(child_ancestor_index >= 0)
+        final_descendant = child_ancestor_index[has_ancestor]
+        
+        ancestor, descend = intersection_index(
+                self.ancestor_cq.snap_index, 
+                final_descendant
+                )
+
+        for i_snap in xrange(2, self.nsnap_ancestor):    
+            child = getattr(self, 'descendant_cq_snapshot'+str(i_snap))
+            child.data_columns.append('ancestor'+str(self.nsnap_ancestor)+'_index') 
+            child_ancestor_index = getattr(child, 'ancestor'+str(self.nsnap_ancestor)+'_index') 
+
+            ancestor_prime, descend_prime = intersection_index(
+                    child_ancestor_index,
+                    final_descendant
+                    )
+            if not np.array_equal(descend, descend_prime):
+                raise ValueError
+
+            child.sample_trim(ancestor_prime)
+            setattr(self, 'descendant_cq_snapshot'+str(i_snap), child)
+        
+        descendant = has_ancestor[0][descend]
+
+        # trim both ancestor and descendants to only keep ones that have lineage
+        child_cq.sample_trim(descendant)
+        setattr(self, 'descendant_cq_snapshot1', child_cq)
+        self.ancestor_cq.sample_trim(ancestor)
+    
+        # check to make sure that all the CenQue object data columns are ordered appropriately 
+        #for i_snap in xrange(1, self.nsnap_ancestor):    
+        #    child = getattr(self, 'descendant_cq_snapshot'+str(i_snap))
+        #    print getattr(child, 'ancestor'+str(self.nsnap_ancestor)+'_index') 
+        #
+        #print self.ancestor_cq.snap_index
+        
+        return None
+
+if __name__=="__main__": 
+    bloodline = Lineage(nsnap_ancestor = 13)
+    bloodline.ancestor() 
+    bloodline.descend() 
+    bloodline.writeout()
