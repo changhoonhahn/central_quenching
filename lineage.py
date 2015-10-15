@@ -113,8 +113,6 @@ class Lineage(object):
         cq_grps = ['ancestor']
         for i_snap in xrange(1, self.nsnap_ancestor):
             cq_grps.append('descendant_cq_snapshot'+str(i_snap))
-        
-        print cq_grps
 
         for l_grp in cq_grps: 
             grp = f.create_group(l_grp)
@@ -130,13 +128,18 @@ class Lineage(object):
             for column in grp_cq.data_columns:      
                 column_attr = getattr(grp_cq, column)
                 grp.create_dataset( column, data=column_attr )     # save to h5py data group 
-        
+            
+            grp.create_dataset( 'data_columns', data=grp_cq.data_columns )   
+
             # save metadata 
             for metadatum in grp_cq.metadata: 
                 if isinstance(getattr(grp_cq, metadatum), dict): 
                     grp.attrs[metadatum] = json.dumps(getattr(grp_cq, metadatum))
                 else: 
                     grp.attrs[metadatum] = getattr(grp_cq, metadatum) 
+
+            print grp_cq.metadata 
+            grp.create_dataset( 'metadata', data=grp_cq.metadata )   
 
         f.close()  
 
@@ -163,7 +166,11 @@ class Lineage(object):
     
         f = h5py.File(lineage_file, 'r')
         
-        for l_grp in ['ancestor', 'descendant']: 
+        cq_grps = ['ancestor']
+        for i_snap in xrange(1, self.nsnap_ancestor):
+            cq_grps.append('descendant_cq_snapshot'+str(i_snap))
+        
+        for l_grp in cq_grps: 
 
             grp = f[l_grp]
             grp_cq = CenQue()
