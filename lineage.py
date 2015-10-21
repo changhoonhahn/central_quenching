@@ -30,7 +30,7 @@ class Lineage(object):
         self.ancestor_cq = None
         self.descendant_cq = None
 
-    def ancestor(self, cenque_type='sf_assigned'):
+    def ancestor(self, cenque_type='sf_assigned', clobber = False):
         """
         Specify ancestor of lineage with a CenQue obj at snapshot nsnap_ancestor. 
         """
@@ -38,15 +38,15 @@ class Lineage(object):
         self.ancestor_cq = CenQue(n_snap = self.nsnap_ancestor)
         self.ancestor_cenque_type = cenque_type 
         self.ancestor_cq.cenque_type = cenque_type 
-    
-        if os.path.isfile(self.ancestor_cq.file()): 
+        
+        if np.array([os.path.isfile(self.ancestor_cq.file()), not clobber]).all(): 
             print 'Reading ', self.ancestor_cq.file()
             self.ancestor_cq.readin()
         else: 
-            print 'Writing ', self.ancestor_cq.file()
-            self.ancestor_cq.import_treepm(nsnap_0)
+            self.ancestor_cq.import_treepm(self.nsnap_ancestor)
             if cenque_type == 'sf_assigned': 
                 self.ancestor_cq = assign_sfr(self.ancestor_cq)
+            self.ancestor_cq.writeout()
         
         if self.ancestor_cenque_type == 'sf_assigned': 
             self.ancestor_sf_prop = self.ancestor_cq.sf_prop
@@ -128,7 +128,7 @@ class Lineage(object):
             for column in grp_cq.data_columns:      
                 column_attr = getattr(grp_cq, column)
                 grp.create_dataset( column, data=column_attr )     # save to h5py data group 
-            
+
             grp.create_dataset( 'data_columns', data=grp_cq.data_columns )   
 
             # save metadata 
@@ -138,7 +138,6 @@ class Lineage(object):
                 else: 
                     grp.attrs[metadatum] = getattr(grp_cq, metadatum) 
 
-            print grp_cq.metadata 
             grp.create_dataset( 'metadata', data=grp_cq.metadata )   
 
         f.close()  
@@ -146,9 +145,11 @@ class Lineage(object):
         return None 
 
     def readin(self, 
+            nsnap_descendants, 
             ancestor_cenque_type = 'sf_assigned', 
             ancestor_sf_prop = {'name': 'average'},
-            ancestor_fq_prop = {'name': 'wetzelsmooth'}
+            ancestor_fq_prop = {'name': 'wetzelsmooth'},
+            clobber = False
             ): 
         """
         Read in the lineage h5py object 
@@ -161,13 +162,15 @@ class Lineage(object):
 
         lineage_file = self.file()   
 
-        if not os.path.isfile(lineage_file): 
-            raise ValeuError(linear_file + ' does not exist') 
+        if not np.array([os.path.isfile(lineage_file), not clobber]).all(): 
+            self.ancestor(clobber = clobber) 
+            self.descend() 
+            self.writeout()
     
         f = h5py.File(lineage_file, 'r')
         
         cq_grps = ['ancestor']
-        for i_snap in xrange(1, self.nsnap_ancestor):
+        for i_snap in nsnap_descendants:
             cq_grps.append('descendant_cq_snapshot'+str(i_snap))
         
         for l_grp in cq_grps: 
@@ -189,34 +192,15 @@ class Lineage(object):
                 else:  
                     setattr(grp_cq, metadatum, (grp.attrs.values())[i_meta]) 
 
-            grp_cq.metadata = grp.attrs.keys()
+            grp_cq.metadata = [str(key) for key in grp.attrs.keys()]
 
             for i_col, column in enumerate(grp.keys()): 
                 setattr(grp_cq, column, grp[column][:])
-
+            
             if l_grp == 'ancestor': 
-                
-                if self.ancestor_cenque_type == 'treepm_import': 
-                    grp_cq.data_columns = [
-                            'mass', 'halo_mass', 'parent', 'child', 'ilk', 'snap_index', 'pos'
-                            ]
-                elif self.ancestor_cenque_type == 'sf_assigned': 
-                    grp_cq.data_columns = [
-                            'mass', 'halo_mass', 'parent', 'child', 'ilk', 'snap_index', 'pos', 
-                            'gal_type', 'sfr', 'ssfr'
-                            ]
-                else: 
-                    raise NotImplementedError
-
-                self.ancestor_cq = grp_cq  
-
-            elif l_grp == 'descendant': 
-
-                grp_cq.data_columns = [
-                        'mass', 'halo_mass', 'parent', 'child', 'ilk', 'snap_index', 'pos'
-                        ]
-
-                self.descendant_cq = grp_cq  
+                self.ancestor_cq = grp_cq
+            else: 
+                setattr(self, l_grp, grp_cq) 
         
         f.close() 
 
@@ -332,7 +316,7 @@ class Lineage(object):
         return None
 
 if __name__=="__main__": 
-    bloodline = Lineage(nsnap_ancestor = 13)
+    bloodline = Lineage(nsnap_ancestor = 20)
     bloodline.ancestor() 
     bloodline.descend() 
     bloodline.writeout()

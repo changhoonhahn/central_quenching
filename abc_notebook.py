@@ -6,16 +6,29 @@ import time
 plt.switch_backend("Agg")
 
 from ssfr import rho_ssfr_cq_evol
-from evolve_lineage import rho_ssfr_lineage_evol
+from sf_inherit import rho_fq_ssfr_descendant
+#from evolve_lineage import rho_ssfr_lineage_evol
 
 
 def distance(theta, Mrcut=18): 
-    rho = rho_ssfr_lineage_evol(
-        start_nsnap = 13, 
-        final_nsnap = 1, 
-        tau_prop = {'name': 'line', 'fid_mass': 10.75, 'slope': theta[0], 'yint': theta[1]}, 
-        Mrcut=Mrcut
-        )
+
+    rho = rho_fq_ssfr_descendant(
+        nsnap_descendant = 1, 
+        nsnap_ancestor = 20, 
+        pq_prop = {'slope': theta[0], 'yint':theta[1]}, 
+        tau_prop = {
+            'name': 'line', 
+            'fid_mass': 11.1, 
+            'slope': theta[2], 
+            'yint': theta[3]
+            },
+        Mrcut=18)
+    #rho = rho_ssfr_lineage_evol(
+    #    start_nsnap = 13, 
+    #    final_nsnap = 1, 
+    #    tau_prop = {'name': 'line', 'fid_mass': 10.75, 'slope': theta[0], 'yint': theta[1]}, 
+    #    Mrcut=Mrcut
+    #    )
     #rho = rho_ssfr_cq_evol(
     #    start_nsnap = 13, 
     #    final_nsnap = 1, 
@@ -78,15 +91,17 @@ class Prior(object):
         return priorz
 
 prior_dict = {
-        'slope': {'shape': 'uniform', 'min': -1.5, 'max': 0.0}, 
-        'yint': {'shape': 'uniform', 'min': 0.1, 'max': 1.0}
+        'pq_slope' : {'shape': 'uniform', 'min': 0.0, 'max': 0.25}, 
+        'pq_yint' : {'shape': 'uniform', 'min': 0.0, 'max': 0.25}, 
+        'tau_slope' : {'shape': 'uniform', 'min': -1.5, 'max': 0.0}, 
+        'tau_yint': {'shape': 'uniform', 'min': 0.1, 'max': 1.0}
         }
 n_params = len(prior_dict.keys())
 prior_obj = Prior(prior_dict) 
 
 N_threads = 10
-N_particles = 500
-N_iter = 30
+N_particles = 500 
+N_iter = 100
 eps0 = 5.0
 
 def prior_sampler(): 
@@ -97,7 +112,7 @@ def prior_sampler():
     for i in xrange(n_params): 
         np.random.seed()
         theta_star[i] = prior_obj.prior()[i].rvs(size=1)[0]
-        
+
     return theta_star
 
 def pi_priors(tmp_theta): 
@@ -108,8 +123,6 @@ def pi_priors(tmp_theta):
             p_theta = prior_obj.prior()[i].pdf(tmp_theta[i])
             
     return p_theta 
-
-
 
 import corner 
 plot_range, plot_labels = [], [] 
@@ -127,7 +140,7 @@ def plot_thetas(theta , w , t):
         labels = plot_labels
         )
     
-    plt.savefig("dat/pmc_abc/theta_t"+str(t)+".png")
+    plt.savefig("figure/theta_t"+str(t)+".png")
     plt.close()
     np.savetxt("dat/pmc_abc/theta_t"+str(t)+".dat" , theta.T)
     

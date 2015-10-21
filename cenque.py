@@ -147,8 +147,8 @@ class CenQue:
                     setattr(self, metadatum, (grp.attrs.values())[i_meta]) 
             else:  
                 setattr(self, metadatum, (grp.attrs.values())[i_meta]) 
-
-        self.metadata = grp.attrs.keys()
+        
+        self.metadata = [str(key) for key in grp.attrs.keys()]
 
         for i_col, column in enumerate(grp.keys()): 
             setattr(self, column, grp[column][:])
