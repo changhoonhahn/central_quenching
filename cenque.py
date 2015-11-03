@@ -47,6 +47,7 @@ class CenQue:
             self.nsnap = self.kwargs['n_snap']
         else: 
             self.nsnap = None       # n_snapshot 
+
         self.zsnap = None           # z_snapshot
         self.t_cosmic = None    # t_cosmic for snapshot
         self.t_step = None      # t_cosmic step 

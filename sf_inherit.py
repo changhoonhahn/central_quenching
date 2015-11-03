@@ -209,100 +209,6 @@ def sf_inherit(nsnap_descendants,
     
     return bloodline 
 
-def ssfr_descendant(
-        nsnap_descendant, 
-        nsnap_ancestor = 13, 
-        pq_prop = {'slope': 0.0, 'yint': 0.0},
-        tau_prop = {'name': 'line', 'fid_mass': 10.75, 'slope': -0.6, 'yint': 0.6}, 
-        **kwargs
-        ):
-    """ SSFR distribution of specified descendant snapshot 
-    """
-
-    bloodline = sf_inherit(
-            [nsnap_descendant], 
-            nsnap_ancestor = nsnap_ancestor, 
-            pq_prop = pq_prop, 
-            tau_prop = tau_prop
-            )
-
-    descendant = getattr(bloodline, 'descendant_cq_snapshot'+str(nsnap_descendant))
-
-    ssfr = Ssfr()
-
-    return ssfr.cenque(descendant)
-
-def fq_descendant(
-        nsnap_descendant, 
-        nsnap_ancestor = 13, 
-        tau_prop = {'name': 'line', 'fid_mass': 10.75, 'slope': -0.6, 'yint': 0.6}, 
-        **kwargs
-        ):
-    """ SSFR distribution of specified descendant snapshot 
-    """
-
-    bloodline = sf_inherit(
-            [nsnap_descendant], 
-            nsnap_ancestor = nsnap_ancestor, 
-            tau_prop = tau_prop
-            )
-
-    descendant = getattr(bloodline, 'descendant_cq_snapshot'+str(nsnap_descendant))
-    
-    return cq_fq(descendant)
-
-def rho_ssfr_lineage_evol(
-        start_nsnap = 13, 
-        final_nsnap = 1, 
-        tau_prop = {'name': 'instant'}, 
-        Mrcut=18, 
-        **kwargs
-        ): 
-    """ Compare sSFR distribution of evolved CenQue and
-    SDSS Group Catalog in the green valley
-    """
-
-    if Mrcut == 18: 
-        z_med = 0.03
-    elif Mrcut == 19: 
-        z_med = 0.05
-    elif Mrcut == 20: 
-        z_med = 0.08
-
-    evol_cq_ssfr_bin, evol_cq_ssfr_hist = ssfr_lineage_evol(
-            start_nsnap = start_nsnap, 
-            final_nsnap = final_nsnap, 
-            tau_prop = tau_prop
-            )
-
-    group_ssfr = Ssfr()
-    group_ssfr_bin, group_ssfr_hist = group_ssfr.groupcat(Mrcut=Mrcut)
-    
-    l2_ssfr = 0.0
-    for i_massbin, massbin in enumerate(group_ssfr.mass_bins): 
-
-        if not np.array_equal(evol_cq_ssfr_bin[i_massbin], group_ssfr_bin[i_massbin]):
-            raise ValueError()
-
-        # sSFR comparison range
-
-        q_ssfr_massbin = np.mean(get_q_ssfr_mean(massbin)) 
-
-        sfr_mstar_z, sig_sfr_mstar_z = get_param_sfr_mstar_z()
-
-        sf_ssfr_massbin = sfr_mstar_z(massbin[1], z_med) - massbin[1]
-
-        green_range = np.where(
-                (evol_cq_ssfr_bin[i_massbin] > q_ssfr_massbin) &
-                (evol_cq_ssfr_bin[i_massbin] < sf_ssfr_massbin)
-                )
-
-        #print np.sum((evol_cq_ssfr_hist[i_massbin][green_range] - group_ssfr_hist[i_massbin][green_range])**2)
-
-        l2_ssfr += np.sum((evol_cq_ssfr_hist[i_massbin][green_range] - group_ssfr_hist[i_massbin][green_range])**2)
-
-    return l2_ssfr
-
 def rho_fq_ssfr_descendant(
         nsnap_descendant = 1, 
         nsnap_ancestor = 20, 
@@ -461,4 +367,102 @@ if __name__=="__main__":
     mu_ssfr = np.mean(np.array(ssfrs))
     std_ssfr = np.std(np.array(ssfrs))
     print mu_ssfr, std_ssfr
+
+    def rho_ssfr_lineage_evol(
+            start_nsnap = 13, 
+            final_nsnap = 1, 
+            tau_prop = {'name': 'instant'}, 
+            Mrcut=18, 
+            **kwargs
+            ): 
+         Compare sSFR distribution of evolved CenQue and
+        SDSS Group Catalog in the green valley
+
+        if Mrcut == 18: 
+            z_med = 0.03
+        elif Mrcut == 19: 
+            z_med = 0.05
+        elif Mrcut == 20: 
+            z_med = 0.08
+
+        evol_cq_ssfr_bin, evol_cq_ssfr_hist = ssfr_lineage_evol(
+                start_nsnap = start_nsnap, 
+                final_nsnap = final_nsnap, 
+                tau_prop = tau_prop
+                )
+
+        group_ssfr = Ssfr()
+        group_ssfr_bin, group_ssfr_hist = group_ssfr.groupcat(Mrcut=Mrcut)
+        
+        l2_ssfr = 0.0
+        for i_massbin, massbin in enumerate(group_ssfr.mass_bins): 
+
+            if not np.array_equal(evol_cq_ssfr_bin[i_massbin], group_ssfr_bin[i_massbin]):
+                raise ValueError()
+
+            # sSFR comparison range
+
+            q_ssfr_massbin = np.mean(get_q_ssfr_mean(massbin)) 
+
+            sfr_mstar_z, sig_sfr_mstar_z = get_param_sfr_mstar_z()
+
+            sf_ssfr_massbin = sfr_mstar_z(massbin[1], z_med) - massbin[1]
+
+            green_range = np.where(
+                    (evol_cq_ssfr_bin[i_massbin] > q_ssfr_massbin) &
+                    (evol_cq_ssfr_bin[i_massbin] < sf_ssfr_massbin)
+                    )
+
+            #print np.sum((evol_cq_ssfr_hist[i_massbin][green_range] - group_ssfr_hist[i_massbin][green_range])**2)
+
+            l2_ssfr += np.sum((evol_cq_ssfr_hist[i_massbin][green_range] - group_ssfr_hist[i_massbin][green_range])**2)
+
+        return l2_ssfr
+
+
+    def ssfr_descendant(
+            nsnap_descendant, 
+            nsnap_ancestor = 13, 
+            pq_prop = {'slope': 0.0, 'yint': 0.0},
+            tau_prop = {'name': 'line', 'fid_mass': 10.75, 'slope': -0.6, 'yint': 0.6}, 
+            **kwargs
+            ):
+        ''' SSFR distribution of specified descendant snapshot 
+        '''
+
+        bloodline = sf_inherit(
+                [nsnap_descendant], 
+                nsnap_ancestor = nsnap_ancestor, 
+                pq_prop = pq_prop, 
+                tau_prop = tau_prop
+                )
+
+        descendant = getattr(bloodline, 'descendant_cq_snapshot'+str(nsnap_descendant))
+
+        ssfr = Ssfr()
+
+        return ssfr.cenque(descendant)
+
+    def fq_descendant(
+            nsnap_descendant, 
+            nsnap_ancestor = 13, 
+            tau_prop = {'name': 'line', 'fid_mass': 10.75, 'slope': -0.6, 'yint': 0.6}, 
+            **kwargs
+            ):
+        ''' SSFR distribution of specified descendant snapshot 
+        '''
+
+        bloodline = sf_inherit(
+                [nsnap_descendant], 
+                nsnap_ancestor = nsnap_ancestor, 
+                tau_prop = tau_prop
+                )
+
+        descendant = getattr(bloodline, 'descendant_cq_snapshot'+str(nsnap_descendant))
+        
+        return cq_fq(descendant)
+
+
+
+
     """
