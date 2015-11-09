@@ -30,22 +30,26 @@ class Lineage(object):
         self.ancestor_cq = None
         self.descendant_cq = None
 
-    def ancestor(self, cenque_type='sf_assigned', clobber = False):
+    def ancestor(self, cenque_type='sf_assigned', scatter=0.0, clobber=False):
         """
         Specify ancestor of lineage with a CenQue obj at snapshot nsnap_ancestor. 
         """
 
-        self.ancestor_cq = CenQue(n_snap = self.nsnap_ancestor)
+        self.ancestor_cq = CenQue(n_snap = self.nsnap_ancestor, scatter = scatter)
         self.ancestor_cenque_type = cenque_type 
         self.ancestor_cq.cenque_type = cenque_type 
+        self.mass_scatter = scatter
         
         if np.array([os.path.isfile(self.ancestor_cq.file()), not clobber]).all(): 
             print 'Reading ', self.ancestor_cq.file()
             self.ancestor_cq.readin()
         else: 
-            self.ancestor_cq.import_treepm(self.nsnap_ancestor)
+            self.ancestor_cq.import_treepm(self.nsnap_ancestor, scatter=scatter)
             if cenque_type == 'sf_assigned': 
+                print 'Assigning SFR'
                 self.ancestor_cq = assign_sfr(self.ancestor_cq)
+                print self.ancestor_cq.avg_sfr
+
             self.ancestor_cq.writeout()
         
         if self.ancestor_cenque_type == 'sf_assigned': 
@@ -94,7 +98,9 @@ class Lineage(object):
             'lineage_ancestor_', 
             str(self.nsnap_ancestor), 
             ancestor_str, 
-            '_descendants', 
+            '_descendants',
+            '_mass_scatter', 
+            str(round(self.mass_scatter, 1)), 
             '.hdf5'
             ]) 
 
@@ -149,6 +155,7 @@ class Lineage(object):
             ancestor_cenque_type = 'sf_assigned', 
             ancestor_sf_prop = {'name': 'average'},
             ancestor_fq_prop = {'name': 'wetzelsmooth'},
+            scatter=0.0,
             clobber = False
             ): 
         """
@@ -159,6 +166,7 @@ class Lineage(object):
         if self.ancestor_cenque_type == 'sf_assigned':
             self.ancestor_sf_prop = ancestor_sf_prop
             self.ancestor_fq_prop = ancestor_fq_prop
+        self.mass_scatter = scatter
 
         lineage_file = self.file()   
 
@@ -221,7 +229,7 @@ class Lineage(object):
     
             # import CenQue object from TreePM
             child_cq = CenQue() 
-            child_cq.import_treepm(i_snap) 
+            child_cq.import_treepm(i_snap, scatter=self.mass_scatter) 
     
             # remove galaxies below the min and max mass
             mass_bins = child_cq.mass_bins
@@ -316,7 +324,8 @@ class Lineage(object):
         return None
 
 if __name__=="__main__": 
-    bloodline = Lineage(nsnap_ancestor = 20)
-    bloodline.ancestor() 
-    bloodline.descend() 
-    bloodline.writeout()
+    for scat in [0.0, 0.2]:
+        bloodline = Lineage(nsnap_ancestor = 20)
+        bloodline.ancestor(scatter = scat, clobber=True) 
+        bloodline.descend() 
+        bloodline.writeout()

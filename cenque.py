@@ -17,6 +17,7 @@ import json
 #---- Local ----
 from assign_sfr import assign_sfr 
 from util.mass_bins import simple_mass_bin
+from central_subhalo import CentralSubhalos
 
 class CenQue: 
 
@@ -48,6 +49,12 @@ class CenQue:
         else: 
             self.nsnap = None       # n_snapshot 
 
+        if 'scatter' in self.kwargs.keys(): 
+            self.mass_scatter = self.kwargs['scatter']
+        else: 
+            self.mass_scatter = None       # n_snapshot 
+
+
         self.zsnap = None           # z_snapshot
         self.t_cosmic = None    # t_cosmic for snapshot
         self.t_step = None      # t_cosmic step 
@@ -59,7 +66,7 @@ class CenQue:
         else: 
             self.cenque_type = None
 
-    def import_treepm(self, nsnap): 
+    def import_treepm(self, nsnap, scatter=0.0): 
         """ Import the following snapshot data from TreePM --> SHAM snapshots. Also imports 
         snapshot, redshift and t_cosmic metadata. 
         * SHAM stellar mass 
@@ -68,11 +75,9 @@ class CenQue:
         * halo mass 
         """
         #start_time = time.time()
-
-        snapshot_file = ''.join([
-            'dat/wetzel_tree/', 
-            'subhalo_sham_centrals_snapshot', str(nsnap), '.hdf5'
-            ]) 
+        
+        centsub = CentralSubhalos(scatter=scatter)
+        snapshot_file = centsub.file(nsnap)
 
         f = h5py.File(snapshot_file, 'r')       # read in h5py file 
         grp = f['cenque_data'] 
@@ -92,7 +97,7 @@ class CenQue:
         self.halo_mass = grp['halo.m.max'][:]       
     
         # Meta data of snapshot 
-        self.metadata = [ 'nsnap', 'zsnap', 't_cosmic', 't_step', 'cenque_type']
+        self.metadata = [ 'nsnap', 'zsnap', 't_cosmic', 't_step', 'cenque_type', 'mass_scatter']
         # get snapshot redshift/cosmic time data using Andrew's table
         n_snaps, z_snap, t_snap, t_wid = np.loadtxt('snapshot_table.dat', 
                 unpack=True, usecols=[0, 2, 3, 4])
@@ -102,6 +107,7 @@ class CenQue:
         self.t_cosmic = t_snap[(n_snaps.tolist()).index(nsnap)] # t_cosmic of snapshot 
         self.t_step = t_wid[(n_snaps.tolist()).index(nsnap)]    # Gyrs until next snapshot
         self.cenque_type = 'treepm_import'
+        self.mass_scatter = scatter
 
         #print "import_treepm takes ", time.time() - start_time
 
@@ -212,6 +218,9 @@ class CenQue:
 
         if self.cenque_type == None: 
             raise ValueError()
+
+        if self.mass_scatter == None: 
+            raise ValueError()
     
         # Cenque Object with assigned starformation properties
         if self.cenque_type == 'treepm_import':
@@ -314,6 +323,8 @@ class CenQue:
             'cenque_centrals_snapshot', 
             str(self.nsnap), 
             file_type_str, 
+            '_mass_scatter',
+            str(round(self.mass_scatter,1)),
             '.hdf5'
             ]) 
 
@@ -333,30 +344,32 @@ class CenQue:
 
         return None 
     
-def build_cenque_importsnap(): 
+def build_cenque_importsnap(snapshots, scatter = 0.0): 
     ''' Build CenQue snapshots with TreePM data imported
     
     Notes
     -----
     * pretty much hardcoded
     '''
-    for i_snap in np.arange(1, 13, 1): 
+    for i_snap in snapshots: 
         snap = CenQue() 
-        snap.ImportSnap(nsnap=i_snap)
-        snap.writeout(nsnap=i_snap)
+        snap.import_treepm(i_snap, scatter=scatter)
+        snap.writeout()
 
-def build_cenque_original(i_snap=13, **kwargs):
+def build_cenque_original(snapshot, **kwargs):
     snap = CenQue() 
     snap.AssignSFR(i_snap, **kwargs) 
     snap.writeout(nsnap=i_snap, file_type='sf assign', **kwargs)
 
-"""
 if __name__=='__main__': 
+    #build_cenque_importsnap(range(1,21), scatter = 0.2)
+
     blah = CenQue()
-    blah.import_treepm(13)
+    blah.import_treepm(20, scatter=0.2)
     blah = assign_sfr(blah)
     blah.writeout()
 
+"""
     #EvolveCenQue(13, 1, fqing_yint=-5.84, tau='instant')  
     #tau='linefit', tau_param=[-0.5, 0.4]) 
     #EvolveCenQue(13, 1, fqing_yint=-5.84, tau='linefit', tau_param=[-0.4, 0.2])

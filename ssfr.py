@@ -10,7 +10,6 @@ import numpy as np
 
 # -- Local --
 from cenque import CenQue
-from evolve import evolve_cq
 from util.cenque_utility import get_q_ssfr_mean
 from sfms.fitting import get_param_sfr_mstar_z
 from group_catalog.group_catalog import central_catalog
@@ -116,44 +115,6 @@ class Ssfr(object):
 
         return mass_bins
 
-def ssfr_cq_evol(
-        start_nsnap = 13, 
-        final_nsnap = 1, 
-        sf_prop = {'name': 'average'}, 
-        fq_prop = {'name': 'wetzelsmooth'}, 
-        tau_prop = {'name': 'instant'}, 
-        mass_evol = 'sham', 
-        **kwargs
-        ): 
-    """ Calculate sSFR distribution of evolved CenQue 
-    """
-
-    evolved_cq = CenQue(n_snap = final_nsnap, cenque_type = 'evol_from'+str(start_nsnap))
-    evolved_cq.sf_prop = sf_prop
-    evolved_cq.fq_prop = fq_prop
-    evolved_cq.tau_prop = tau_prop
-    evolved_cq.mass_evol = mass_evol
-    
-    if not os.path.isfile(evolved_cq.file()):
-        start_cq = CenQue(n_snap = start_nsnap, cenque_type = 'sf_assigned')
-        start_cq.readin()
-
-        evolved_cq = evolve_cq(
-                start_cq, 
-                final_nsnap = final_nsnap, 
-                sf_prop = sf_prop, 
-                fq_prop = fq_prop, 
-                tau_prop = tau_prop, 
-                mass_evol = mass_evol, 
-                **kwargs
-                )
-    else: 
-        evolved_cq.readin()
-
-    evolved_cq_ssfr = Ssfr()
-
-    return evolved_cq_ssfr.cenque(evolved_cq)
-
 # distance measurement between SSFR distribution data and model
 def rho_ssfr_cq_evol(
         start_nsnap = 13, 
@@ -257,4 +218,43 @@ if __name__ == "__main__":
         mass_evol = 'sham', 
         Mrcut=18
         ) 
+
+def ssfr_cq_evol(
+        start_nsnap = 13, 
+        final_nsnap = 1, 
+        sf_prop = {'name': 'average'}, 
+        fq_prop = {'name': 'wetzelsmooth'}, 
+        tau_prop = {'name': 'instant'}, 
+        mass_evol = 'sham', 
+        **kwargs
+        ): 
+    ''' Calculate sSFR distribution of evolved CenQue 
+    '''
+
+    evolved_cq = CenQue(n_snap = final_nsnap, cenque_type = 'evol_from'+str(start_nsnap))
+    evolved_cq.sf_prop = sf_prop
+    evolved_cq.fq_prop = fq_prop
+    evolved_cq.tau_prop = tau_prop
+    evolved_cq.mass_evol = mass_evol
+    
+    if not os.path.isfile(evolved_cq.file()):
+        start_cq = CenQue(n_snap = start_nsnap, cenque_type = 'sf_assigned')
+        start_cq.readin()
+
+        evolved_cq = evolve_cq(
+                start_cq, 
+                final_nsnap = final_nsnap, 
+                sf_prop = sf_prop, 
+                fq_prop = fq_prop, 
+                tau_prop = tau_prop, 
+                mass_evol = mass_evol, 
+                **kwargs
+                )
+    else: 
+        evolved_cq.readin()
+
+    evolved_cq_ssfr = Ssfr()
+
+    return evolved_cq_ssfr.cenque(evolved_cq)
+
 """

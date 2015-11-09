@@ -72,7 +72,7 @@ class CentralSubhalos:
                 sub, 
                 'm.star', 
                 scat = self.scatter, 
-                dis_mf=0.0, 
+                dis_mf = 0.0, 
                 zis = self.snapshots
                 ) 
 
@@ -126,10 +126,9 @@ class CentralSubhalos:
 
         return None
 
-
 if __name__=='__main__': 
-    censub = CentralSubhalos(scatter = 0.0)
-    #censub.build_catalogs()
+    censub = CentralSubhalos(scatter = 0.2)
+    censub.build_catalogs()
     censub.read(10)
     print censub.__dict__.keys()
     print censub.snapshot

@@ -104,8 +104,11 @@ def assign_sfr(
 
         if 'delta_sfr' not in cenque.__dict__.keys(): 
             cenque.delta_sfr = np.array([-999. for i in xrange(ngal_tot)])
+        
+        if 'avg_sfr' not in cenque.__dict__.keys(): 
+            cenque.avg_sfr = np.array([-999. for i in xrange(ngal_tot)])
 
-        extra_attr = ['delta_sfr']
+        extra_attr = ['avg_sfr', 'delta_sfr']
     else: 
         raise NotImplementedError() 
 
@@ -196,6 +199,7 @@ def assign_sfr(
 
                 mu_sf_ssfr = mu_sf_sfr - mass_bin_mid[i_m]
                 
+                cenque.avg_sfr[i_sf_massbin] = mu_sf_sfr
                 cenque.delta_sfr[i_sf_massbin] = sigma_sf_sfr * np.random.randn(ngal_sf_massbin[i_m])
 
                 cenque.sfr[i_sf_massbin] = mu_sf_sfr + cenque.delta_sfr[i_sf_massbin]
