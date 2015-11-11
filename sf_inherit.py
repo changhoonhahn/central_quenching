@@ -6,12 +6,14 @@ Lineage object ancestor for the descendant CenQue objects
 """
 import time
 import numpy as np
+from scipy import interpolate
 
 from ssfr import Ssfr
 from cenque import CenQue
 from lineage import Lineage
-# SFR evolution 
+
 import sfr_evol
+import mass_evol
 
 from plotting.plot_fq import PlotFq
 from quiescent_fraction import cq_fq
@@ -29,6 +31,7 @@ def sf_inherit(nsnap_descendants,
         pq_prop = {'slope': 0.05, 'yint': 0.0}, 
         tau_prop = {'name': 'line', 'fid_mass': 10.75, 'slope': -0.6, 'yint': 0.6}, 
         sfrevol_prop = {'name': 'notperiodic'}, 
+        massevol_prop = {'name': 'sham'}, 
         scatter = 0.0, 
         quiet = True, 
         qaplot = False,
@@ -46,6 +49,12 @@ def sf_inherit(nsnap_descendants,
     elif nsnap_descendants[0] != 1: 
         nsnap_descendants.pop(1)
         nsnap_descendants = [1] + nsnap_descendants
+    
+    # spline between z and t_cosmic
+    z, t = np.loadtxt('snapshot_table.dat', unpack=True, usecols=[2, 3]) 
+    z_of_t = interpolate.interp1d(list(reversed(t)), list(reversed(z)), kind='cubic') 
+    
+    logsfr_mstar_z, sig_logsfr_mstar_z = get_param_sfr_mstar_z()
 
     # read in the lineage (< 0.05 seconds for one snapshot)
     bloodline = Lineage(nsnap_ancestor = nsnap_ancestor)
@@ -53,6 +62,7 @@ def sf_inherit(nsnap_descendants,
 
     ancestor = bloodline.ancestor_cq    # ancestor CenQue object
     t_ancestor = ancestor.t_cosmic
+    z_ancestor = ancestor.zsnap
     
     q_ancestors = np.where(ancestor.gal_type == 'quiescent')[0]
     sf_ancestors = np.where(ancestor.gal_type == 'star-forming')[0]
@@ -71,6 +81,7 @@ def sf_inherit(nsnap_descendants,
         # descendent CenQue object
         descendant = getattr(bloodline, 'descendant_cq_snapshot'+str(nsnap_descendant))
         t_descendant = descendant.t_cosmic 
+        z_descendant = descendant.zsnap
 
         if not np.array_equal(ancestor.snap_index, getattr(descendant, 'ancestor'+str(nsnap_ancestor)+'_index')): 
             # check that lineage is properly tracked
@@ -84,8 +95,21 @@ def sf_inherit(nsnap_descendants,
     
         # quiescent evolution (ssfr reamins constant)
         descendant.ssfr[q_ancestors] = ancestor.ssfr[q_ancestors]
-        descendant.sfr[q_ancestors] = descendant.mass[q_ancestors] + descendant.ssfr[q_ancestors]
+        
+        def logsfr_quiescent(logmass, t_input):
+            return ancestor.ssfr[q_ancestors] + logmass
     
+        if massevol_prop['name'] == 'integrated': 
+            descendant.mass[q_ancestors], descendant.sfr[q_ancestors] = mass_evol.integrated_rk4(
+                    logsfr_quiescent, 
+                    ancestor.mass[q_ancestors], 
+                    t_ancestor, 
+                    t_descendant, 
+                    f_retain=massevol_prop['f_retain'], 
+                    delt = massevol_prop['t_step']
+                    )
+        #descendant.sfr[q_ancestors] = logsfr_quiescent(descendant.mass[q_ancestors], t_descendant)    
+
         if nsnap_descendant == 1: 
 
             # star-forming evolution 
@@ -115,14 +139,6 @@ def sf_inherit(nsnap_descendants,
             # Initialize SFR evolution parameters
             sfrevol_param = sfr_evol.get_sfrevol_param(len(descendant.mass), sf_ancestors, **sfrevol_prop)
 
-            ### Initialize SFR(t_cosmic) function
-            ### 
-            ### 
-            ### 
-            ### 
-            ### 
-            ### 
-
             np.random.seed()
             # cosmic time/redshift at which the SF galaxy is quenched 
             # is sampled uniformly between t_ancestor and t_nsnap=1
@@ -140,81 +156,111 @@ def sf_inherit(nsnap_descendants,
             q_ssfr_mean = get_q_ssfr_mean(descendant.mass[sf_ancestors[is_qing]])
             final_q_ssfr = 0.18 * np.random.randn(len(is_qing[0])) + q_ssfr_mean 
         
-        # star forming decendants that never quench 
-        # SFRs all evolve by 0.76 * Delta z
-
+        # star forming decendants that will quench by Snapshot 1
+        descendant.q_ssfr[sf_ancestors[is_qing]] = final_q_ssfr
+        q_started = np.where(t_q <= t_descendant)   # SF galaxies that have started quenching
+        q_notstarted = np.where(t_q > t_descendant) # SF galaxies taht have NOT started quenching
+        
+        # star forming descendants that do not quench by this snapshot 
+        if len(q_notstarted[0]) > 0:  
+            notquenched = np.concatenate([is_notqing[0], is_qing[0][q_notstarted]])
+        else: 
+            notquenched = is_notqing[0]
+        # star forming descendants that do quench by this snapshot
+        quenched = is_qing[0][q_started]
+    
+        # ---------------------------------------------------------------------------------------------------
+        # star forming descendants that DO NOT quench by this snapshot 
+        # ---------------------------------------------------------------------------------------------------
+        
         sfrevol_param_nq = []  
         for i_p in xrange(len(sfrevol_param)):
-            sfrevol_param_nq.append(sfrevol_param[i_p][sf_ancestors[is_notqing]])
+            sfrevol_param_nq.append(sfrevol_param[i_p][sf_ancestors[notquenched]])
 
-        def logsfr_nq(logmass, t_input): 
+        def logsfr_notquenched(logmass, t_input): 
             # this is a simplification. logsfr should depend on the new mass at each time step 
             # but that complicates the SF duty cycle 
-            # avglogsfr = logsfr_mstar_z(logmass, t_ancestor)    
-            avglogsfr = ancestor.avg_sfr[sf_ancestors[is_notqing]]
+            avglogsfr = ancestor.avg_sfr[sf_ancestors[notquenched]]
+            #avglogsfr = logsfr_mstar_z(logmass, z_ancestor)
 
-            logsfr_sfms = sfr_evol.logsfr_sfms_evol(t_ancestor, t_input)
+            logsfr_sfms = sfr_evol.logsfr_sfms_evol(z_ancestor, z_of_t(t_input))
+
+            #logsfr_time = time.time()
+            logsfr_sfduty = sfr_evol.logsfr_sfduty_fluct(
+                    t_ancestor, 
+                    t_input, 
+                    delta_sfr=ancestor.delta_sfr[sf_ancestors[notquenched]],
+                    sfrevol_param=sfrevol_param_nq, 
+                    **sfrevol_prop
+                    )
+            #print 'logsfduty time ', (time.time() - logsfr_time)
+
+            return avglogsfr + logsfr_sfms + logsfr_sfduty
+         
+        print 'SHAM Masses : ', descendant.mass[sf_ancestors[notquenched]]
+
+        if massevol_prop['name'] == 'integrated': 
+            #    pass
+
+            #elif massevol_prop['name'] == 'blasdlkjlaksdfja': 
+            start_time = time.time()
+
+            descendant.mass[sf_ancestors[notquenched]], descendant.sfr[sf_ancestors[notquenched]] = \
+                    mass_evol.integrated_rk4(
+                            logsfr_notquenched, 
+                            ancestor.mass[sf_ancestors[notquenched]], 
+                            t_ancestor, 
+                            t_descendant, 
+                            f_retain = massevol_prop['f_retain'], 
+                            delt = massevol_prop['t_step']
+                            )
+            print 'integration time ', (time.time() - start_time)
+        
+            print 'Integrated Masses : ', descendant.mass[sf_ancestors[notquenched]]
+        
+            print 'blah', descendant.sfr[sf_ancestors[notquenched]]
+            print 'dlah', logsfr_notquenched(descendant.mass[sf_ancestors[notquenched]], t_descendant)
+
+        elif massevol_prop['name'] == 'sham': 
+            descendant.sfr[sf_ancestors[notquenched]] = \
+                    logsfr_notquenched(
+                            descendant.mass[sf_ancestors[notquenched]], 
+                            t_descendant
+                            )
+
+        descendant.ssfr[sf_ancestors[notquenched]] = \
+                descendant.sfr[sf_ancestors[notquenched]] - \
+                descendant.mass[sf_ancestors[notquenched]]
+        
+        # ---------------------------------------------------------------------------------------------------
+        # star forming descendants that DO quench by this snapshot 
+        # ---------------------------------------------------------------------------------------------------
+        
+        sfrevol_param_q = []  
+        for i_p in xrange(len(sfrevol_param)):
+            sfrevol_param_q.append(sfrevol_param[i_p][sf_ancestors[quenched]])
+
+        def logsfr_quenched(logmass, t_input): 
+            # this is a simplification. logsfr should depend on the new mass at each time step 
+            # but that complicates the SF duty cycle 
+            avglogsfr = ancestor.avg_sfr[sf_ancestors[is_qing[0][q_started]]]
+            #avglogsfr = logsfr_mstar_z(logmass, z_ancestor)
+
+            logsfr_sfms = sfr_evol.logsfr_sfms_evol(
+                    z_ancestor, 
+                    z_of_t(t_input), 
+                    z_q = z_of_t(t_q[q_started])
+                    )
 
             logsfr_sfduty = sfr_evol.logsfr_sfduty_fluct(
                     t_ancestor, 
                     t_input, 
-                    delta_sfr=ancestor.delta_sfr[sf_ancestors[is_notqing]],
-                    sfrevol_param=sfrevol_param_nq, 
+                    t_q = t_q[q_started], 
+                    delta_sfr=ancestor.delta_sfr[sf_ancestors[quenched]],
+                    sfrevol_param=sfrevol_param_q, 
                     **sfrevol_prop
                     )
 
-            return avglogsfr + logsfr_sfms + logsfr_sfduty
-        
-        descendant.sfr[sf_ancestors[is_notqing]] = \
-                sfr_evol.sfr_evol(
-                        t_cosmic = t_descendant - t_ancestor, 
-                        indices = sf_ancestors[is_notqing], 
-                        sfrevol_param = sfrevol_param, 
-                        ancestor_sfr = ancestor.sfr, 
-                        ancestor_delta_sfr = ancestor.delta_sfr, 
-                        **sfrevol_prop
-                        ) + \
-                                0.76 * (descendant.zsnap - ancestor.zsnap) 
-        print ''
-        print 'Not Quenching'
-        print len(descendant.sfr[sf_ancestors[is_notqing]])
-        print len(logsfr_nq(ancestor.mass, t_descendant))
-        print np.min(descendant.sfr[sf_ancestors[is_notqing]] - logsfr_nq(ancestor.mass, t_descendant))
-        print np.max(descendant.sfr[sf_ancestors[is_notqing]] - logsfr_nq(ancestor.mass, t_descendant))
-        print ''
-        print ''
-
-
-        descendant.ssfr[sf_ancestors[is_notqing]] = \
-                descendant.sfr[sf_ancestors[is_notqing]] - \
-                descendant.mass[sf_ancestors[is_notqing]]
-
-        # star forming decendants that ARE quenching
-        descendant.q_ssfr[sf_ancestors[is_qing]] = final_q_ssfr
-         
-        q_started = np.where(t_q <= t_descendant) 
-        q_notstarted = np.where(t_q > t_descendant)
-        
-        sfrevol_param_qs = []  
-        for i_p in xrange(len(sfrevol_param)):
-            sfrevol_param_qs.append(sfrevol_param[i_p][sf_ancestors[is_qing[0][q_started]]])
-
-        def logsfr_qs(logmass, t_input): 
-            # this is a simplification. logsfr should depend on the new mass at each time step 
-            # but that complicates the SF duty cycle 
-            # avglogsfr = logsfr_mstar_z(logmass, t_ancestor)    
-            avglogsfr = ancestor.avg_sfr[sf_ancestors[is_qing[0][q_started]]]
-
-            logsfr_sfms = sfr_evol.logsfr_sfms_evol(t_ancestor, t_q[q_started])
-
-            logsfr_sfduty = sfr_evol.logsfr_sfduty_fluct(
-                    t_ancestor, 
-                    t_q[q_started], 
-                    delta_sfr=ancestor.delta_sfr[sf_ancestors[is_qing[0][q_started]]],
-                    sfrevol_param=sfrevol_param_qs, 
-                    **sfrevol_prop
-                    )
-            
             logsfr_quench = sfr_evol.logsfr_quenching(
                     t_q[q_started], 
                     t_input, 
@@ -223,69 +269,41 @@ def sf_inherit(nsnap_descendants,
 
             return avglogsfr + logsfr_sfms + logsfr_sfduty + logsfr_quench
         
-        descendant.sfr[sf_ancestors[is_qing[0][q_started]]] = \
-                sfr_evol.sfr_evol(t_cosmic = t_q[q_started] - t_ancestor, 
-                        indices = sf_ancestors[is_qing[0][q_started]],
-                        sfrevol_param = sfrevol_param, 
-                        ancestor_sfr = ancestor.sfr, 
-                        ancestor_delta_sfr = ancestor.delta_sfr, 
-                        **sfrevol_prop) + \
-                                0.76 * (z_q[q_started] - ancestor.zsnap) + \
-                                np.log10( np.exp( (t_q[q_started] - t_descendant) / tau_q[q_started] ) )
+        #descendant.sfr[sf_ancestors[quenched]] = logsfr_quenched(ancestor.mass, t_descendant)
+        
+        print 'SHAM Masses : ', descendant.mass[sf_ancestors[quenched]]
 
-        print ''
-        print 'Quenching Started'
-        print len(descendant.sfr[sf_ancestors[is_qing[0][q_started]]])
-        print len(logsfr_qs(ancestor.mass, t_descendant))
-        print np.min(descendant.sfr[sf_ancestors[is_qing[0][q_started]]]-logsfr_qs(ancestor.mass, t_descendant))
-        print np.max(descendant.sfr[sf_ancestors[is_qing[0][q_started]]]-logsfr_qs(ancestor.mass, t_descendant))
-        print ''
-        print ''
+        if massevol_prop['name'] == 'integrated': 
+            start_time = time.time()
+            descendant.mass[sf_ancestors[quenched]], descendant.sfr[sf_ancestors[quenched]] \
+                    = mass_evol.integrated_rk4(
+                            logsfr_quenched, 
+                            ancestor.mass[sf_ancestors[quenched]], 
+                            t_ancestor, 
+                            t_descendant, 
+                            f_retain = massevol_prop['f_retain'], 
+                            delt = massevol_prop['t_step']
+                            )
+            print 'integration time ', (time.time() - start_time)
 
-        if len(q_notstarted[0]) > 0:
+            print 'Integrated Masses : ', descendant.mass[sf_ancestors[quenched]]
+            
+            print 'blah', descendant.sfr[sf_ancestors[quenched]]
+            print 'dlah', logsfr_quenched(descendant.mass[sf_ancestors[quenched]], t_descendant)
 
-            sfrevol_param_qns = []  
-            for i_p in xrange(len(sfrevol_param)):
-                sfrevol_param_qns.append(sfrevol_param[i_p][sf_ancestors[is_qing[0][q_notstarted]]])
+        elif massevol_prop['name'] == 'sham': 
+            descendant.sfr[sf_ancestors[quenched]] = logsfr_quenched(
+                    descendant.mass[sf_ancestors[quenched]], 
+                    t_descendant
+                    )
 
-            def logsfr_qns(logmass, t_input): 
-                # this is a simplification. logsfr should depend on the new mass at each time step 
-                # but that complicates the SF duty cycle 
-                # avglogsfr = logsfr_mstar_z(logmass, t_ancestor)    
-                avglogsfr = ancestor.avg_sfr[sf_ancestors[is_qing[0][q_notstarted]]]
-
-                logsfr_sfms = sfr_evol.logsfr_sfms_evol(t_ancestor, t_descendant)
-
-                logsfr_sfduty = sfr_evol.logsfr_sfduty_fluct(
-                        t_ancestor, 
-                        t_descendant, 
-                        delta_sfr=ancestor.delta_sfr[sf_ancestors[is_qing[0][q_notstarted]]],
-                        sfrevol_param=sfrevol_param_qns, 
-                        **sfrevol_prop
-                        )
-
-                return avglogsfr + logsfr_sfms + logsfr_sfduty
-
-            descendant.sfr[sf_ancestors[is_qing[0][q_notstarted]]] = \
-                    sfr_evol.sfr_evol(
-                            t_cosmic = t_descendant - t_ancestor, 
-                            indices = sf_ancestors[is_qing[0][q_notstarted]],
-                            sfrevol_param = sfrevol_param, 
-                            ancestor_sfr = ancestor.sfr, 
-                            ancestor_delta_sfr = ancestor.delta_sfr, 
-                            **sfrevol_prop
-                            ) + \
-                    0.76 * (descendant.zsnap - ancestor.zsnap)
-            print ''
-            print 'Quenching Not Started'
-            print len(descendant.sfr[sf_ancestors[is_qing[0][q_notstarted]]])
-            print len(logsfr_qns(ancestor.mass, t_descendant))
-            print np.min(descendant.sfr[sf_ancestors[is_qing[0][q_notstarted]]] - logsfr_qns(ancestor.mass, t_descendant))
-            print np.max(descendant.sfr[sf_ancestors[is_qing[0][q_notstarted]]] - logsfr_qns(ancestor.mass, t_descendant))
-            print ''
-            print ''
-
-        descendant.ssfr[sf_ancestors[is_qing]] = descendant.sfr[sf_ancestors[is_qing]] - descendant.mass[sf_ancestors[is_qing]]
+        descendant.ssfr[sf_ancestors[quenched]] = \
+                descendant.sfr[sf_ancestors[quenched]] - \
+                descendant.mass[sf_ancestors[quenched]]
+        
+        # ---------------------------------------------------------------------------------------------------
+        # Account for over quenching  
+        # ---------------------------------------------------------------------------------------------------
         
         overquenched = np.where(
                 descendant.q_ssfr[sf_ancestors[is_qing]] > descendant.ssfr[sf_ancestors[is_qing]]
@@ -431,176 +449,3 @@ def rho_fq_ssfr_descendant(
                 )
     #l2_ssfr /= np.float(n_length)
     return l2_f_q+l2_ssfr
-
-if __name__=="__main__":
-    pass
-    #print rho_fq_ssfr_descendant(
-    #            nsnap_descendant = 1, 
-    #            nsnap_ancestor = 20, 
-    #            pq_prop = {'slope': 0.1, 'yint': 0.0054}, 
-    #            tau_prop = {'name': 'line', 'fid_mass': 11.2, 'slope': -0.68, 'yint': 0.6},
-    #            Mrcut=18
-    #            )
-    
-    #sf_inherit(
-    #        [1, 2, 3, 6, 9, 12, 15, 18], 
-    #        nsnap_ancestor = 20, 
-    #        pq_prop = {'slope': 0.0, 'yint': 0.0}, 
-    #        tau_prop = {'name': 'instant'}, 
-    #        qaplot = True,
-    #        scatter = 0.2 
-    #        )
-
-    #tau_prop = {'name': 'line', 'fid_mass': 11.2, 'slope': -0.68, 'yint': 0.6},
-
-    #print 'terrible fit both f_q and ssfr' 
-    #print rho_fq_ssfr_descendant(
-    #            nsnap_descendant = 1, 
-    #            nsnap_ancestor = 20, 
-    #            pq_prop = {'slope': 0.25, 'yint': 0.25}, 
-    #            tau_prop = {'name': 'line', 'fid_mass': 10.5, 'slope': -0.9, 'yint': 1.0},
-    #            Mrcut=18)
-    
-    #print 'decent fit both f_q and ssfr' 
-    #print rho_fq_ssfr_descendant(
-    #            nsnap_descendant = 1, 
-    #            nsnap_ancestor = 20, 
-    #            pq_prop = {'slope': 0.0, 'yint': 0.0}, 
-    #            tau_prop = {'name': 'line', 'fid_mass': 10.75, 'slope': -0.6, 'yint': 0.6},
-    #            Mrcut=18)
-    
-    #sf_inherit(
-    #        [1, 2, 3, 6, 9, 12, 15, 18], 
-    #        nsnap_ancestor = 20, 
-    #        pq_prop = {'slope': 0.05, 'yint': 0.0}, 
-    #        tau_prop = {'name': 'line', 'fid_mass': 10.75, 'slope': -0.6, 'yint': 0.6},
-    #        qaplot=True,
-    #        qaplotname='decentfit_example'
-    #        )
-    
-    #sf_inherit(
-    #        [1, 2, 3, 6, 9, 12, 15, 18], 
-    #        nsnap_ancestor = 20, 
-    #        pq_prop = {'slope': 0.05, 'yint': 0.1}, 
-    #        tau_prop = {'name': 'line', 'fid_mass': 10.75, 'slope': -0.6, 'yint': 0.6},
-    #        qaplot=True,
-    #        qaplotname='decentfit_example'
-    #        )
-
-    """
-    fqs, ssfrs = [], [] 
-    for yint in [0.0, 0.05, 0.1]: 
-        for slope in [ 0.0, 0.05, 0.1]: 
-            #print slope, yint 
-            fq, ssfr = rho_fq_ssfr_descendant(
-                nsnap_descendant = 1, 
-                nsnap_ancestor = 20, 
-                pq_prop = {'slope': slope, 'yint': yint}, 
-                tau_prop = {'name': 'line', 'fid_mass': 10.75, 'slope': -0.6, 'yint': 0.6},
-                Mrcut=18)
-
-            fqs.append(fq)
-            ssfrs.append(ssfr)
-
-
-    mu_fq = np.mean(np.array(fqs))
-    std_fq = np.std(np.array(fqs))
-    print mu_fq, std_fq
-    mu_ssfr = np.mean(np.array(ssfrs))
-    std_ssfr = np.std(np.array(ssfrs))
-    print mu_ssfr, std_ssfr
-
-    def rho_ssfr_lineage_evol(
-            start_nsnap = 13, 
-            final_nsnap = 1, 
-            tau_prop = {'name': 'instant'}, 
-            Mrcut=18, 
-            **kwargs
-            ): 
-         Compare sSFR distribution of evolved CenQue and
-        SDSS Group Catalog in the green valley
-
-        if Mrcut == 18: 
-            z_med = 0.03
-        elif Mrcut == 19: 
-            z_med = 0.05
-        elif Mrcut == 20: 
-            z_med = 0.08
-
-        evol_cq_ssfr_bin, evol_cq_ssfr_hist = ssfr_lineage_evol(
-                start_nsnap = start_nsnap, 
-                final_nsnap = final_nsnap, 
-                tau_prop = tau_prop
-                )
-
-        group_ssfr = Ssfr()
-        group_ssfr_bin, group_ssfr_hist = group_ssfr.groupcat(Mrcut=Mrcut)
-        
-        l2_ssfr = 0.0
-        for i_massbin, massbin in enumerate(group_ssfr.mass_bins): 
-
-            if not np.array_equal(evol_cq_ssfr_bin[i_massbin], group_ssfr_bin[i_massbin]):
-                raise ValueError()
-
-            # sSFR comparison range
-
-            q_ssfr_massbin = np.mean(get_q_ssfr_mean(massbin)) 
-
-            sfr_mstar_z, sig_sfr_mstar_z = get_param_sfr_mstar_z()
-
-            sf_ssfr_massbin = sfr_mstar_z(massbin[1], z_med) - massbin[1]
-
-            green_range = np.where(
-                    (evol_cq_ssfr_bin[i_massbin] > q_ssfr_massbin) &
-                    (evol_cq_ssfr_bin[i_massbin] < sf_ssfr_massbin)
-                    )
-
-            #print np.sum((evol_cq_ssfr_hist[i_massbin][green_range] - group_ssfr_hist[i_massbin][green_range])**2)
-
-            l2_ssfr += np.sum((evol_cq_ssfr_hist[i_massbin][green_range] - group_ssfr_hist[i_massbin][green_range])**2)
-
-        return l2_ssfr
-
-
-    def ssfr_descendant(
-            nsnap_descendant, 
-            nsnap_ancestor = 13, 
-            pq_prop = {'slope': 0.0, 'yint': 0.0},
-            tau_prop = {'name': 'line', 'fid_mass': 10.75, 'slope': -0.6, 'yint': 0.6}, 
-            **kwargs
-            ):
-        ''' SSFR distribution of specified descendant snapshot 
-        '''
-
-        bloodline = sf_inherit(
-                [nsnap_descendant], 
-                nsnap_ancestor = nsnap_ancestor, 
-                pq_prop = pq_prop, 
-                tau_prop = tau_prop
-                )
-
-        descendant = getattr(bloodline, 'descendant_cq_snapshot'+str(nsnap_descendant))
-
-        ssfr = Ssfr()
-
-        return ssfr.cenque(descendant)
-
-    def fq_descendant(
-            nsnap_descendant, 
-            nsnap_ancestor = 13, 
-            tau_prop = {'name': 'line', 'fid_mass': 10.75, 'slope': -0.6, 'yint': 0.6}, 
-            **kwargs
-            ):
-        ''' SSFR distribution of specified descendant snapshot 
-        '''
-
-        bloodline = sf_inherit(
-                [nsnap_descendant], 
-                nsnap_ancestor = nsnap_ancestor, 
-                tau_prop = tau_prop
-                )
-
-        descendant = getattr(bloodline, 'descendant_cq_snapshot'+str(nsnap_descendant))
-        
-        return cq_fq(descendant)
-    """

@@ -48,7 +48,6 @@ class Lineage(object):
             if cenque_type == 'sf_assigned': 
                 print 'Assigning SFR'
                 self.ancestor_cq = assign_sfr(self.ancestor_cq)
-                print self.ancestor_cq.avg_sfr
 
             self.ancestor_cq.writeout()
         

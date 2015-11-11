@@ -1,5 +1,6 @@
 import numpy as np
 
+from lineage import Lineage
 from sf_inherit import sf_inherit 
 from plotting.plot_fq import PlotFq
 from plotting.plot_tau import plot_tau
@@ -13,7 +14,8 @@ def qaplot_sf_inherit(
         nsnap_ancestor = 20, 
         nsnap_descendant = 1, 
         scatter = 0.0, 
-        sfrevol_prop = {'name': 'squarewave', 'freq_range': [0.0, 2*np.pi], 'phase_range': [0, 1]}
+        sfrevol_prop = {'name': 'squarewave', 'freq_range': [0.0, 2*np.pi], 'phase_range': [0, 1]},
+        massevol_prop = {'name': 'sham'}
         ):
     '''
     '''
@@ -23,7 +25,8 @@ def qaplot_sf_inherit(
         str(nsnap_ancestor), 'ancestor_', 
         str(nsnap_descendant), 'descendant_', 
         str(round(scatter)), 'Mscatter_', 
-        sfrevol_prop['name'], '_sfrevol'
+        sfrevol_prop['name'], '_sfrevol_',
+        massevol_prop['name'], '_massevol'
         ])
 
     posterior_file = ''.join([
@@ -43,18 +46,25 @@ def qaplot_sf_inherit(
                 np.median(theta[i_param])
                 )
 
-    bloodline = sf_inherit(
-            [nsnap_descendant], 
-            nsnap_ancestor = nsnap_ancestor, 
-            pq_prop = {'slope': med_theta[0], 'yint': med_theta[1]}, 
-            tau_prop = {
-                'name': 'line', 'fid_mass': 11.1, 'slope': med_theta[2], 'yint': med_theta[3]
-                }, 
-            sfrevol_prop = sfrevol_prop, 
-            quiet = True, 
-            scatter = scatter
-            )
-    descendant = getattr(bloodline, 'descendant_cq_snapshot'+str(nsnap_descendant))
+    if nsnap_descendant < nsnap_ancestor: 
+        bloodline = sf_inherit(
+                [nsnap_descendant], 
+                nsnap_ancestor = nsnap_ancestor, 
+                pq_prop = {'slope': med_theta[0], 'yint': med_theta[1]}, 
+                tau_prop = {
+                    'name': 'line', 'fid_mass': 11.1, 'slope': med_theta[2], 'yint': med_theta[3]
+                    }, 
+                sfrevol_prop = sfrevol_prop, 
+                massevol_prop = massevol_prop, 
+                quiet = True, 
+                scatter = scatter
+                )
+
+        descendant = getattr(bloodline, 'descendant_cq_snapshot'+str(nsnap_descendant))
+    else: 
+        bloodline = Lineage(nsnap_ancestor = nsnap_ancestor)
+        bloodline.readin([1], scatter = scatter)
+        descendant = bloodline.ancestor_cq
 
     sfrevol_str = sfrevol_prop['name']
 
@@ -105,27 +115,31 @@ def qaplot_sf_inherit(
     plt.close()
     
     # Stellar Mass - Halo Mass 
-    #mass_scatter_plot = PlotMstarMhalo()
-    #mass_scatter_plot.bloodline(
-    #        bloodline, 
-    #        nsnap_descendant
-    #        )
-    #    
-    #mass_scatter_fig_file = ''.join([
-    #    'figure/', 
-    #    'mass_scatter_abc_posterior_mass_scatter', str(scatter), '.png'
-    #    ])
-    #plt.savefig(mass_scatter_fig_file, bbox_inches="tight")
-    #plt.close()
+    mass_scatter_plot = PlotMstarMhalo()
+    mass_scatter_plot.cenque(descendant)
+        
+    mass_scatter_fig_file = ''.join([
+        'figure/', 
+        'qaplot_sf_inherit_mass_scatter', file_str, '.png'
+        ])
+    plt.savefig(mass_scatter_fig_file, bbox_inches="tight")
+    plt.close()
 
 if __name__=="__main__":
-    for i in [1, 5]:#, 11, 15, 19]: 
+    for i in [13, 18, 19]:#, 5]:#, 11, 15, 19]: 
         print i 
         qaplot_sf_inherit(
                 29, 
                 nsnap_descendant = i, 
-                sfrevol_prop = {'name': 'squarewave', 'freq_range': [0.0, 2*np.pi], 'phase_range': [0, 1]}
+                sfrevol_prop = {'name': 'notperiodic'},
+                massevol_prop = {'name': 'integrated', 'f_retain': 0.6, 't_step': 0.1}
                 )
+        #qaplot_sf_inherit(
+        #        29, 
+        #        nsnap_descendant = i, 
+        #        sfrevol_prop = {'name': 'squarewave', 'freq_range': [0.0, 2*np.pi], 'phase_range': [0, 1]},
+        #        massevol_prop = {'name': 'integrated', 'f_retain': 1.0, 't_step': 0.1}
+        #        )
 
         #qaplot_sf_inherit(
         #        29, 

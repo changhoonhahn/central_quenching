@@ -3,6 +3,7 @@
 Star formation rate evolution for CenQue and Lineage class objects
 
 '''
+import time
 import numpy as np
 from scipy import signal
 
@@ -30,40 +31,6 @@ def get_sfrevol_param(ngal, indices, **sfrevol_prop):
 
     else: 
         raise NotImplementedError("Only squarewave implemented") 
-
-def logsfr_neverquenched(indices=None, sfrevol_param=None, ancestor_cq=None, **sfrevol_prop):
-    '''
-    '''
-    logsfr_mstar_z, sig_logsfr_mstar_z = get_param_sfr_mstar_z()
-
-    t_ancestor = ancestor_cq.t_cosmic
-    
-    # below is necessary otherwise, memory gets fucked
-    sfrevol_param_indices = []  
-    for i_p in xrange(len(sfrevol_param_indices)):
-        sfrevol_param_indices.append(sfrevol_param_indices[i_p][indices])
-
-    def logsfr(logmass, t): 
-
-        # avglogsfr = logsfr_mstar_z(logmass, t_ancestor)    
-        # this is a simplification. logsfr should depend on the new mass at each time step 
-        # but that complicates the SF duty cycle 
-        avglogsfr = ancestor_cq.avg_sfr
-
-        logsfr_sfms = logsfr_sfms_evol(t_ancestor, t)
-
-        logsfr_sfduty = logsfr_sfduty_fluct(
-                t_ancestor, 
-                t, 
-                delta_sfr=ancestor_cq.delta_sfr[indices], 
-                sfrevol_param=sfr_evol_param_indices, 
-                **sfrevol_prop
-                )
-
-        return avglogsfr + logsfr_sfms + logsfr_sfduty
-   
-    return logsfr
-
 
 def sfr_evol(t_cosmic = None, indices = None, sfrevol_param = None, ancestor_sfr = None, ancestor_delta_sfr = None, **sfrevol_prop):
     '''
@@ -116,7 +83,7 @@ def sfr_evol(t_cosmic = None, indices = None, sfrevol_param = None, ancestor_sfr
 
         return evolved_sfr
 
-def logsfr_sfduty_fluct(t0, tf, delta_sfr=None, sfrevol_param=None, **sfrevol_prop): 
+def logsfr_sfduty_fluct(t0, tf, t_q=None, delta_sfr=None, sfrevol_param=None, **sfrevol_prop): 
     '''
     log(SFR) contribution from SF duty cycle fluctuation 
 
@@ -126,24 +93,56 @@ def logsfr_sfduty_fluct(t0, tf, delta_sfr=None, sfrevol_param=None, **sfrevol_pr
     
     if sfrevol_prop['name'] == 'notperiodic': 
 
-        return 0.0
+        return delta_sfr 
 
     elif sfrevol_prop['name'] == 'squarewave': 
 
+        start_time = time.time()
         freq, phase = sfrevol_param 
+        print 'sfduty ', time.time()-start_time
 
-        t_cosmic = tf - t0
+        start_time = time.time()
+        if t_q is None: 
+            t_cosmic = tf - t0
+        else: 
+            t_cosmic = t_q - t0
+            notqing = np.where(tf <= t_q)
+            t_cosmic[notqing] = tf - t0
+        print 'sfduty ', time.time()-start_time
 
-        return delta_sfr * signal.square(freq * (t_cosmic - phase))
+        start_time = time.time()
+        sfduty = delta_sfr * signal.square(freq * (t_cosmic - phase))
+        print 'sfduty ', time.time()-start_time
 
-def logsfr_sfms_evol(t0, tf): 
+        return sfduty
+
+def logsfr_sfms_evol_t(t0, tf): 
+    '''
+    log(SFR) from the SFMS evolution 
+
+    log(SFR)_SFMS = -0.76 * (z(t0) - z(tf))
+
+    Takes long
+    '''
+    return 0.76 * (get_zsnap(tf) - get_zsnap(t0))
+
+def logsfr_sfms_evol(z0, zf, z_q = None): 
     '''
     log(SFR) from the SFMS evolution 
 
     log(SFR)_SFMS = -0.76 * (z0 - zf)
 
     '''
-    return 0.76 * (get_zsnap(tf) - get_zsnap(t0))
+
+    if z_q is None: 
+        sfms = 0.76 * (zf - z0)
+    else:
+        sfms = 0.76 * (z_q - z0)
+
+        notqing = np.where(z_q <= zf)
+        sfms[notqing] = 0.76 * (zf - z0)
+    
+    return sfms 
 
 def logsfr_quenching(tq, tf, tau=None): 
     '''
@@ -151,4 +150,14 @@ def logsfr_quenching(tq, tf, tau=None):
                                 
     log(SFR)_quenching = np.log10( np.exp( -(t_f - t_Q)/tau) )
     '''
-    return np.log10( np.exp( (tq - tf) / tau ) ) 
+    qing = np.where(tf >= tq)
+    logsfrq = np.zeros(len(tq))
+
+    logsfrq[qing] = np.log10( np.exp( (tq[qing] - tf) / tau[qing] ) ) 
+
+    if np.max(logsfrq) > 0.0: 
+        i_max = np.argmax(logsfrq)
+        print logsfrq[i_max], 'tq', tq[i_max], 'tf', tf, 'tau', tau[i_max]
+        raise ValueError
+
+    return logsfrq
