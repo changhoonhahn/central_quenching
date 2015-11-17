@@ -138,7 +138,6 @@ def logsfr_sfms_evol(z0, zf, z_q = None):
         sfms = 0.76 * (zf - z0)
     else:
         sfms = 0.76 * (z_q - z0)
-
         notqing = np.where(z_q <= zf)
         sfms[notqing] = 0.76 * (zf - z0)
     

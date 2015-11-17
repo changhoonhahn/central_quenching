@@ -8,17 +8,22 @@ from plotting.plot_sfms import PlotSFMS
 from plotting.plot_ssfr import PlotSSFR
 from plotting.plot_mstar_mhalo import PlotMstarMhalo
 
-
 def qaplot_sf_inherit(
         n_step, 
         nsnap_ancestor = 20, 
         nsnap_descendant = 1, 
         scatter = 0.0, 
         sfrevol_prop = {'name': 'squarewave', 'freq_range': [0.0, 2*np.pi], 'phase_range': [0, 1]},
+        sfrevol_massdep = False,
         massevol_prop = {'name': 'sham'}
         ):
     '''
     '''
+    
+    if sfrevol_massdep: 
+        sfrevol_massdep_str = 'SFRMt_'
+    else: 
+        sfrevol_massdep_str = 'SFRM0t_'
 
     file_str = ''.join([ 
         '_', 
@@ -26,6 +31,7 @@ def qaplot_sf_inherit(
         str(nsnap_descendant), 'descendant_', 
         str(round(scatter)), 'Mscatter_', 
         sfrevol_prop['name'], '_sfrevol_',
+        sfrevol_massdep_str, 
         massevol_prop['name'], '_massevol'
         ])
 
@@ -55,6 +61,7 @@ def qaplot_sf_inherit(
                     'name': 'line', 'fid_mass': 11.1, 'slope': med_theta[2], 'yint': med_theta[3]
                     }, 
                 sfrevol_prop = sfrevol_prop, 
+                sfrevol_massdep = sfrevol_massdep,
                 massevol_prop = massevol_prop, 
                 quiet = True, 
                 scatter = scatter
@@ -128,12 +135,22 @@ def qaplot_sf_inherit(
 if __name__=="__main__":
     for i in [13, 18, 19]:#, 5]:#, 11, 15, 19]: 
         print i 
+        #qaplot_sf_inherit(
+        #        29, 
+        #        nsnap_descendant = i, 
+        #        sfrevol_prop = {'name': 'notperiodic'},
+        #        sfrevol_massdep = False, 
+        #        massevol_prop = {'name': 'integrated', 'f_retain': 0.6, 't_step': 0.1}
+        #        )
+        
         qaplot_sf_inherit(
                 29, 
                 nsnap_descendant = i, 
                 sfrevol_prop = {'name': 'notperiodic'},
-                massevol_prop = {'name': 'integrated', 'f_retain': 0.6, 't_step': 0.1}
+                sfrevol_massdep = False, 
+                massevol_prop = {'name': 'sham'}
                 )
+
         #qaplot_sf_inherit(
         #        29, 
         #        nsnap_descendant = i, 
