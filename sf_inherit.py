@@ -31,6 +31,7 @@ def sf_inherit(nsnap_descendants,
         pq_prop = {'slope': 0.05, 'yint': 0.0}, 
         tau_prop = {'name': 'line', 'fid_mass': 10.75, 'slope': -0.6, 'yint': 0.6}, 
         sfrevol_prop = {'name': 'notperiodic'}, 
+        sfrevol_massdep = True,
         massevol_prop = {'name': 'sham'}, 
         scatter = 0.0, 
         quiet = True, 
@@ -93,7 +94,9 @@ def sf_inherit(nsnap_descendants,
         descendant.ssfr   = np.array([-999. for i in xrange(n_descendant)])
         descendant.q_ssfr = np.array([-999. for i in xrange(n_descendant)])
     
+        # -----------------------------------------------------------------------------------------
         # quiescent evolution (ssfr reamins constant)
+        # -----------------------------------------------------------------------------------------
         descendant.ssfr[q_ancestors] = ancestor.ssfr[q_ancestors]
         
         def logsfr_quiescent(logmass, t_input):
@@ -170,27 +173,31 @@ def sf_inherit(nsnap_descendants,
         quenched = is_qing[0][q_started]
     
         # ---------------------------------------------------------------------------------------------------
-        # star forming descendants that DO NOT quench by this snapshot 
+        # star forming descendants that DO NOT quench by descendant snapshot 
         # ---------------------------------------------------------------------------------------------------
-        
+        # SFR evolution parameters
         sfrevol_param_nq = []  
         for i_p in xrange(len(sfrevol_param)):
             sfrevol_param_nq.append(sfrevol_param[i_p][sf_ancestors[notquenched]])
 
         def logsfr_notquenched(logmass, t_input): 
-            # this is a simplification. logsfr should depend on the new mass at each time step 
-            # but that complicates the SF duty cycle 
-            avglogsfr = ancestor.avg_sfr[sf_ancestors[notquenched]]
-            #avglogsfr = logsfr_mstar_z(logmass, z_ancestor)
+        
+            if sfrevol_massdep:  
+                # SFR evolution based on solving an ODE of SFR
+                avglogsfr = logsfr_mstar_z(logmass, z_ancestor)
+            else: 
+                # SFR evolution based on just time evolution 
+                avglogsfr = ancestor.avg_sfr[sf_ancestors[notquenched]]
 
+            # evolution of the SF MS over t 
             logsfr_sfms = sfr_evol.logsfr_sfms_evol(z_ancestor, z_of_t(t_input))
 
             #logsfr_time = time.time()
             logsfr_sfduty = sfr_evol.logsfr_sfduty_fluct(
                     t_ancestor, 
                     t_input, 
-                    delta_sfr=ancestor.delta_sfr[sf_ancestors[notquenched]],
-                    sfrevol_param=sfrevol_param_nq, 
+                    delta_sfr = ancestor.delta_sfr[sf_ancestors[notquenched]],
+                    sfrevol_param = sfrevol_param_nq, 
                     **sfrevol_prop
                     )
             #print 'logsfduty time ', (time.time() - logsfr_time)
@@ -200,11 +207,8 @@ def sf_inherit(nsnap_descendants,
         print 'SHAM Masses : ', descendant.mass[sf_ancestors[notquenched]]
 
         if massevol_prop['name'] == 'integrated': 
-            #    pass
 
-            #elif massevol_prop['name'] == 'blasdlkjlaksdfja': 
             start_time = time.time()
-
             descendant.mass[sf_ancestors[notquenched]], descendant.sfr[sf_ancestors[notquenched]] = \
                     mass_evol.integrated_rk4(
                             logsfr_notquenched, 
@@ -229,11 +233,10 @@ def sf_inherit(nsnap_descendants,
                             )
 
         descendant.ssfr[sf_ancestors[notquenched]] = \
-                descendant.sfr[sf_ancestors[notquenched]] - \
-                descendant.mass[sf_ancestors[notquenched]]
+                descendant.sfr[sf_ancestors[notquenched]] - descendant.mass[sf_ancestors[notquenched]]
         
         # ---------------------------------------------------------------------------------------------------
-        # star forming descendants that DO quench by this snapshot 
+        # star forming descendants that DO quench by this descendant snapshot 
         # ---------------------------------------------------------------------------------------------------
         
         sfrevol_param_q = []  
@@ -241,17 +244,21 @@ def sf_inherit(nsnap_descendants,
             sfrevol_param_q.append(sfrevol_param[i_p][sf_ancestors[quenched]])
 
         def logsfr_quenched(logmass, t_input): 
-            # this is a simplification. logsfr should depend on the new mass at each time step 
-            # but that complicates the SF duty cycle 
-            avglogsfr = ancestor.avg_sfr[sf_ancestors[is_qing[0][q_started]]]
-            #avglogsfr = logsfr_mstar_z(logmass, z_ancestor)
 
+            if sfrevol_massdep:  
+                # SFR evolution based on solving an ODE of SFR
+                avglogsfr = logsfr_mstar_z(logmass, z_ancestor)
+            else: 
+                # SFR evolution based on just time evolution 
+                avglogsfr = ancestor.avg_sfr[sf_ancestors[is_qing[0][q_started]]]
+    
+            # log(SFR)_SFMS evolutionfrom t0 to tQ
             logsfr_sfms = sfr_evol.logsfr_sfms_evol(
                     z_ancestor, 
-                    z_of_t(t_input), 
-                    z_q = z_of_t(t_q[q_started])
+                    z_of_t(t_q[q_started])
                     )
-
+            
+            # log(SFR)_duty evolution from t0 to tQ
             logsfr_sfduty = sfr_evol.logsfr_sfduty_fluct(
                     t_ancestor, 
                     t_input, 

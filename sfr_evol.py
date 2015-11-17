@@ -99,7 +99,7 @@ def logsfr_sfduty_fluct(t0, tf, t_q=None, delta_sfr=None, sfrevol_param=None, **
 
         start_time = time.time()
         freq, phase = sfrevol_param 
-        print 'sfduty ', time.time()-start_time
+        #print 'sfduty ', time.time()-start_time
 
         start_time = time.time()
         if t_q is None: 
@@ -108,11 +108,11 @@ def logsfr_sfduty_fluct(t0, tf, t_q=None, delta_sfr=None, sfrevol_param=None, **
             t_cosmic = t_q - t0
             notqing = np.where(tf <= t_q)
             t_cosmic[notqing] = tf - t0
-        print 'sfduty ', time.time()-start_time
+        #print 'sfduty ', time.time()-start_time
 
         start_time = time.time()
         sfduty = delta_sfr * signal.square(freq * (t_cosmic - phase))
-        print 'sfduty ', time.time()-start_time
+        #print 'sfduty ', time.time()-start_time
 
         return sfduty
 
