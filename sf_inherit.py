@@ -49,6 +49,8 @@ def sf_inherit(nsnap_descendants,
     
     # make sure that snapshot = 1 is included among imported descendants
     # and the first element of the list
+    if not isinstance(nsnap_descendants, list): 
+        raise ValueError
     if 1 not in nsnap_descendants: 
         nsnap_descendants = [1] + nsnap_descendants
     elif nsnap_descendants[0] != 1: 
@@ -72,15 +74,6 @@ def sf_inherit(nsnap_descendants,
     q_ancestors = np.where(ancestor.gal_type == 'quiescent')[0]
     sf_ancestors = np.where(ancestor.gal_type == 'star-forming')[0]
         
-    if qaplot: 
-        # plot ancestor SSFR distribution 
-        cqplot = PlotSSFR()
-        cqplot.cenque_ssfr_dist(ancestor, line_color='b')
-
-        fqplot = PlotFq()
-        fqplot.cenque_fq(ancestor, line_color='k', label = 't = ' + str(round(ancestor.t_cosmic,2)) )
-        fqplot.param_fq(line_color = 'k', label = None)
-    
     for nsnap_descendant in nsnap_descendants:      # Descendants 
     
         # descendent CenQue object
@@ -97,12 +90,14 @@ def sf_inherit(nsnap_descendants,
         descendant.sfr    = np.array([-999. for i in xrange(n_descendant)])
         descendant.ssfr   = np.array([-999. for i in xrange(n_descendant)])
         descendant.q_ssfr = np.array([-999. for i in xrange(n_descendant)])
-    
+        descendant.gal_type = np.array(['' for i in xrange(n_descendant)], dtype='|S16')
+        
         # --------------------------------------------------------------------------------
         # quiescent evolution (ssfr reamins constant)
         # --------------------------------------------------------------------------------
         descendant.ssfr[q_ancestors] = ancestor.ssfr[q_ancestors]
-        
+        descendant.gal_type[q_ancestors] = 'quiescent'
+
         def logsfr_quiescent(logmass, t_input):
             return ancestor.ssfr[q_ancestors] + logmass
     
@@ -173,6 +168,8 @@ def sf_inherit(nsnap_descendants,
         descendant.q_ssfr[sf_ancestors] = final_q_ssfr
         q_started = np.where(t_q <= t_descendant)   # SF galaxies that have started quenching
         q_notstarted = np.where(t_q > t_descendant) # SF galaxies taht have NOT started quenching
+        descendant.gal_type[sf_ancestors[q_started]] = 'quiescent'
+        descendant.gal_type[sf_ancestors[q_notstarted]] = 'star-forming'
         
         # ---------------------------------------------------------------------------------------------------
         # star forming evolution 
@@ -216,7 +213,7 @@ def sf_inherit(nsnap_descendants,
 
             return avglogsfr + logsfr_sfms + logsfr_sfduty + logsfr_quench
          
-        print 'SHAM Masses : ', descendant.mass[sf_ancestors]
+        #print 'SHAM Masses : ', descendant.mass[sf_ancestors]
 
         if massevol_prop['name'] == 'integrated': 
 
@@ -230,9 +227,9 @@ def sf_inherit(nsnap_descendants,
                             f_retain = massevol_prop['f_retain'], 
                             delt = massevol_prop['t_step']
                             )
-            print 'integration time ', (time.time() - start_time)
+            #print 'integration time ', (time.time() - start_time)
         
-            print 'Integrated Masses : ', descendant.mass[sf_ancestors]
+            #print 'Integrated Masses : ', descendant.mass[sf_ancestors]
         
             #print 'blah', descendant.sfr[sf_ancestors]
             #print 'dlah', logsfr_m_t(descendant.mass[sf_ancestors], t_descendant)
@@ -254,62 +251,14 @@ def sf_inherit(nsnap_descendants,
         overquenched = np.where(
                 descendant.q_ssfr[sf_ancestors] > descendant.ssfr[sf_ancestors]
                 )
-        descendant.ssfr[sf_ancestors[overquenched]] = descendant.q_ssfr[sf_ancestors[overquenched]]
+        if len(overquenched[0]) > 0: 
+            descendant.ssfr[sf_ancestors[overquenched]] = descendant.q_ssfr[sf_ancestors[overquenched]]
+            descendant.sfr[sf_ancestors[overquenched]] = descendant.ssfr[sf_ancestors[overquenched]] \
+                    + descendant.mass[sf_ancestors[overquenched]]
+            descendant.gal_type[sf_ancestors[overquenched]] = 'quiescent'
 
         setattr(bloodline, 'descendant_cq_snapshot'+str(nsnap_descendant), descendant)
 
-        if qaplot: 
-            if nsnap_descendant != 1: 
-                cqplot.cenque_ssfr_dist(descendant, lw=2, line_color=cqplot.pretty_colors[nsnap_descendant], label=None)
-
-                fqplot.cenque_fq(
-                        descendant, 
-                        lw=2, 
-                        label = 't=' + str(round(descendant.t_cosmic, 1))+',z='+str(round(descendant.zsnap, 2))  
-                        )
-                fqplot.param_fq(lw=2, line_color = fqplot.pretty_colors[descendant.nsnap], label = None)
-            else:
-                cqplot.cenque_ssfr_dist(descendant, line_color='r')
-                fqplot.cenque_fq(
-                        descendant, 
-                        label = 't=' + str(round(descendant.t_cosmic, 1))+',z='+str(round(descendant.zsnap, 2))  
-                        )
-                fqplot.param_fq(
-                        line_color = fqplot.pretty_colors[descendant.nsnap], 
-                        label = None
-                        )
-
-    if qaplot: 
-        cqplot.groupcat_ssfr_dist(Mrcut=18)
-        cqplot.set_axes()
-
-        gc = central_catalog(Mrcut=18, clobber=False)
-        groupcat = CenQue()
-        groupcat.sfr = gc.sfr
-        groupcat.mass = gc.mass
-        groupcat.zsnap = np.median(gc.z)
-        gc_mass, gc_fq = cq_fq(groupcat)
-        
-        fqplot.subs.plot(
-                gc_mass, 
-                gc_fq, 
-                color='red', 
-                lw=5, 
-                label=r'Group Catalog $\mathtt{M_r = 18}$' 
-                ) 
-
-        fqplot.set_axes()
-        tauplot = plot_tau([tau_prop])
-
-        if qaplotname is not None: 
-            if '.png' not in qaplotname: 
-                qaplotname += '.png'
-            cqplot.fig.savefig('figure/cq_'+qaplotname, bbox_inches = 'tight')
-            fqplot.fig.savefig('figure/fq_'+qaplotname, bbox_inches = 'tight')
-            tauplot.savefig('figure/tau_'+qaplotname, bbox_inches = 'tight')
-        else: 
-            plt.show()
-    
     return bloodline 
 
 def rho_fq_ssfr_descendant(
@@ -394,3 +343,66 @@ def rho_fq_ssfr_descendant(
                 )
     #l2_ssfr /= np.float(n_length)
     return l2_f_q+l2_ssfr
+
+'''
+    if qaplot: 
+        # plot ancestor SSFR distribution 
+        cqplot = PlotSSFR()
+        cqplot.cenque_ssfr_dist(ancestor, line_color='b')
+
+        fqplot = PlotFq()
+        fqplot.cenque_fq(ancestor, line_color='k', label = 't = ' + str(round(ancestor.t_cosmic,2)) )
+        fqplot.param_fq(line_color = 'k', label = None)
+    
+        if qaplot: 
+            if nsnap_descendant != 1: 
+                cqplot.cenque_ssfr_dist(descendant, lw=2, line_color=cqplot.pretty_colors[nsnap_descendant], label=None)
+
+                fqplot.cenque_fq(
+                        descendant, 
+                        lw=2, 
+                        label = 't=' + str(round(descendant.t_cosmic, 1))+',z='+str(round(descendant.zsnap, 2))  
+                        )
+                fqplot.param_fq(lw=2, line_color = fqplot.pretty_colors[descendant.nsnap], label = None)
+            else:
+                cqplot.cenque_ssfr_dist(descendant, line_color='r')
+                fqplot.cenque_fq(
+                        descendant, 
+                        label = 't=' + str(round(descendant.t_cosmic, 1))+',z='+str(round(descendant.zsnap, 2))  
+                        )
+                fqplot.param_fq(
+                        line_color = fqplot.pretty_colors[descendant.nsnap], 
+                        label = None
+                        )
+
+    if qaplot: 
+        cqplot.groupcat_ssfr_dist(Mrcut=18)
+        cqplot.set_axes()
+
+        gc = central_catalog(Mrcut=18, clobber=False)
+        groupcat = CenQue()
+        groupcat.sfr = gc.sfr
+        groupcat.mass = gc.mass
+        groupcat.zsnap = np.median(gc.z)
+        gc_mass, gc_fq = cq_fq(groupcat)
+        
+        fqplot.subs.plot(
+                gc_mass, 
+                gc_fq, 
+                color='red', 
+                lw=5, 
+                label=r'Group Catalog $\mathtt{M_r = 18}$' 
+                ) 
+
+        fqplot.set_axes()
+        tauplot = plot_tau([tau_prop])
+
+        if qaplotname is not None: 
+            if '.png' not in qaplotname: 
+                qaplotname += '.png'
+            cqplot.fig.savefig('figure/cq_'+qaplotname, bbox_inches = 'tight')
+            fqplot.fig.savefig('figure/fq_'+qaplotname, bbox_inches = 'tight')
+            tauplot.savefig('figure/tau_'+qaplotname, bbox_inches = 'tight')
+        else: 
+            plt.show()
+''' 

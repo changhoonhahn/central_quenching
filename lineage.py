@@ -29,6 +29,7 @@ class Lineage(object):
 
         self.ancestor_cq = None
         self.descendant_cq = None
+        self.file_name = None
 
     def ancestor(self, cenque_type='sf_assigned', scatter=0.0, clobber=False):
         """
@@ -110,8 +111,11 @@ class Lineage(object):
         Write ancestor and descendant CenQue objects to hdf5 file 
         """
         
-        output_file = self.file()  
-        print 'Writing ', output_file 
+        if self.file_name is None: 
+            output_file = self.file()  
+            print 'Writing ', output_file 
+        else: 
+            output_file = self.file_name 
 
         f = h5py.File(output_file, 'w')    
         
@@ -161,19 +165,23 @@ class Lineage(object):
         Read in the lineage h5py object 
         """
 
-        self.ancestor_cenque_type = ancestor_cenque_type 
-        if self.ancestor_cenque_type == 'sf_assigned':
-            self.ancestor_sf_prop = ancestor_sf_prop
-            self.ancestor_fq_prop = ancestor_fq_prop
-        self.mass_scatter = scatter
+        if self.file_name is None: 
 
-        lineage_file = self.file()   
+            self.ancestor_cenque_type = ancestor_cenque_type 
+            if self.ancestor_cenque_type == 'sf_assigned':
+                self.ancestor_sf_prop = ancestor_sf_prop
+                self.ancestor_fq_prop = ancestor_fq_prop
+            self.mass_scatter = scatter
 
-        if not np.array([os.path.isfile(lineage_file), not clobber]).all(): 
-            self.ancestor(clobber = clobber) 
-            self.descend() 
-            self.writeout()
-    
+            lineage_file = self.file()   
+
+            if not np.array([os.path.isfile(lineage_file), not clobber]).all(): 
+                self.ancestor(clobber = clobber) 
+                self.descend() 
+                self.writeout()
+        else: 
+            lineage_file = self.file_name
+
         f = h5py.File(lineage_file, 'r')
         
         cq_grps = ['ancestor']
