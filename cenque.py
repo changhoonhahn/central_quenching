@@ -54,7 +54,6 @@ class CenQue:
         else: 
             self.mass_scatter = None       # n_snapshot 
 
-
         self.zsnap = None           # z_snapshot
         self.t_cosmic = None    # t_cosmic for snapshot
         self.t_step = None      # t_cosmic step 
@@ -241,6 +240,8 @@ class CenQue:
             sfr_str = '_'
             if self.sf_prop['name'] == 'average': 
                 sfr_str += 'average'
+            elif self.sf_prop['name'] == 'average_noscatter': 
+                sfr_str += 'average_noscatter'
             else: 
                 raise NotImplementedError()
             sfr_str += '_sfassign'
@@ -292,6 +293,8 @@ class CenQue:
             sfr_str = '_'
             if self.sf_prop['name'] == 'average': 
                 sfr_str += 'average'
+            elif self.sf_prop['name'] == 'average_noscatter': 
+                sfr_str += 'average_noscatter'
             else: 
                 raise NotImplementedError()
             sfr_str += '_sfassign'

@@ -126,13 +126,15 @@ def logsfr_sfms_evol_t(t0, tf):
     '''
     return 0.76 * (get_zsnap(tf) - get_zsnap(t0))
 
-def logsfr_sfms_evol(z0, zf, z_q = None): 
+def logsfr_sfms_evol(zi, zf, z_q = None): 
     '''
     log(SFR) from the SFMS evolution 
 
     log(SFR)_SFMS = -0.76 * (z0 - zf)
 
     '''
+    #z0 = np.min([zi, np.max([zf, 0.9])])
+    z0 = zi #np.min([zi, zf])
 
     if z_q is None: 
         sfms = 0.76 * (zf - z0)

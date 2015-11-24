@@ -31,7 +31,7 @@ class Lineage(object):
         self.descendant_cq = None
         self.file_name = None
 
-    def ancestor(self, cenque_type='sf_assigned', scatter=0.0, clobber=False):
+    def ancestor(self, cenque_type='sf_assigned', scatter=0.0, sf_prop={'name': 'average'}, clobber=False):
         """
         Specify ancestor of lineage with a CenQue obj at snapshot nsnap_ancestor. 
         """
@@ -46,9 +46,10 @@ class Lineage(object):
             self.ancestor_cq.readin()
         else: 
             self.ancestor_cq.import_treepm(self.nsnap_ancestor, scatter=scatter)
+
             if cenque_type == 'sf_assigned': 
                 print 'Assigning SFR'
-                self.ancestor_cq = assign_sfr(self.ancestor_cq)
+                self.ancestor_cq = assign_sfr(self.ancestor_cq, sf_prop=sf_prop)
 
             self.ancestor_cq.writeout()
         
@@ -86,6 +87,8 @@ class Lineage(object):
             ancestor_str += '_'
             if self.ancestor_sf_prop['name'] == 'average': 
                 ancestor_str += 'average'
+            elif self.ancestor_sf_prop['name'] == 'average_noscatter': 
+                ancestor_str += 'average_noscatter'
             else: 
                 raise NotImplementedError
             ancestor_str += '_sfassign'
@@ -181,7 +184,7 @@ class Lineage(object):
                 self.writeout()
         else: 
             lineage_file = self.file_name
-
+        print 'Reading ', lineage_file
         f = h5py.File(lineage_file, 'r')
         
         cq_grps = ['ancestor']
@@ -333,6 +336,6 @@ class Lineage(object):
 if __name__=="__main__": 
     for scat in [0.0, 0.2]:
         bloodline = Lineage(nsnap_ancestor = 20)
-        bloodline.ancestor(scatter = scat, clobber=True) 
+        bloodline.ancestor(scatter = scat, sf_prop={'name': 'average'}, clobber=True) 
         bloodline.descend() 
         bloodline.writeout()

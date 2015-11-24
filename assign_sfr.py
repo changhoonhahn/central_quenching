@@ -59,7 +59,8 @@ def assign_sfr(
         cenque.sf_prop = sf_prop
     else: 
         if cenque.sf_prop != sf_prop: 
-            warnings.warn("SF properties do not match")
+            cenque.sf_prop = sf_prop
+            warnings.warn("SF properties do not match; Replacing SF_prop")
 
     if 'fq_prop' not in cenque.__dict__.keys():
         cenque.fq_prop = fq_prop 
@@ -109,6 +110,18 @@ def assign_sfr(
             cenque.avg_sfr = np.array([-999. for i in xrange(ngal_tot)])
 
         extra_attr = ['avg_sfr', 'delta_sfr']
+
+    elif sf_prop['name'] == 'average_noscatter': 
+        sfr_mstar_z, sig_sfr_mstar_z = get_param_sfr_mstar_z()
+
+        if 'delta_sfr' not in cenque.__dict__.keys(): 
+            cenque.delta_sfr = np.array([-999. for i in xrange(ngal_tot)])
+        
+        if 'avg_sfr' not in cenque.__dict__.keys(): 
+            cenque.avg_sfr = np.array([-999. for i in xrange(ngal_tot)])
+
+        extra_attr = ['avg_sfr', 'delta_sfr']
+
     else: 
         raise NotImplementedError() 
 
@@ -194,10 +207,8 @@ def assign_sfr(
             # sample SFR 
             if  sf_prop['name'] == 'average': 
 
-                mu_sf_sfr = sfr_mstar_z(mass_bin_mid[i_m], cenque.zsnap)
-                sigma_sf_sfr = sig_sfr_mstar_z(mass_bin_mid[i_m], cenque.zsnap)
-
-                mu_sf_ssfr = mu_sf_sfr - mass_bin_mid[i_m]
+                mu_sf_sfr = sfr_mstar_z(cenque.mass[i_sf_massbin], cenque.zsnap)
+                sigma_sf_sfr = sig_sfr_mstar_z(cenque.mass[i_sf_massbin], cenque.zsnap)
                 
                 cenque.avg_sfr[i_sf_massbin] = mu_sf_sfr
                 cenque.delta_sfr[i_sf_massbin] = sigma_sf_sfr * np.random.randn(ngal_sf_massbin[i_m])
@@ -207,7 +218,21 @@ def assign_sfr(
                 if not quiet:
                     print 'Starforming galaxies: '
                     print 'Average(SFR) = ', mu_sf_sfr, ' sigma(SFR) = ', sigma_sf_sfr 
+
+            elif sf_prop['name'] == 'average_noscatter': 
             
+                mu_sf_sfr = sfr_mstar_z(cenque.mass[i_sf_massbin], cenque.zsnap)
+                sigma_sf_sfr = 0.0
+                
+                cenque.avg_sfr[i_sf_massbin] = mu_sf_sfr
+                cenque.delta_sfr[i_sf_massbin] = sigma_sf_sfr * np.random.randn(ngal_sf_massbin[i_m])
+
+                cenque.sfr[i_sf_massbin] = mu_sf_sfr + cenque.delta_sfr[i_sf_massbin]
+
+                if not quiet:
+                    print 'Starforming galaxies: '
+                    print 'Average(SFR) = ', mu_sf_sfr, ' sigma(SFR) = ', sigma_sf_sfr 
+
             else:
                 raise NotImplementedError
 

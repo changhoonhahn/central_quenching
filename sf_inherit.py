@@ -28,6 +28,7 @@ from group_catalog.group_catalog import central_catalog
 
 def sf_inherit(nsnap_descendants, 
         nsnap_ancestor = 13, 
+        ancestor_sf_prop = {'name': 'average'}, 
         pq_prop = {'slope': 0.05, 'yint': 0.0}, 
         tau_prop = {'name': 'line', 'fid_mass': 10.75, 'slope': -0.6, 'yint': 0.6}, 
         sfrevol_prop = {'name': 'notperiodic'}, 
@@ -65,7 +66,7 @@ def sf_inherit(nsnap_descendants,
 
     # read in the lineage (< 0.05 seconds for one snapshot)
     bloodline = Lineage(nsnap_ancestor = nsnap_ancestor)
-    bloodline.readin(nsnap_descendants, scatter = scatter, clobber = clobber)
+    bloodline.readin(nsnap_descendants, scatter = scatter, clobber = clobber, ancestor_sf_prop=ancestor_sf_prop)
 
     ancestor = bloodline.ancestor_cq    # ancestor CenQue object
     t_ancestor = ancestor.t_cosmic
@@ -257,6 +258,7 @@ def sf_inherit(nsnap_descendants,
                     + descendant.mass[sf_ancestors[overquenched]]
             descendant.gal_type[sf_ancestors[overquenched]] = 'quiescent'
 
+        descendant.data_columns = np.array(list(descendant.data_columns) + ['ssfr', 'sfr', 'q_ssfr', 'gal_type'])
         setattr(bloodline, 'descendant_cq_snapshot'+str(nsnap_descendant), descendant)
 
     return bloodline 

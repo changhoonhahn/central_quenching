@@ -164,13 +164,16 @@ def plot_integrated_mass_evol(mass0, t0, tf,
             sub.plot(tfs, np.array(sfrs)[:,i], c=pretty_colors[i], lw=2, alpha=0.5, label=sfr_label)
             sub.plot(tfs, np.array(sfmssfrs)[:,i], c='k', lw=2, ls='--')
         
+        for tf_i in tfs: 
+            sub.vlines(tf_i, -1.0, 2.5, color='k', linewidth=1, linestyle=':')
+
     m_sub.set_xlim([t0-2.5, tf+0.5])
     m_sub.set_ylim([8.5, 12.5])
     m_sub.set_ylabel(r"$\mathtt{log\;M_*}$", fontsize=20)
     m_sub.set_title(title)
 
     sub.set_xlim([t0-2.5, tf+0.5])
-    sub.set_ylim([-1.0, 2.5])
+    sub.set_ylim([-2.0, 2.0])
     sub.set_xlabel(r"$\mathtt{t_{cosmic}}$", fontsize=20)
     sub.set_ylabel(r"$\mathtt{log\;SFR}$", fontsize=20)
     sub.legend(loc='upper left')
@@ -186,34 +189,32 @@ def plot_integrated_mass_evol(mass0, t0, tf,
 
 if __name__=="__main__": 
     mass0 = np.arange(7.5, 12.5, 0.5)
-    '''
+    #plot_integrated_mass_evol(mass0, 4.0, 13.2, 
+    #        title="Integrated Mass Evolution; SFR(M,t); Constant SF Duty Cycle",  
+    #        sfrevol_prop = {'name': 'notperiodic'},
+    #        massevol_prop = {'name': 'integrated', 'f_retain': 0.6, 't_step': 0.05},
+    #        sfr_kwargs = 'm',
+    #        fig_file = 'test_massevol_sfr_m_t_notperiodic_dutycycle.png'
+    #        )
+    #
+    #plot_integrated_mass_evol(mass0, 4.0, 13.2, 
+    #        title="Integrated Mass Evolution; SFR(M0,t); Constant SF Duty Cycle",  
+    #        sfrevol_prop = {'name': 'notperiodic'},
+    #        massevol_prop = {'name': 'integrated', 'f_retain': 0.6, 't_step': 0.05},
+    #        sfr_kwargs = 'm0',
+    #        fig_file = 'test_massevol_sfr_m0_t_notperiodic_dutycycle.png'
+    #        )
     plot_integrated_mass_evol(mass0, 4.0, 13.2, 
-            title="Integrated Mass Evolution; SFR(M,t); Constant SF Duty Cycle",  
-            sfrevol_prop = {'name': 'notperiodic'},
+            title="Integrated Mass Evolution; SFR(M,t); Periodic SF Duty Cycle",  
+            sfrevol_prop = {'name': 'squarewave', 'freq_range': [2.*np.pi, 20.*np.pi], 'phase_range': [0, 1]},
             massevol_prop = {'name': 'integrated', 'f_retain': 0.6, 't_step': 0.05},
             sfr_kwargs = 'm',
-            fig_file = 'test_massevol_sfr_m_t_notperiodic_dutycycle.png'
+            fig_file = 'test_massevol_sfr_m_t_midfreq_periodic_dutycycle_constantSFRz09.png'
             )
-    
     plot_integrated_mass_evol(mass0, 4.0, 13.2, 
-            title="Integrated Mass Evolution; SFR(M0,t); Constant SF Duty Cycle",  
-            sfrevol_prop = {'name': 'notperiodic'},
+            title="Integrated Mass Evolution; SFR(M0,t); Periodic SF Duty Cycle",  
+            sfrevol_prop = {'name': 'squarewave', 'freq_range': [2.*np.pi, 20.0*np.pi], 'phase_range': [0, 1]},
             massevol_prop = {'name': 'integrated', 'f_retain': 0.6, 't_step': 0.05},
             sfr_kwargs = 'm0',
-            fig_file = 'test_massevol_sfr_m0_t_notperiodic_dutycycle.png'
-            )
-    '''
-    plot_integrated_mass_evol(mass0, 4.0, 13.2, 
-            title="Integrated Mass Evolution; SFR(M,t); Periodic SF Duty Cycle",  
-            sfrevol_prop = {'name': 'squarewave', 'freq_range': [100.0, 1000.0], 'phase_range': [0, 1]},
-            massevol_prop = {'name': 'integrated', 'f_retain': 0.6, 't_step': 0.01},
-            sfr_kwargs = 'm',
-            fig_file = 'test_massevol_sfr_m_t_periodic_dutycycle.png'
-            )
-    plot_integrated_mass_evol(mass0, 4.0, 13.2, 
-            title="Integrated Mass Evolution; SFR(M,t); Periodic SF Duty Cycle",  
-            sfrevol_prop = {'name': 'squarewave', 'freq_range': [100.0, 1000.0], 'phase_range': [0, 1]},
-            massevol_prop = {'name': 'integrated', 'f_retain': 0.6, 't_step': 0.01},
-            sfr_kwargs = 'm',
-            fig_file = 'test_massevol_sfr_m_t_periodic_dutycycle.png'
+            fig_file = 'test_massevol_sfr_m0_t_midfreq_periodic_dutycycle_constantSFRz09.png'
             )
