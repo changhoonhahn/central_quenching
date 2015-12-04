@@ -108,7 +108,8 @@ def get_fq_nsnap(Mstar, nsnap, **kwargs):
     return get_fq(Mstar, z_snap[nsnap], **kwargs) 
 
 def sfq_classify(mstar, sfr, z_in, Mrcut=18, clobber=False):
-    ''' Classify galaxies' SFRs and stellar masses into
+    ''' 
+    Classify galaxies' SFRs and stellar masses into
     star-forming or quiescent based on evolve sSFR cut.
 
     Parameters
@@ -120,7 +121,7 @@ def sfq_classify(mstar, sfr, z_in, Mrcut=18, clobber=False):
 
     Returns
     -------
-    [average SFR, standard deviation SFR]
+    Array of strings that describe whether the galaxies are 'star-forming' or 'quiescent'
 
     Notes
     -----
@@ -166,13 +167,16 @@ def sfr_cut(mstar, zin):
     #return -0.75 + 0.76*(zin-0.05) + 0.5*(mstar-10.5)
     return -0.75 + 0.76*(zin-0.04) + 0.5*(mstar-10.5)
 
+"""
 def cq_fq(cenque): 
-    """
+    '''
+    HAS NOW BEEN INCORPORATED INTO THE ACTUAL CENQUE OBJECT 
+
     Calculate the quiescent fraction of CenQue object. Note
     that the CenQue object has the following attributes: 
     mass, SFR, zsnap (all the necessary properties for f_Q 
     classification). 
-    """
+    '''
 
     # check that all necessary attributes are present
     if cenque.zsnap is None: 
@@ -207,7 +211,6 @@ def cq_fq(cenque):
 
     return np.array(masses), np.array(f_q)
 
-"""
 def get_fq_alpha(Mstar, z_in, alpha): 
     ''' Quiescent fraction evolved from z = 0.88 by (1+z)^alpha where alpha is a free parameter
     '''

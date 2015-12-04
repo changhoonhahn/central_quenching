@@ -11,10 +11,130 @@ import matplotlib.pyplot as plt
 from matplotlib.collections import LineCollection
 
 # --- Local ---
+from plots import Plots
 import bovy_plot as bovy
 from group_catalog.group_catalog import sf_centrals
-from defutility.plotting import prettyplot
-from defutility.plotting import prettycolors
+
+class PlotSFMS(Plots): 
+
+    def __init__(self, **kwargs): 
+        ''' 
+        Child class of Plots class that plots the StarForming Main Sequence for 
+        different class objects (CenQue/GroupCat)
+        '''
+
+        super(PlotSFMS, self).__init__(**kwargs)
+
+    def cenque(self, cq_obj, **mkwargs): 
+        '''
+        Plot SF-MS (M* vs SFR) for CenQue object
+        '''
+
+        if self.kwargs == {}: 
+            kwargs = mkwargs.copy() 
+        else: 
+            kwargs = (self.kwargs).copy()
+            kwargs.update(mkwargs)
+    
+        if 'label' in kwargs: 
+            label = kwargs['label']
+        else: 
+            label = 'z = '+str(cq_obj.zsnap) 
+        
+        if 'color' in kwargs: 
+            color = kwargs['color']
+        else: 
+            try: 
+                color = self.pretty_colors[cq_obj.nsnap]
+            except TypeError: 
+                color = 'black'
+
+        if 'justsf' in kwargs: 
+
+            if not kwargs['justsf']: 
+                raise ValueError(
+                        'Why would you specify it; to make it false, just leave it blank'
+                        )
+            
+            justsf = np.where(cq_obj.gal_type == 'star-forming')
+            
+            self.sub.scatter(
+                    cq_obj.mass[justsf],
+                    cq_obj.sfr[justsf],
+                    color=color, 
+                    s=3
+                    )
+            self.sub.set_xlim([9.0, 12.0])
+            self.sub.set_ylim([-5.0, 2.0])
+            self.sub.set_xlabel(r'$\mathtt{M_*}$')
+            self.sub.set_ylabel(r'$\mathtt{log\;SFR}$')
+
+        else: 
+
+            bovy.scatterplot(
+                    cq_obj.mass, 
+                    cq_obj.sfr,
+                    scatter=True, 
+                    color=color, 
+                    s=3, 
+                    xrange=[9.0, 12.0], 
+                    yrange=[-5.0, 2.0], 
+                    xlabel='\mathtt{M_*}', 
+                    ylabel='\mathtt{log\;SFR}'
+                    )
+
+        return None   
+
+    def bloodline(self, bloodline, snapshot, **mkwargs):
+        '''
+        '''
+        descendant = getattr(bloodline, 'descendant_cq_snapshot'+str(snapshot))
+
+        if self.kwargs == {}: 
+            kwargs = mkwargs.copy() 
+        else: 
+            kwargs = (self.kwargs).copy()
+            kwargs.update(mkwargs)
+    
+        if 'label' in kwargs: 
+            label = kwargs['label']
+        else: 
+            label = ''.join([
+                'z =', 
+                str(round(util.get_z_nsnap(descendant.nsnap), 2))
+                ])
+            print label
+        
+        if 'color' in kwargs: 
+            color = kwargs['color']
+        else: 
+            try: 
+                color = self.pretty_colors[descendant.nsnap]
+            except TypeError: 
+                color = 'black'
+
+        bovy.scatterplot(
+                descendant.mass, 
+                descendant.sfr, 
+                scatter=True, 
+                color=color, 
+                s=3, 
+                xrange=[9.0, 12.0], 
+                yrange=[-3.0, 3.0], 
+                xlabel='\mathtt{M_*}', 
+                ylabel='\mathtt{log\;SFR}'
+                )
+
+        return None   
+
+    def save_fig(self, file_name): 
+        '''
+        Save figure to file 
+        '''
+        
+        plt.savefig(file_name, bbox_inches='tight') 
+
+        return None
 
 def plot_sfms_data(Mrcut=18): 
     ''' Plot StarForming Main Sequence from iSEDfit data and flexible SFMS fit function 

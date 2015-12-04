@@ -19,8 +19,13 @@ from ssfr import Ssfr
 from assign_sfr import assign_sfr 
 from util.mass_bins import simple_mass_bin
 from central_subhalo import CentralSubhalos
+from quiescent_fraction import sfq_classify
 # -- plotting --
+from plotting.plot_fq import PlotFq
+from plotting.plot_tau import PlotTau
 from plotting.plot_ssfr import PlotSSFR
+from plotting.plot_sfms import PlotSFMS
+from plotting.plot_mstar_mhalo import PlotMstarMhalo
 
 class CenQue: 
 
@@ -67,6 +72,8 @@ class CenQue:
             self.cenque_type = self.kwargs['cenque_type']
         else: 
             self.cenque_type = None
+
+        self.ssfr_dist = None
 
     def import_treepm(self, nsnap, scatter=0.0): 
         """ Import the following snapshot data from TreePM --> SHAM snapshots. Also imports 
@@ -349,14 +356,27 @@ class CenQue:
             setattr(self, column, new_attr)
 
         return None 
-    
-    def Ssfr(self, **ssfr_kwargs): 
+
+    # ----  SSFR -----
+    def Ssfr(self, **ssfr_kwargs):          
         '''
         Calculate SSFR distribution 
+
+        Returns 
+        -------
+        ssfr_bin_mid : 
+            midpoints of SSFR bins
+        ssfr_hist : 
+            SSFR histogram 
+
         '''
         ssfr_dist = Ssfr()
         ssfr_bin_mid, ssfr_hist = ssfr_dist.cenque(self)
         
+        #self.ssfr_dist = ssfr_dist  # save to class 
+
+        return ssfr_bin_mid, ssfr_hist
+
     def plotSsfr(self, **pltkwargs):
         '''
         Plot SSFR of CenQue objectusing PlotSSFR plot object
@@ -364,9 +384,12 @@ class CenQue:
         Parameters
         ----------
         pltkwargs : 
-            - quenching : (True/False) If true plot stacked SSFR distribution for CenQue data that differentiates the 
-                quiescent, quenching, and star-fomring populations
+            - quenching : (True/False) If true plot stacked SSFR distribution 
+                for CenQue data that differentiates the quiescent, quenching, 
+                and star-fomring populations.
         '''
+        plt.close() # in case there's another plot
+
         ssfr_plot = PlotSSFR()
         ssfr_plot.cenque(self, **pltkwargs)
 
@@ -387,11 +410,137 @@ class CenQue:
         else: 
             return ssfr_plot
 
+    # --- Quiescent Fraction ---
+    def Fq(self, **fq_kwargs):
+        '''
+        Calculate quiescent fraction of CenQue class object
+        '''
+        if cenque.zsnap is None: 
+            raise ValueError
+        if cenque.mass is None: 
+            raise ValueError
+        if cenque.sfr is None: 
+            raise ValueError
+
+        # Star-forming or Quiescent    
+        sf_q = sfq_classify(self.mass, self.sfr, self.zsnap, Mrcut=18)
+
+        masses, f_q = [], [] 
+        for i_bin in xrange(self.mass_bins.nbins): 
+
+            in_massbin = np.where( 
+                    (cenque.mass > self.mass_bins.mass_low[i_bin]) &
+                    (cenque.mass <= self.mass_bins.mass_high[i_bin])
+                    )
+
+            n_massbin = len(in_massbin[0])
+
+            if n_massbin == 0: 
+                continue
+
+            q = len(np.where(sf_q[in_massbin] == 'quiescent')[0])
+            
+            masses.append( self.mass_bins.mass_mid[i_bin] ) 
+            f_q.append( np.float(q)/np.float(n_massbin) )
+        
+        return np.array(masses), np.array(f_q)
+    
     def plotFq(self, **pltkwargs): 
+        '''
+        Plot f_q of CenQue object using PlotFq plot object
+        '''
+        plt.close() # in case there's another plot
 
+        fq_plot = PlotFq() 
+        fq_plot.cenque(self)
 
-    def 
+        if 'param' in pltkwargs.keys():
+            # hardcoded for convenience 
+            if pltkwargs['param']: 
+                fq_plot.param_fq(line_color='k', label=None)
 
+        fq_plot.set_axes()
+
+        if 'savefig' in pltkwargs.keys():
+            if isinstance(pltkwargs['savefig'], str): 
+                fq_plot.save_fig(pltkwargs['savefig'])
+            else: 
+                ValueError('savefig = figure_file_name')
+
+            return None
+
+        else: 
+            return fq_plot
+
+    def plotTau(self, **pltkwargs): 
+        '''
+        Plot quenching timescale 
+        '''
+
+        plt.close() 
+
+        tau_plot = PlotTau(self.tau_prop)
+
+        if 'savefig' in pltkwargs.keys():
+            if isinstance(pltkwargs['savefig'], str): 
+                tau_plot.save_fig(pltkwargs['savefig'])
+            else: 
+                ValueError('savefig = figure_file_name')
+
+            return None
+
+        else: 
+            return tau_plot 
+
+    def plotMstarMhalo(self, **pltkwargs): 
+        '''
+        Plot M* versus M_halo relationship
+
+        Notes
+        -----
+        Uses bovy_plot.scatter_plot so things are a big clunky 
+        '''
+
+        plt.close()
+
+        mm_plot = PlotMstarMhalo(self, **pltkwargs)
+        
+        if 'savefig' in pltkwargs.keys():
+            if isinstance(pltkwargs['savefig'], str): 
+                mm_plot.save_fig(pltkwargs['savefig'])
+            else: 
+                ValueError('savefig = figure_file_name')
+
+            return None
+
+        else: 
+            return mm_plot 
+
+    def plotSFMS(self, **pltkwargs): 
+        '''
+        Plot the Star Forming Main Sequence of the CenQue object
+        
+        Notes
+        -----
+        Uses bovy_plot.scatter_plot so things are a big clunky 
+        '''
+        
+        plt.close() 
+
+        sfms_plot = PlotSFMS
+        sfms_plot.cenque(self, **pltkwargs)
+        
+        if 'savefig' in pltkwargs.keys():
+            if isinstance(pltkwargs['savefig'], str): 
+                sfms_plot.save_fig(pltkwargs['savefig'])
+            else: 
+                ValueError('savefig = figure_file_name')
+
+            return None
+
+        else: 
+            return mm_plot 
+        
 def build_cenque_importsnap(snapshots, scatter = 0.0): 
     ''' Build CenQue snapshots with TreePM data imported
     
