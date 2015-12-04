@@ -9,7 +9,7 @@ import os
 import numpy as np
 
 # -- Local --
-from cenque import CenQue
+#from cenque import CenQue
 from util.cenque_utility import get_q_ssfr_mean
 from sfms.fitting import get_param_sfr_mstar_z
 from group_catalog.group_catalog import central_catalog

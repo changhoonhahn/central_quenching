@@ -29,6 +29,22 @@ def get_sfrevol_param(ngal, indices, **sfrevol_prop):
 
         return [period, phase]
 
+    elif sfrevol_prop['name'] == 'newamp_squarewave': 
+
+        freq = np.array([-999. for i in xrange(ngal)])
+        phase = np.array([-999. for i in xrange(ngal)])
+
+        freq[indices] = np.random.uniform(sfrevol_prop['freq_range'][0], sfrevol_prop['freq_range'][1], size=len(indices))
+        phase[indices] = np.random.uniform(sfrevol_prop['phase_range'][0], sfrevol_prop['phase_range'][1], size=len(indices))
+        
+        # maximum of number of cycles based on frequency range
+        n_cycle = int((20.0 + np.max(phase[indices])) // (np.pi / np.min(freq[indices])))          
+        #print 'n_cycle = ', n_cycle
+
+        amp = np.zeros([ngal, n_cycle])
+        amp[indices] = (np.random.normal(loc=0.0, scale=sfrevol_prop['sigma'], size=n_cycle * len(indices))).reshape([len(indices), n_cycle])
+
+        return [freq, phase, amp]
     else: 
         raise NotImplementedError("Only squarewave implemented") 
 
@@ -82,6 +98,16 @@ def sfr_evol(t_cosmic = None, indices = None, sfrevol_param = None, ancestor_sfr
                 ancestor_delta_sfr[indices] * (signal.square(freq[indices] * (t_cosmic - phase[indices])) - 1.0)
 
         return evolved_sfr
+    
+    elif sfrevol_prop['name'] == 'newamp_squarewave': 
+
+        freq, phase, amp = sfrevol_param  
+
+        #amp = ancestor_sfr[indices] / signal.square(-1.0 * freq[indices] * phase[indices])
+        evolved_sfr = ancestor_sfr[indices] + \
+                ancestor_delta_sfr[indices] * (signal.square(freq[indices] * (t_cosmic - phase[indices])) - 1.0)
+
+        return evolved_sfr
 
 def logsfr_sfduty_fluct(t0, tf, t_q=None, delta_sfr=None, sfrevol_param=None, **sfrevol_prop): 
     '''
@@ -97,22 +123,36 @@ def logsfr_sfduty_fluct(t0, tf, t_q=None, delta_sfr=None, sfrevol_param=None, **
 
     elif sfrevol_prop['name'] == 'squarewave': 
 
-        start_time = time.time()
         freq, phase = sfrevol_param 
-        #print 'sfduty ', time.time()-start_time
 
-        start_time = time.time()
         if t_q is None: 
             t_cosmic = tf - t0
         else: 
             t_cosmic = t_q - t0
             notqing = np.where(tf <= t_q)
             t_cosmic[notqing] = tf - t0
-        #print 'sfduty ', time.time()-start_time
 
-        start_time = time.time()
         sfduty = delta_sfr * signal.square(freq * (t_cosmic - phase))
-        #print 'sfduty ', time.time()-start_time
+
+        return sfduty
+    
+    elif sfrevol_prop['name'] == 'newamp_squarewave': 
+
+        freq, phase, amp = sfrevol_param 
+
+        if t_q is None: 
+            t_cosmic = tf - t0
+        else: 
+            t_cosmic = t_q - t0
+            notqing = np.where(tf <= t_q)
+            t_cosmic[notqing] = tf - t0
+
+        n_cycles = ((t_cosmic - phase) // (np.pi / freq)).astype(int)
+        print amp.shape, np.max(n_cycles)
+        n_cycles += np.arange(amp.shape[0]) * amp.shape[1]
+        #print np.max(n_cycles), amp.shape[0] * amp.shape[1]
+
+        sfduty = amp.reshape(amp.shape[0] * amp.shape[1])[n_cycles] * signal.square(freq * (t_cosmic - phase))
 
         return sfduty
 

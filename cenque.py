@@ -15,9 +15,12 @@ import os
 import json 
 
 #---- Local ----
+from ssfr import Ssfr
 from assign_sfr import assign_sfr 
 from util.mass_bins import simple_mass_bin
 from central_subhalo import CentralSubhalos
+# -- plotting --
+from plotting.plot_ssfr import PlotSSFR
 
 class CenQue: 
 
@@ -347,6 +350,48 @@ class CenQue:
 
         return None 
     
+    def Ssfr(self, **ssfr_kwargs): 
+        '''
+        Calculate SSFR distribution 
+        '''
+        ssfr_dist = Ssfr()
+        ssfr_bin_mid, ssfr_hist = ssfr_dist.cenque(self)
+        
+    def plotSsfr(self, **pltkwargs):
+        '''
+        Plot SSFR of CenQue objectusing PlotSSFR plot object
+
+        Parameters
+        ----------
+        pltkwargs : 
+            - quenching : (True/False) If true plot stacked SSFR distribution for CenQue data that differentiates the 
+                quiescent, quenching, and star-fomring populations
+        '''
+        ssfr_plot = PlotSSFR()
+        ssfr_plot.cenque(self, **pltkwargs)
+
+        if 'groupcat' in pltkwargs.keys(): 
+            if pltkwargs['groupcat']: 
+                ssfr_plot.groupcat(Mrcut=18)    # Mr cut is hardcoded
+            else: 
+                raise ValueError('Are you sure you wanted to specify groupcat=False?')
+
+        ssfr_plot.set_axes()
+
+        if 'savefig' in pltkwargs.keys():
+            if isinstance(pltkwargs['savefig'], str): 
+                ssfr_plot.save_fig(pltkwargs['savefig'])
+            else: 
+                ValueError('savefig = figure_file_name')
+            return None
+        else: 
+            return ssfr_plot
+
+    def plotFq(self, **pltkwargs): 
+
+
+    def 
+
 def build_cenque_importsnap(snapshots, scatter = 0.0): 
     ''' Build CenQue snapshots with TreePM data imported
     

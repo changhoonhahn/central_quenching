@@ -498,12 +498,27 @@ if __name__=="__main__":
     qaplot_sf_inherit_average_scatter(
             29, 
             [1,3,5,7,9,11,13,15,17,19],
-            sfrevol_prop = {'name': 'notperiodic'},
+            sfrevol_prop = {'name': 'newamp_squarewave', 'freq_range': [2.*np.pi, 20.*np.pi], 'phase_range': [0,1], 'sigma': 0.3},
             sfrevol_massdep = True, 
             massevol_prop = {'name': 'integrated', 'f_retain': 0.6, 't_step': 0.1}
             )
+    #track_sf_pop_sfms_evol(
+    #        29, 
+    #        100,
+    #        sfrevol_prop = {'name': 'newamp_squarewave', 'freq_range': [2.*np.pi, 20.*np.pi], 'phase_range': [0,1], 'sigma': 0.3},
+    #        sfrevol_massdep = False, 
+    #        massevol_prop = {'name': 'integrated', 'f_retain': 0.6, 't_step': 0.1}
+    #        )
     
 '''
+    qaplot_sf_inherit_average_scatter(
+            29, 
+            [1], #[1,3,5,7,9,11,13,15,17,19],
+            sfrevol_prop = {'name': 'amp_squarewave', 'freq_range': [2.*np.pi, 20.*np.pi], 'phase_range': [0,1]},
+            sfrevol_massdep = True, 
+            massevol_prop = {'name': 'integrated', 'f_retain': 0.6, 't_step': 0.1}
+            )
+
     for sfrevoprop in [{'name': 'notperiodic'}, {'name': 'squarewave', 'freq_range': [100.0, 1000.0], 'phase_range': [0, 1]}]:
         track_sf_pop_sfms_evol(
                 29, 
