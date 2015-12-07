@@ -12,39 +12,71 @@ from sfms.fitting import get_param_sfr_mstar_z
 
 def get_sfrevol_param(ngal, indices, **sfrevol_prop): 
     ''' 
-    Generate SFR evolution parameters used to evolve SFR based on sfrevol_prop 
-
+    Generate SFR evolution parameters specified by sfrevol_prop. Ultimately
+    these parameters will be used by other functions to actually evolve the
+    SFR properties 
     '''
     
     if sfrevol_prop['name'] == 'notperiodic':
-        
+        # simple  constant
         return []  
 
     elif sfrevol_prop['name'] == 'squarewave': 
+        # simple square wave with fixed amplitude 
         period = np.array([-999. for i in xrange(ngal)])
         phase = np.array([-999. for i in xrange(ngal)])
 
-        period[indices] = np.random.uniform(sfrevol_prop['freq_range'][0], sfrevol_prop['freq_range'][1], size=len(indices))
-        phase[indices] = np.random.uniform(sfrevol_prop['phase_range'][0], sfrevol_prop['phase_range'][1], size=len(indices))
+        period[indices] = \
+                np.random.uniform(
+                        sfrevol_prop['freq_range'][0], 
+                        sfrevol_prop['freq_range'][1], 
+                        size=len(indices)
+                        )
+        phase[indices] = \
+                np.random.uniform(
+                        sfrevol_prop['phase_range'][0], 
+                        sfrevol_prop['phase_range'][1], 
+                        size=len(indices)
+                        )
 
         return [period, phase]
 
     elif sfrevol_prop['name'] == 'newamp_squarewave': 
+        # square wave with new amplitude assigned every full period  
 
         freq = np.array([-999. for i in xrange(ngal)])
         phase = np.array([-999. for i in xrange(ngal)])
 
-        freq[indices] = np.random.uniform(sfrevol_prop['freq_range'][0], sfrevol_prop['freq_range'][1], size=len(indices))
-        phase[indices] = np.random.uniform(sfrevol_prop['phase_range'][0], sfrevol_prop['phase_range'][1], size=len(indices))
+        freq[indices] = \
+                np.random.uniform(
+                        sfrevol_prop['freq_range'][0], 
+                        sfrevol_prop['freq_range'][1], 
+                        size=len(indices)
+                        )
+        phase[indices] = \
+                np.random.uniform(
+                        sfrevol_prop['phase_range'][0], 
+                        sfrevol_prop['phase_range'][1], 
+                        size=len(indices)
+                        )
         
-        # maximum of number of cycles based on frequency range
-        n_cycle = int((20.0 + np.max(phase[indices])) // (np.pi / np.min(freq[indices])))          
-        #print 'n_cycle = ', n_cycle
+        # maximum of number of cycles based on frequency 
+        min_period = 2.0 * np.pi / np.max(freq[indices])
+
+        # overestimated max number of cycles for convenience 
+        n_cycle = int((20.0 + np.max(phase[indices])) // min_period)
 
         amp = np.zeros([ngal, n_cycle])
-        amp[indices] = (np.random.normal(loc=0.0, scale=sfrevol_prop['sigma'], size=n_cycle * len(indices))).reshape([len(indices), n_cycle])
+        amp[indices] = \
+                (np.random.normal(
+                    loc=0.0, 
+                    scale=sfrevol_prop['sigma'], 
+                    size=n_cycle * len(indices)
+                    )
+                    ).reshape([len(indices), n_cycle])
 
         return [freq, phase, amp]
+
     else: 
         raise NotImplementedError("Only squarewave implemented") 
 
@@ -111,7 +143,7 @@ def sfr_evol(t_cosmic = None, indices = None, sfrevol_param = None, ancestor_sfr
 
 def logsfr_sfduty_fluct(t0, tf, t_q=None, delta_sfr=None, sfrevol_param=None, **sfrevol_prop): 
     '''
-    log(SFR) contribution from SF duty cycle fluctuation 
+    log(SFR) contribution only from SF duty cycle fluctuation 
 
     log(SFR)_sfdutyfluctuation = Delta log(SFR) * squarewave( freq * (t + phase) ) 
 
@@ -146,13 +178,15 @@ def logsfr_sfduty_fluct(t0, tf, t_q=None, delta_sfr=None, sfrevol_param=None, **
             t_cosmic = t_q - t0
             notqing = np.where(tf <= t_q)
             t_cosmic[notqing] = tf - t0
+        
+        # individual n_cycle 
+        n_cycles = ((t_cosmic - phase) // (2.0 * np.pi / freq)).astype(int)
+        #print amp.shape, np.max(n_cycles)
 
-        n_cycles = ((t_cosmic - phase) // (np.pi / freq)).astype(int)
-        print amp.shape, np.max(n_cycles)
         n_cycles += np.arange(amp.shape[0]) * amp.shape[1]
-        #print np.max(n_cycles), amp.shape[0] * amp.shape[1]
 
-        sfduty = amp.reshape(amp.shape[0] * amp.shape[1])[n_cycles] * signal.square(freq * (t_cosmic - phase))
+        sfduty = amp.reshape(amp.shape[0] * amp.shape[1])[n_cycles] * \
+                signal.square(freq * (t_cosmic - phase))
 
         return sfduty
 

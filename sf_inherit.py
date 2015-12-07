@@ -15,16 +15,11 @@ from lineage import Lineage
 import sfr_evol
 import mass_evol
 
-from plotting.plot_fq import PlotFq
-from quiescent_fraction import cq_fq
 from quiescent_fraction import get_fq
-from plotting.plot_tau import plot_tau
-from plotting.plot_ssfr import PlotSSFR
 from util.cenque_utility import get_zsnap
 from sfms.fitting import get_param_sfr_mstar_z
 from util.cenque_utility import get_q_ssfr_mean
 from util.tau_quenching import get_quenching_efold
-from group_catalog.group_catalog import central_catalog
 
 def sf_inherit(nsnap_descendants, 
         nsnap_ancestor = 13, 

@@ -13,6 +13,7 @@ import h5py
 import time
 import os 
 import json 
+import matplotlib.pyplot as plt
 
 #---- Local ----
 from ssfr import Ssfr
@@ -524,10 +525,9 @@ class CenQue:
         -----
         Uses bovy_plot.scatter_plot so things are a big clunky 
         '''
-        
         plt.close() 
 
-        sfms_plot = PlotSFMS
+        sfms_plot = PlotSFMS()
         sfms_plot.cenque(self, **pltkwargs)
         
         if 'savefig' in pltkwargs.keys():
@@ -539,7 +539,7 @@ class CenQue:
             return None
 
         else: 
-            return mm_plot 
+            return sfms_plot 
         
 def build_cenque_importsnap(snapshots, scatter = 0.0): 
     ''' Build CenQue snapshots with TreePM data imported

@@ -1,17 +1,15 @@
 import numpy as np
+import time
 
 from lineage import Lineage
 from sf_inherit import sf_inherit 
 from plotting.plot_fq import PlotFq
-from plotting.plot_tau import plot_tau
 from plotting.plot_sfms import PlotSFMS
 from plotting.plot_ssfr import PlotSSFR
-from util.cenque_utility import get_z_nsnap
 from plotting.plot_mstar_mhalo import PlotMstarMhalo
 
 from defutility.plotting import prettyplot
 from defutility.plotting import prettycolors
-from sfms.fitting import get_param_sfr_mstar_z
 
 def qaplot_sf_inherit(
         n_step, 
@@ -253,12 +251,8 @@ def qaplot_sf_inherit_average_scatter(
     '''
     Test Lineage SF Inherit function
     '''
-    
-    if sfrevol_massdep: 
-        sfrevol_massdep_str = 'SFRMt_'
-    else: 
-        sfrevol_massdep_str = 'SFRM0t_'
 
+    # Get media theta from ABC posterior
     posterior_file = ''.join([
         'dat/pmc_abc/', 
         'theta_t', 
@@ -275,7 +269,9 @@ def qaplot_sf_inherit_average_scatter(
         med_theta.append( 
                 np.median(theta[i_param])
                 )
-
+    # ------------------
+    # SF inheritance 
+    start_time = time.time()
     bloodline = sf_inherit(
             nsnap_descendants, 
             nsnap_ancestor = nsnap_ancestor, 
@@ -290,37 +286,22 @@ def qaplot_sf_inherit_average_scatter(
             quiet = True, 
             scatter = scatter
             )
+    print 'SF inherit took ', time.time() - start_time
     
-    prettyplot()
-    pretty_colors = prettycolors()
+    if sfrevol_massdep: 
+        sfrevol_massdep_str = 'SFRMt_'
+    else: 
+        sfrevol_massdep_str = 'SFRM0t_'
     
-    sfr_mstar_z, sig_sfr_mstar_z = get_param_sfr_mstar_z()
-
     for nsnap_descendant in nsnap_descendants: 
+
         descendant = getattr(bloodline, 'descendant_cq_snapshot'+str(nsnap_descendant))
+        
+        start_time = time.time()
+        # SFMS plot
+        sfms_plot = descendant.plotSFMS(justsf=True, bovyplot=True)
+        sfms_plot.param_sfms()      # plot parameterized SFMS
 
-        fig = plt.figure()
-        sub = fig.add_subplot(111)
-
-        sf_gal = np.where(descendant.gal_type == 'star-forming')
-
-        sub.scatter(
-                descendant.mass[sf_gal], 
-                descendant.sfr[sf_gal], 
-                color=pretty_colors[nsnap_descendant],
-                s=10
-                )
-        sub.plot(np.arange(8.5, 12.0, 0.1), 
-                sfr_mstar_z(np.arange(8.5, 12.0, 0.1), get_z_nsnap(nsnap_descendant)), 
-                c = 'k', 
-                ls = '--', 
-                lw = 3 
-                )
-        sub.set_xlim([9.0, 12.0])
-        sub.set_ylim([-5.0, 2.0])
-        sub.set_xlabel(r'$\mathtt{M_*}$')
-        sub.set_ylabel(r'$\mathtt{log\;SFR}$')
-    
         file_str = ''.join([ 
             '_', 
             str(nsnap_ancestor), 'ancestor_', 
@@ -333,10 +314,27 @@ def qaplot_sf_inherit_average_scatter(
 
         sfms_fig_file = ''.join([
             'figure/', 
+            'qaplot_sf_inherit_sfms_justsf', file_str, '_twoslope_sfms.png'
+            ])
+        print sfms_fig_file 
+        sfms_plot.save_fig(sfms_fig_file)
+        print 'SFMS plotting took ', time.time() - start_time
+
+        plt.close()
+
+        sfms_plot = descendant.plotSFMS(justsf=False, bovyplot=True)
+        sfms_plot.param_sfms()      # plot parameterized SFMS
+
+        sfms_fig_file = ''.join([
+            'figure/', 
             'qaplot_sf_inherit_sfms', file_str, '_twoslope_sfms.png'
             ])
-        fig.savefig(sfms_fig_file, bbox_inches='tight')
+        print sfms_fig_file 
+        sfms_plot.save_fig(sfms_fig_file)
+        print 'SFMS plotting took ', time.time() - start_time
+
         plt.close()
+
 
 def sf_inherited_lineage(
         n_step, 
@@ -420,6 +418,8 @@ def track_sf_pop_sfms_evol(
         massevol_prop = {'name': 'sham'}
         ):
     '''
+    Directly track the evolution of n_gal galaxies in SFR versus M* paradigm. 
+    Makes cool plots, 10 out of 10 would do again.
     '''
 
     if sfrevol_massdep: 
@@ -495,20 +495,29 @@ def track_sf_pop_sfms_evol(
     plt.close()
 
 if __name__=="__main__":
-    qaplot_sf_inherit_average_scatter(
+    #qaplot_sf_inherit_average_scatter(
+    #        29, 
+    #        [1],
+    #        sfrevol_prop = {'name': 'newamp_squarewave', 'freq_range': [2.*np.pi, 20.*np.pi], 'phase_range': [0,1], 'sigma': 0.3},
+    #        sfrevol_massdep = True, 
+    #        massevol_prop = {'name': 'integrated', 'f_retain': 0.6, 't_step': 0.1}
+    #        )
+    #sf_inherited_lineage(
+    #        29, 
+    #        nsnap_ancestor = 20, 
+    #        scatter = 0.0, 
+    #        sfrevol_prop = {'name': 'newamp_squarewave', 'freq_range': [2.*np.pi, 20.*np.pi], 'phase_range': [0,1], 'sigma': 0.3},
+    #        sfrevol_massdep = True, 
+    #        massevol_prop = {'name': 'integrated', 'f_retain': 0.6, 't_step': 0.1}
+    #        )
+
+    track_sf_pop_sfms_evol(
             29, 
-            [1,3,5,7,9,11,13,15,17,19],
+            10,
             sfrevol_prop = {'name': 'newamp_squarewave', 'freq_range': [2.*np.pi, 20.*np.pi], 'phase_range': [0,1], 'sigma': 0.3},
             sfrevol_massdep = True, 
             massevol_prop = {'name': 'integrated', 'f_retain': 0.6, 't_step': 0.1}
             )
-    #track_sf_pop_sfms_evol(
-    #        29, 
-    #        100,
-    #        sfrevol_prop = {'name': 'newamp_squarewave', 'freq_range': [2.*np.pi, 20.*np.pi], 'phase_range': [0,1], 'sigma': 0.3},
-    #        sfrevol_massdep = False, 
-    #        massevol_prop = {'name': 'integrated', 'f_retain': 0.6, 't_step': 0.1}
-    #        )
     
 '''
     qaplot_sf_inherit_average_scatter(
