@@ -13,6 +13,9 @@ from matplotlib.collections import LineCollection
 # --- Local ---
 from plots import Plots
 import bovy_plot as bovy
+
+from util.cenque_utility import get_z_nsnap
+from sfms.fitting import get_param_sfr_mstar_z
 from group_catalog.group_catalog import sf_centrals
 
 class PlotSFMS(Plots): 
@@ -24,43 +27,51 @@ class PlotSFMS(Plots):
         '''
 
         super(PlotSFMS, self).__init__(**kwargs)
+        self.cenque_nsnap = None
+        self.scatter = None
 
-    def cenque(self, cq_obj, **mkwargs): 
+    def cenque(self, cq_obj, scatter=False, bovyplot=True, **mkwargs): 
         '''
         Plot SF-MS (M* vs SFR) for CenQue object
         '''
 
         if self.kwargs == {}: 
-            kwargs = mkwargs.copy() 
+            self.kwargs = mkwargs.copy() 
         else: 
-            kwargs = (self.kwargs).copy()
-            kwargs.update(mkwargs)
+            self.kwargs = (self.kwargs).copy()
+            self.kwargs.update(mkwargs)
     
-        if 'label' in kwargs: 
-            label = kwargs['label']
+        if 'label' in self.kwargs: 
+            label = self.kwargs['label']
         else: 
             label = 'z = '+str(cq_obj.zsnap) 
         
-        if 'color' in kwargs: 
-            color = kwargs['color']
+        if 'color' in self.kwargs: 
+            color = self.kwargs['color']
         else: 
             try: 
                 color = self.pretty_colors[cq_obj.nsnap]
+                self.cenque_nsnap = cq_obj.nsnap
             except TypeError: 
                 color = 'black'
 
-        if 'justsf' in kwargs: 
+        if 'justsf' in self.kwargs: 
+            if self.kwargs['justsf']: 
+                justsf = np.where(cq_obj.gal_type == 'star-forming')
 
-            if not kwargs['justsf']: 
-                raise ValueError(
-                        'Why would you specify it; to make it false, just leave it blank'
-                        )
-            
-            justsf = np.where(cq_obj.gal_type == 'star-forming')
-            
+                cq_mass = cq_obj.mass[justsf]
+                cq_sfr = cq_obj.sfr[justsf]
+            else: 
+                cq_mass = cq_obj.mass
+                cq_sfr = cq_obj.sfr
+        else: 
+            cq_mass = cq_obj.mass
+            cq_sfr = cq_obj.sfr
+        
+        if scatter: 
             self.sub.scatter(
-                    cq_obj.mass[justsf],
-                    cq_obj.sfr[justsf],
+                    cq_mass,
+                    cq_sfr,
                     color=color, 
                     s=3
                     )
@@ -68,12 +79,12 @@ class PlotSFMS(Plots):
             self.sub.set_ylim([-5.0, 2.0])
             self.sub.set_xlabel(r'$\mathtt{M_*}$')
             self.sub.set_ylabel(r'$\mathtt{log\;SFR}$')
+            self.scatter = True
 
         else: 
-
             bovy.scatterplot(
-                    cq_obj.mass, 
-                    cq_obj.sfr,
+                    cq_mass, 
+                    cq_sfr,
                     scatter=True, 
                     color=color, 
                     s=3, 
@@ -82,6 +93,7 @@ class PlotSFMS(Plots):
                     xlabel='\mathtt{M_*}', 
                     ylabel='\mathtt{log\;SFR}'
                     )
+            self.scatter = False
 
         return None   
 
@@ -127,12 +139,50 @@ class PlotSFMS(Plots):
 
         return None   
 
+    def param_sfms(self, nsnap = None, **pltkwargs): 
+        '''
+        Plot parameterized SFMS
+        '''
+        sfr_mstar_z, sig_sfr_mstar_z = get_param_sfr_mstar_z()
+
+        if nsnap is None: 
+            if self.cenque_nsnap is not None: 
+                nsnap = self.cenque_nsnap
+            else: 
+                raise ValueError('nsnap needs to be specified')
+        
+        if 'justsf' in self.kwargs: 
+            self.sub.plot(
+                np.arange(8.5, 12.0, 0.1), 
+                sfr_mstar_z(np.arange(8.5, 12.0, 0.1), get_z_nsnap(nsnap)), 
+                c = 'k', 
+                ls = '--', 
+                lw = 3 
+                )
+        else:
+            plt.plot(
+                    np.arange(8.5, 12.0, 0.1), 
+                    sfr_mstar_z(np.arange(8.5, 12.0, 0.1), get_z_nsnap(nsnap)), 
+                    c = 'k', 
+                    ls = '--', 
+                    lw = 3 
+                    )
+
+        return None
+        
     def save_fig(self, file_name): 
         '''
         Save figure to file 
         '''
         
-        plt.savefig(file_name, bbox_inches='tight') 
+        if 'justsf' in self.kwargs: 
+            if self.kwargs['justsf']: 
+                if self.scatter: 
+                    self.fig.savefig(file_name, bbox_inches='tight') 
+                else: 
+                    plt.savefig(file_name, bbox_inches='tight') 
+        else: 
+            plt.savefig(file_name, bbox_inches='tight') 
 
         return None
 

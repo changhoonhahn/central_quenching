@@ -3,6 +3,7 @@
 Plotting class objects
 
 '''
+import matplotlib.pyplot as plt
 from defutility.plotting import prettyplot
 from defutility.plotting import prettycolors 
 
@@ -12,13 +13,13 @@ class Plots(object):
         '''
         Class that generally encompasses all of the plotting I will do for the CenQue project
         '''
-        self.kwargs
+        self.kwargs = kwargs
 
         prettyplot()
         self.pretty_colors = prettycolors()
 
         self.fig = plt.figure(figsize=[10, 10])
-        self.subs = self.fig.add_subplot(1,1,1)
+        self.sub = self.fig.add_subplot(1,1,1)
 
     def save_fig(self, file_name): 
         '''

@@ -9,15 +9,7 @@ import matplotlib.pyplot as plt
 
 #----- Local -----
 from plots import Plots
-#from cenque import CenQue
-# quiescent fraction
-from quiescent_fraction import cq_fq
 from quiescent_fraction import get_fq
-
-from util import cenque_utility as util
-
-from group_catalog.group_catalog import central_catalog
-
 
 class PlotFq(Plots): 
 
