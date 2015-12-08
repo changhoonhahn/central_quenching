@@ -37,7 +37,7 @@ def integrated_rk4(logsfr, logmass0, t0, tf, f_retain=0.6, delt=0.025, **sfrkwar
     logM_n_1 = logmass0
     
     if niter > 0: 
-        #print niter, ' RK4 iterations', f_retain, delt
+        print niter, ' RK4 iterations', f_retain, delt
         for i in xrange(niter): 
             t_n = t_n_1 + delt
                 
@@ -89,15 +89,14 @@ def integrated_euler(logsfr, logmass0, t0, tf, f_retain=0.6, delt=0.025, **sfrkw
     t_n_1 = t0 
     logSFR_n_1 = logsfr(logmass0, t0, **sfrkwargs)
     logM_n_1 = logmass0
-    
+
     if niter > 0: 
-        #print niter, ' RK4 iterations', f_retain, delt
+        print niter, ' Euler iterations', f_retain, delt
         for i in xrange(niter): 
             t_n = t_n_1 + delt
-
-            logM_n = np.log10(
-                    (10.0 ** logM_n_1) + delt * f_retain * (10.** logsfr(np.log10(10.0 **logM_n_1), t_n_1, **sfrkwargs))
-                    )
+            
+            M_n = (10. ** logM_n_1) + delt * 10.**9. * f_retain * (10.** logSFR_n_1)
+            logM_n = np.log10(M_n)
                 
             if np.sum(np.isnan(logM_n)) > 0: 
                 raise ValueError('There are NaNs') 
@@ -105,9 +104,11 @@ def integrated_euler(logsfr, logmass0, t0, tf, f_retain=0.6, delt=0.025, **sfrkw
             logSFR_n_1 = logsfr(logM_n, t_n, **sfrkwargs)
             logM_n_1 = logM_n
             t_n_1 = t_n
-    #print tf, t_n_1
-    #print 'logsfr', logSFR_n_1
+
     if np.min(logM_n_1 - logmass0) < 0.0: 
-        raise ValueError("integrated mass cannot decrease over cosmic time")
+        if np.min(logM_n_1 - logmass0) > -0.001: 
+            pass
+        else: 
+            raise ValueError("integrated mass cannot decrease over cosmic time")
 
     return logM_n_1, logSFR_n_1

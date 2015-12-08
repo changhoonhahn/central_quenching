@@ -22,7 +22,7 @@ from util.cenque_utility import get_q_ssfr_mean
 from util.tau_quenching import get_quenching_efold
 
 def sf_inherit(nsnap_descendants, 
-        nsnap_ancestor = 13, 
+        nsnap_ancestor = 20, 
         ancestor_sf_prop = {'name': 'average'}, 
         pq_prop = {'slope': 0.05, 'yint': 0.0}, 
         tau_prop = {'name': 'line', 'fid_mass': 10.75, 'slope': -0.6, 'yint': 0.6}, 
@@ -36,6 +36,19 @@ def sf_inherit(nsnap_descendants,
     ''' 
     Evolve star forming properties of ancestor CenQue object in Lineage Class 
     to descendant CenQue object
+
+    Parameters
+    ----------
+    nsnap_ancestor : 
+        Snapshot number of ancestor CenQue object attribute within imported Lineage
+    ancestor_sf_prop : 
+        Property dictionary that dictates the Star Formation Rate assignment in ancestor CenQue object
+    pq_prop : 
+        Property dictionary that dictates the quenching probability. Keys are 'slope' and 'yint'
+    tau_prop : 
+        Property dictionary that dictates the quenching timescale. Keys are 'name', 'fid_mass', 'slope', and 'yint'
+
+
     '''
     # make sure that snapshot = 1 is included among imported descendants
     # and the first element of the list

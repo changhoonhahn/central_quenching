@@ -13,6 +13,35 @@ from defutility.plotting import prettyplot
 from defutility.plotting import prettycolors 
 from sfms.fitting import get_param_sfr_mstar_z
 
+def test_analytical(): 
+
+    def logsfr(logmass, t0, **kwargs): 
+        return np.log10(2.0 * np.sqrt(10.0**logmass))
+    
+    mass0 = 0.0 
+    mass_f, sfr_f = mass_evol.integrated_rk4(
+            logsfr, 
+            mass0, 
+            0.0, 
+            13.0, 
+            f_retain = 1.0, 
+            delt = 0.001
+            )
+    print np.log10((13.0 * 10**9.)**2), np.log10(2.0 * 13.0 * 10**9.)
+    print mass_f, sfr_f
+    
+    mass_f, sfr_f = mass_evol.integrated_euler(
+            logsfr, 
+            mass0, 
+            0.0, 
+            13.0, 
+            f_retain = 1.0, 
+            delt = 0.0005
+            )
+    print np.log10((13.0 * 10**9.)**2), np.log10(2.0 * 13.0 * 10**9.)
+    print mass_f, sfr_f
+
+
 def test_mass_evol(mass0, t0, tf, 
         delmass0 = 0.1, 
         t_initial = 4.0079, 
@@ -188,6 +217,8 @@ def plot_integrated_mass_evol(mass0, t0, tf,
     plt.close()
 
 if __name__=="__main__": 
+    test_analytical()
+    '''
     mass0 = np.arange(7.5, 12.5, 0.5)
     plot_integrated_mass_evol(mass0, 4.0, 13.2, 
             title="Integrated Mass Evolution; SFR(M,t); Constant SF Duty Cycle",  
@@ -217,3 +248,4 @@ if __name__=="__main__":
             sfr_kwargs = 'm0',
             fig_file = 'test_massevol_sfr_m0_t_midfreq_periodic_dutycycle_twoslopeSFMS.png'
             )
+    '''

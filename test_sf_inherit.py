@@ -15,60 +15,29 @@ from defutility.plotting import prettyplot
 from defutility.plotting import prettycolors
 
 def qaplot_sf_inherit(
-        n_step, 
-        nsnap_ancestor = 20, 
-        nsnap_descendant = 1, 
+        n_step, nsnap_ancestor = 20, nsnap_descendant = 1, 
         scatter = 0.0, 
         sfrevol_prop = {'name': 'squarewave', 'freq_range': [0.0, 2*np.pi], 'phase_range': [0, 1]},
-        sfrevol_massdep = False,
         massevol_prop = {'name': 'sham'},
-        ssfr=True, 
-        mass_scatter=True, 
-        sfms=True
+        ssfr=True, fq=False, tau=False, mass_scatter=False, sfms=False
         ):
     '''
+    QAPlots for SF inherit module. 
     '''
+
+    med_theta = abc_posterior_median(n_step)
     
-    if sfrevol_massdep: 
-        sfrevol_massdep_str = 'SFRMt_'
-    else: 
-        sfrevol_massdep_str = 'SFRM0t_'
+    # quenching probabilyt properties
+    pq_dict = {'slope': med_theta[0], 'yint': med_theta[1]}
+    # tau properties
+    tau_dict = {'name': 'line', 'fid_mass': 11.1, 'slope': med_theta[2], 'yint': med_theta[3]}
 
-    file_str = ''.join([ 
-        '_', 
-        str(nsnap_ancestor), 'ancestor_', 
-        str(nsnap_descendant), 'descendant_', 
-        str(round(scatter)), 'Mscatter_', 
-        sfrevol_prop['name'], '_sfrevol_',
-        sfrevol_massdep_str, 
-        massevol_prop['name'], '_massevol'
-        ])
-
-    posterior_file = ''.join([
-        'dat/pmc_abc/', 
-        'theta_t', 
-        str(n_step), 
-        '.dat'])
-
-    theta = np.loadtxt(
-            posterior_file, 
-            unpack = True
-            ) 
-
-    med_theta = [] 
-    for i_param in xrange(len(theta)):
-        med_theta.append( 
-                np.median(theta[i_param])
-                )
-
-    if nsnap_descendant < nsnap_ancestor: 
+    if nsnap_descendant < nsnap_ancestor:   
         bloodline = sf_inherit(
                 [nsnap_descendant], 
                 nsnap_ancestor = nsnap_ancestor, 
-                pq_prop = {'slope': med_theta[0], 'yint': med_theta[1]}, 
-                tau_prop = {
-                    'name': 'line', 'fid_mass': 11.1, 'slope': med_theta[2], 'yint': med_theta[3]
-                    }, 
+                pq_prop = pq_dict, 
+                tau_prop = tau_dict, 
                 sfrevol_prop = sfrevol_prop, 
                 sfrevol_massdep = sfrevol_massdep,
                 massevol_prop = massevol_prop, 
@@ -78,71 +47,53 @@ def qaplot_sf_inherit(
 
         descendant = getattr(bloodline, 'descendant_cq_snapshot'+str(nsnap_descendant))
     else: 
-        bloodline = Lineage(nsnap_ancestor = nsnap_ancestor)
-        bloodline.readin([1], scatter = scatter)
-        descendant = bloodline.ancestor_cq
+        raise ValueError('Specified nsnap_descedant does not reference a descendant')
 
-    sfrevol_str = sfrevol_prop['name']
-    
-    if ssfr: 
-        # SSFR distribution
-        ssfr_plot = PlotSSFR()
-        ssfr_plot.cenque(
-                descendant, 
-                line_color='red', 
-                line_width=4, 
-                label=r'Median $\mathtt{\tau_{Q}}$ of Posterior'
-                )
-        ssfr_plot.groupcat(Mrcut=18)
-        ssfr_plot.set_axes()
-        ssfr_fig_file = ''.join([
+    lineage_str = ''.join([ 
+        '_', 
+        str(nsnap_ancestor), 'ancestor_', 
+        str(nsnap_descendant), 'descendant_', 
+        str(round(scatter)), 'Mscatter_', 
+        sfrevol_prop['name'], '_sfrevol_SFRMt_',
+        massevol_prop['name'], '_massevol'
+        ])
+
+    attr_list = []
+    if ssfr: attr_list.append('ssfr')
+    if fq: attr_list.append('fq')
+    if tau: attr_list.append('tau')
+    if sfms: attr_list.append('sfms')
+    if mass_scatter: attr_list.append('mass_scatter')
+
+    for attr in attr_list: 
+        fig_name = ''.join([
             'figure/', 
-            'qaplot_sf_inherit_ssfr', file_str, '.png'
+            'qaplot_sf_inherit_', attr, lineage_str, '.png'
             ])
-        ssfr_plot.fig.savefig(ssfr_fig_file, bbox_inches="tight")
-        
-    # Quiescent Fraction 
-    #fq_plot = PlotFq()
-    #fq_plot.cenque_fq(descendant, line_color='r', label=None)
-    #fq_plot.param_fq(line_color='k', label=None)
-    #fq_plot.set_axes()
-    #fq_fig_file = ''.join([
-    #    'figure/', 
-    #    'fq_abc_posterior_mass_scatter', str(scatter), '_', sfrevol_sfr, '_sfrevol.png'
-    #    ])
-    #fq_plot.fig.savefig(fq_fig_file, bbox_inches="tight")
+
+        if attr == 'ssfr':                          # SSFR
+            descendant.plotSsfr(
+                    line_color='red', 
+                    line_width=4, 
+                    label=r'Median $\mathtt{\tau_{Q}}$ of Posterior', 
+                    groupcat = True, 
+                    savefig = fig_name                    
+                    )
+        elif attr == 'fq':                          # Quiescent Fraction 
+            descendant.plotFq(
+                    param=True, 
+                    line_color='r', 
+                    label = None,
+                    savefig= fig_name                    
+                    )
+        elif attr == 'tau':                         # Quenching Timescale
+            descendant.plotTau(savefig = fig_name)
+        elif attr == 'sfms':                        # Star Forming Main Sequence 
+            descendant.plotSFMS(justsf=True, bovyplot=True, savefig = fig_name)
+        elif attr == 'mass_scatter':                # Stellar Mass - Halo Mass 
+            descendant.plotMstarMhalo(savefig = fig_name)
     
-    # Quenching Timescale
-    #tau_plot = plot_tau([{'name': 'line', 'fid_mass': 11.1, 'slope': med_theta[2], 'yint': med_theta[3]}])
-    #tau_fig_file = ''.join([
-    #    'figure/', 
-    #    'tau_abc_posterior_mass_scatter', str(scatter), '.png'
-    #    ])
-    #tau_plot.savefig(tau_fig_file, bbox_inches="tight")
-    #plt.close()
-    
-    if sfms:
-        # Star Forming Main Sequence 
-        sfms_plot = PlotSFMS()
-        sfms_plot.cenque(descendant, justsf=True)
-        sfms_fig_file = ''.join([
-            'figure/', 
-            'qaplot_sf_inherit_sfms', file_str, '.png'
-            ])
-        plt.savefig(sfms_fig_file, bbox_inches="tight")
-        plt.close()
-   
-    if mass_scatter: 
-        # Stellar Mass - Halo Mass 
-        mass_scatter_plot = PlotMstarMhalo()
-        mass_scatter_plot.cenque(descendant)
-            
-        mass_scatter_fig_file = ''.join([
-            'figure/', 
-            'qaplot_sf_inherit_mass_scatter', file_str, '.png'
-            ])
-        plt.savefig(mass_scatter_fig_file, bbox_inches="tight")
-        plt.close()
+    return None
 
 def qaplot_sf_inherit_nosfr_scatter(
         n_step, 
@@ -243,98 +194,67 @@ def qaplot_sf_inherit_nosfr_scatter(
         plt.close()
 
 def qaplot_sf_inherit_average_scatter(
-        n_step, 
-        nsnap_descendants,
-        nsnap_ancestor = 20, 
-        scatter = 0.0, 
+        nsnap_descendants, nsnap_ancestor = 20, scatter = 0.0, n_step = 29,
         sfrevol_prop = {'name': 'squarewave', 'freq_range': [0.0, 2*np.pi], 'phase_range': [0, 1]},
-        sfrevol_massdep = False,
         massevol_prop = {'name': 'sham'}
         ):
     '''
     Test Lineage SF Inherit function
     '''
+    med_theta = abc_posterior_median(n_step)         # Get media theta from ABC posterior
 
-    # Get media theta from ABC posterior
-    posterior_file = ''.join([
-        'dat/pmc_abc/', 
-        'theta_t', 
-        str(n_step), 
-        '.dat'])
+    # quenching probabilyt properties
+    pq_dict = {'slope': med_theta[0], 'yint': med_theta[1]}
+    # tau properties
+    tau_dict = {'name': 'line', 'fid_mass': 11.1, 'slope': med_theta[2], 'yint': med_theta[3]}
 
-    theta = np.loadtxt(
-            posterior_file, 
-            unpack = True
-            ) 
-
-    med_theta = [] 
-    for i_param in xrange(len(theta)):
-        med_theta.append( 
-                np.median(theta[i_param])
-                )
-    # ------------------
-    # SF inheritance 
     start_time = time.time()
     bloodline = sf_inherit(
             nsnap_descendants, 
             nsnap_ancestor = nsnap_ancestor, 
             ancestor_sf_prop = {'name': 'average'}, 
-            pq_prop = {'slope': med_theta[0], 'yint': med_theta[1]}, 
-            tau_prop = {
-                'name': 'line', 'fid_mass': 11.1, 'slope': med_theta[2], 'yint': med_theta[3]
-                }, 
+            pq_prop = pq_dict, 
+            tau_prop = tau_dict,            
             sfrevol_prop = sfrevol_prop, 
-            sfrevol_massdep = sfrevol_massdep,
             massevol_prop = massevol_prop, 
             quiet = True, 
             scatter = scatter
             )
-    print 'SF inherit took ', time.time() - start_time
-    
-    if sfrevol_massdep: 
-        sfrevol_massdep_str = 'SFRMt_'
-    else: 
-        sfrevol_massdep_str = 'SFRM0t_'
+    print 'SF inherit took ', (time.time() - start_time)/60.0, ' minutes' 
     
     for nsnap_descendant in nsnap_descendants: 
 
         descendant = getattr(bloodline, 'descendant_cq_snapshot'+str(nsnap_descendant))
         
-        start_time = time.time()
-        # SFMS plot
-        sfms_plot = descendant.plotSFMS(justsf=True, bovyplot=True)
-        sfms_plot.param_sfms()      # plot parameterized SFMS
+        if massevol_prop['name'] == 'sham': 
+            massevol_str = massevol_prop['name']
+        else: 
+            massevol_str = massevol_prop['type'] + massevol_prop['name']
 
-        file_str = ''.join([ 
+        lineage_str = ''.join([ 
             '_', 
             str(nsnap_ancestor), 'ancestor_', 
             str(nsnap_descendant), 'descendant_', 
             str(round(scatter)), 'Mscatter_', 
-            sfrevol_prop['name'], '_sfrevol_',
-            sfrevol_massdep_str, 
-            massevol_prop['name'], '_massevol'
+            sfrevol_prop['name'], '_sfrevol_SFRMt_',
+            massevol_str, '_massevol'
             ])
 
-        sfms_fig_file = ''.join([
-            'figure/', 
-            'qaplot_sf_inherit_sfms_justsf', file_str, '_twoslope_sfms.png'
-            ])
-        print sfms_fig_file 
-        sfms_plot.save_fig(sfms_fig_file)
-        print 'SFMS plotting took ', time.time() - start_time
+        for justsf in [True, False]: 
+            justsf_str = ''
+            if justsf: 
+                justsf_str = '_justsf'
 
-        plt.close()
+            fig_name = ''.join([
+                'figure/', 
+                'qaplot_sf_inherit_sfms', justsf_str, lineage_str, '_twoslope_sfms.png'
+                ])
 
-        sfms_plot = descendant.plotSFMS(justsf=False, bovyplot=True)
-        sfms_plot.param_sfms()      # plot parameterized SFMS
-
-        sfms_fig_file = ''.join([
-            'figure/', 
-            'qaplot_sf_inherit_sfms', file_str, '_twoslope_sfms.png'
-            ])
-        print sfms_fig_file 
-        sfms_plot.save_fig(sfms_fig_file)
-        print 'SFMS plotting took ', time.time() - start_time
+            sfms_plot = descendant.plotSFMS(justsf=justsf, bovyplot=True)
+            sfms_plot.param_sfms()
+            
+            print fig_name
+            sfms_plot.save_fig(fig_name)
 
         plt.close()
 
@@ -343,43 +263,13 @@ def sf_inherited_lineage(
         nsnap_ancestor = 20, 
         scatter = 0.0, 
         sfrevol_prop = {'name': 'squarewave', 'freq_range': [0.0, 2*np.pi], 'phase_range': [0, 1]},
-        sfrevol_massdep = False,
         massevol_prop = {'name': 'sham'}
         ): 
     '''
-    Write out SF Inherited Lineage to file in order for faster access in the future. 
+    Write out SF Inherited Lineage to file for record keeping purposes and faster access for plotting 
     '''
-    if sfrevol_massdep: 
-        sfrevol_massdep_str = 'SFRMt_'
-    else: 
-        sfrevol_massdep_str = 'SFRM0t_'
 
-    file_str = ''.join([ 
-        '_', 
-        str(nsnap_ancestor), 'ancestor_', 
-        str(round(scatter)), 'Mscatter_', 
-        sfrevol_prop['name'], '_sfrevol_',
-        sfrevol_massdep_str, 
-        massevol_prop['name'], '_massevol_',
-        str(n_step), '_abcpost'
-        ])
-
-    posterior_file = ''.join([
-        'dat/pmc_abc/', 
-        'theta_t', 
-        str(n_step), 
-        '.dat'])
-
-    theta = np.loadtxt(
-            posterior_file, 
-            unpack = True
-            ) 
-
-    med_theta = [] 
-    for i_param in xrange(len(theta)):
-        med_theta.append( 
-                np.median(theta[i_param])
-                )
+    med_theta = abc_posterior_median(n_step)
 
     nsnap_range = np.arange(1, nsnap_ancestor)
 
@@ -387,15 +277,26 @@ def sf_inherited_lineage(
             list(nsnap_range),
             nsnap_ancestor = nsnap_ancestor, 
             pq_prop = {'slope': med_theta[0], 'yint': med_theta[1]}, 
-            tau_prop = {
-                'name': 'line', 'fid_mass': 11.1, 'slope': med_theta[2], 'yint': med_theta[3]
-                }, 
+            tau_prop = {'name': 'line', 'fid_mass': 11.1, 'slope': med_theta[2], 'yint': med_theta[3]}, 
             sfrevol_prop = sfrevol_prop, 
-            sfrevol_massdep = sfrevol_massdep,
             massevol_prop = massevol_prop, 
             quiet = True, 
             scatter = scatter
             )
+
+    if massevol_prop['name'] == 'sham': 
+        massevol_str = massevol_prop['name'] 
+    else: 
+        massevol_str =  massevol_prop['type'] + massevol_prop['name']
+
+    lineage_str = ''.join([ 
+        '_', 
+        str(nsnap_ancestor), 'ancestor_', 
+        str(round(scatter)), 'Mscatter_', 
+        sfrevol_prop['name'], '_sfrevol_SFRMt_', 
+        massevol_str, '_massevol_',
+        str(n_step), '_abcpost'
+        ])
 
     bloodline.file_name = ''.join([
             'dat/lineage/', 
@@ -404,7 +305,7 @@ def sf_inherited_lineage(
             '_descendants',
             '_mass_scatter', 
             str(round(bloodline.mass_scatter, 1)), 
-            file_str, 
+            lineage_str, 
             '.hdf5'
             ]) 
     bloodline.writeout()
@@ -530,23 +431,51 @@ def track_sf_pop_sfms_evol(
         #plt.show()
         plt.close()
 
+def abc_posterior_median(n_step): 
+    '''
+    Median theat from ABC posterior 
+    '''
+    # read in ABC posterior file 
+    posterior_file = ''.join([
+        'dat/pmc_abc/', 
+        'theta_t', 
+        str(n_step), 
+        '.dat'])
+
+    theta = np.loadtxt(
+            posterior_file, 
+            unpack = True
+            ) 
+
+    med_theta = [] 
+    for i_param in xrange(len(theta)):
+        med_theta.append( 
+                np.median(theta[i_param])
+                )
+
+    return med_theta 
+
 if __name__=="__main__":
-    #qaplot_sf_inherit_average_scatter(
+    qaplot_sf_inherit_average_scatter(
+            [1],
+            sfrevol_prop = {'name': 'newamp_squarewave', 'freq_range': [2.*np.pi, 20.*np.pi], 'phase_range': [0,1], 'sigma': 0.3},
+            massevol_prop = {'name': 'integrated', 'type': 'euler', 'f_retain': 0.6, 't_step': 0.01}
+            )   # {'name': 'notperiodic'}
+    qaplot_sf_inherit_average_scatter(
+            [1],
+            sfrevol_prop = {'name': 'newamp_squarewave', 'freq_range': [2.*np.pi, 20.*np.pi], 'phase_range': [0,1], 'sigma': 0.3},
+            massevol_prop = {'name': 'integrated', 'type': 'rk4', 'f_retain': 0.6, 't_step': 0.01}
+            )   # {'name': 'notperiodic'}
+    #start_time = time.time()
+    #sf_inherited_lineage(
     #        29, 
-    #        [1],
+    #        nsnap_ancestor = 20, 
+    #        scatter = 0.0, 
     #        sfrevol_prop = {'name': 'newamp_squarewave', 'freq_range': [2.*np.pi, 20.*np.pi], 'phase_range': [0,1], 'sigma': 0.3},
     #        sfrevol_massdep = True, 
-    #        massevol_prop = {'name': 'integrated', 'f_retain': 0.6, 't_step': 0.1}
+    #        massevol_prop = {'name': 'integrated', 'type': 'euler', 'f_retain': 0.6, 't_step': 0.01}
     #        )
-
-    sf_inherited_lineage(
-            29, 
-            nsnap_ancestor = 20, 
-            scatter = 0.0, 
-            sfrevol_prop = {'name': 'newamp_squarewave', 'freq_range': [2.*np.pi, 20.*np.pi], 'phase_range': [0,1], 'sigma': 0.3},
-            sfrevol_massdep = True, 
-            massevol_prop = {'name': 'integrated', 'type': 'euler', 'f_retain': 0.6, 't_step': 0.01}
-            )
+    #print (time.time() - start_time)/60.0, ' minutes'
 
     #track_sf_pop_sfms_evol(
     #        29, 

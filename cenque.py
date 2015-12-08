@@ -453,7 +453,7 @@ class CenQue:
         plt.close() # in case there's another plot
 
         fq_plot = PlotFq() 
-        fq_plot.cenque(self)
+        fq_plot.cenque(self, **pltkwargs)
 
         if 'param' in pltkwargs.keys():
             # hardcoded for convenience 
