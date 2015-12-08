@@ -19,11 +19,25 @@ def get_param_sfr_mstar_z():
     """
 
     def avgsfr_sfms(mstar, z_in): 
-        mu_SFR = 0.65*(mstar - 10.5) + 0.76 * (z_in - 0.01)
+
+        #if z_in < 0.9: 
+        #    pass
+        #else: 
+        #    z_in = 0.9
+
+        lowmass = np.where(mstar < 9.5)
+        not_lowmass = np.where(mstar >= 9.5)
+
+        mu_SFR = np.zeros(len(mstar))
+        mu_SFR[not_lowmass] = 0.5*(mstar[not_lowmass] - 9.5) - 0.5 + 0.76 * z_in
+        mu_SFR[lowmass] = (mstar[lowmass] - 9.5) - 0.5 + 0.76 * z_in
+        #mu_SFR = 0.5*(mstar - 10.5) + 0.76 * z_in
+        #mu_SFR = 0.65*(mstar - 10.5) + 0.76 * (z_in - 0.01)
         return mu_SFR
 
     def sigsfr_sfms(mstar, z_in): 
         return 0.3 
+        #return 0.28 + 0.05*(mstar - 10.5)
         
     return [avgsfr_sfms, sigsfr_sfms] 
 

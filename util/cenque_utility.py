@@ -17,30 +17,24 @@ from scipy import interpolate
 
 # ---- Local -----
 
-# SSFR distribution ----------------------------------------------------------------
-class CQssfr: 
-    ''' SSFR distribution for CenQue class
-    '''
-    def __init__(self): 
-        self.ssfr = None 
-        self.bin_low = None     # SSFR bin low 
-        self.bin_high = None    # SSFR bin high 
-        self.bin_mid = None     # SSFR bin mid 
-        self.ssfr_hist = None   # histogram 
+def intersection_index(arr1, arr2):  
+    """ 
+    Find the indicies of the intersecting elements of arr1 and arr2.
+    Takes approximately < 1 second
+    """
+    sort_arr1_indices = np.argsort(arr1)
+    sort_arr2_indices = np.argsort(arr2)
 
-    def histogram(self): 
-        ''' Calculate SSFR histogram 
-        '''
-        if self.ssfr == None: 
-            raise NameError('Not SSFR specified') 
+    sorted_arr1 = arr1[sort_arr1_indices]
+    sorted_arr2 = arr2[sort_arr2_indices]
 
-    def readin(self, **kwargs): 
-        ''' Read in ssfr histogram 
-        '''
+    arr1_in1d = np.in1d(sorted_arr1, sorted_arr2)
+    arr2_in1d = np.in1d(sorted_arr2, sorted_arr1)
 
-    def writeout(self, **kwargs): 
-        ''' Writes out ssfr histogram 
-        '''
+    arr1_intersect_indices = sort_arr1_indices[arr1_in1d]
+    arr2_intersect_indices = sort_arr2_indices[arr2_in1d]
+
+    return arr1_intersect_indices, arr2_intersect_indices 
 
 # SF property functions ------------------------------------------------------------------------
 def get_sfr_mstar_z_flex(mstar, z_in, built_sfms_fit):
@@ -137,11 +131,22 @@ def get_q_ssfr_mean(masses, Mrcut=18):
     * A little bit of hardcoded tweaking but these should not matter because ultimately  
 
     '''
+    if isinstance(masses, list): 
+        masses = np.array(masses)
+
     fit_line_param = get_bestfit_qgroupcat_ssfr(Mrcut=Mrcut) 
     fit_slope = fit_line_param[0].item() 
     fit_yint = fit_line_param[1].item() 
 
-    q_ssfr = np.array([ fit_slope * (mass - 10.5) + fit_yint - 0.1 for mass in masses ])  
+    #q_ssfr = (fit_slope + 0.05) * (masses - 10.5) + fit_yint# - 0.1  
+    #q_ssfr = (fit_slope + 0.05) * (masses - 10.4) + fit_yint  
+    q_ssfr = (fit_slope + 0.15) * (masses - 10.4) + fit_yint - 0.1
+    
+    mass = np.arange(9.5, 11.5, 0.1)
+    #print fit_slope, fit_yint
+    #print (fit_slope + 0.05) * (mass - 10.4) + fit_yint
+    #print (fit_slope + 0.125) * (mass - 10.4) + fit_yint - 0.075
+    #print (fit_slope + 0.15) * (mass - 10.4) + fit_yint - 0.1
 
     #q_ssfr = np.array([ (-0.7 * mass) - 4.625 for mass in masses ])  
     return q_ssfr 
