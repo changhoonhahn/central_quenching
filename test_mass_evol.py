@@ -14,33 +14,59 @@ from defutility.plotting import prettycolors
 from sfms.fitting import get_param_sfr_mstar_z
 
 def test_analytical(): 
+    '''
+    Quick analystical test for the integration scheme
+    '''
 
     def logsfr(logmass, t0, **kwargs): 
         return np.log10(2.0 * np.sqrt(10.0**logmass))
     
     mass0 = 0.0 
-    mass_f, sfr_f = mass_evol.integrated_rk4(
-            logsfr, 
-            mass0, 
-            0.0, 
-            13.0, 
-            f_retain = 1.0, 
-            delt = 0.001
-            )
-    print np.log10((13.0 * 10**9.)**2), np.log10(2.0 * 13.0 * 10**9.)
-    print mass_f, sfr_f
+    t_arr = np.arange(0.0, 14., 1.0)
     
-    mass_f, sfr_f = mass_evol.integrated_euler(
-            logsfr, 
-            mass0, 
-            0.0, 
-            13.0, 
-            f_retain = 1.0, 
-            delt = 0.0005
-            )
-    print np.log10((13.0 * 10**9.)**2), np.log10(2.0 * 13.0 * 10**9.)
-    print mass_f, sfr_f
+    rk4_masses, euler_masses = [0.0], [0.0]
+    rk4_sfrs, euler_sfrs = [0.0], [0.0]
 
+    for tt in t_arr[1:]:
+
+        rk4_mass_f, rk4_sfr_f = mass_evol.integrated_rk4(
+                logsfr, 
+                mass0, 
+                np.min(t_arr), 
+                tt, 
+                f_retain = 1.0, 
+                delt = 0.01
+                )
+        euler_mass_f, euler_sfr_f = mass_evol.integrated_euler(
+                logsfr, 
+                mass0, 
+                np.min(t_arr), 
+                tt, 
+                f_retain = 1.0, 
+                delt = 0.005
+                )
+
+        rk4_masses.append(rk4_mass_f)
+        euler_masses.append(euler_mass_f)
+        
+        rk4_sfrs.append(rk4_sfr_f)
+        euler_sfrs.append(euler_sfr_f)
+
+    prettyplot()
+    pretty_colors = prettycolors()
+    fig = plt.figure(1, figsize=(10,12))
+    sub = fig.add_subplot(111)
+    
+    analytic = np.log10((t_arr * 10**9.)**2)
+    sub.plot(t_arr, (rk4_masses-analytic)/analytic, lw=4, c=pretty_colors[1], label='RK4')
+    sub.plot(t_arr, (euler_masses-analytic)/analytic, lw=4, ls='--', c=pretty_colors[3], label='Euler')
+    sub.set_xlim([0.0, 14.0])
+    sub.set_xlabel('fake t', fontsize=25)
+    sub.set_ylabel('(fake integrated M - fake analytic M)/ fake analytic M', fontsize=25)
+    #sub.set_ylim([17.0, 20.0])
+    sub.legend(loc='lower right')
+    plt.show()
+    return None
 
 def test_mass_evol(mass0, t0, tf, 
         delmass0 = 0.1, 
