@@ -27,22 +27,16 @@ def sf_inherit(nsnap_descendants,
         pq_prop = {'slope': 0.05, 'yint': 0.0}, 
         tau_prop = {'name': 'line', 'fid_mass': 10.75, 'slope': -0.6, 'yint': 0.6}, 
         sfrevol_prop = {'name': 'notperiodic'}, 
-        sfrevol_massdep = False,
         massevol_prop = {'name': 'sham'}, 
         scatter = 0.0, 
         quiet = True, 
         qaplot = False,
         qaplotname = None, 
         clobber = False):
-    """ 
+    ''' 
     Evolve star forming properties of ancestor CenQue object in Lineage Class 
     to descendant CenQue object
-    """
-    if sfrevol_massdep: 
-        print "SFR(M*(t), t)"
-    else: 
-        print "SFR(M*(t0), t)"
-    
+    '''
     # make sure that snapshot = 1 is included among imported descendants
     # and the first element of the list
     if not isinstance(nsnap_descendants, list): 
@@ -98,21 +92,31 @@ def sf_inherit(nsnap_descendants,
             return ancestor.ssfr[q_ancestors] + logmass
     
         if massevol_prop['name'] == 'integrated': 
-            descendant.mass[q_ancestors], descendant.sfr[q_ancestors] = mass_evol.integrated_rk4(
-                    logsfr_quiescent, 
-                    ancestor.mass[q_ancestors], 
-                    t_ancestor, 
-                    t_descendant, 
-                    f_retain=massevol_prop['f_retain'], 
-                    delt = massevol_prop['t_step']
-                    )
-        elif massevol_prop['name'] == 'sham': 
-            descendant.sfr[q_ancestors] = logsfr_quiescent(
-                    descendant.mass[q_ancestors], 
-                    t_descendant
-                    )
+            if massevol_prop['type'] == 'rk4': 
+                descendant.mass[q_ancestors], descendant.sfr[q_ancestors] = \
+                        mass_evol.integrated_rk4(
+                                logsfr_quiescent, 
+                                ancestor.mass[q_ancestors], 
+                                t_ancestor, 
+                                t_descendant, 
+                                f_retain=massevol_prop['f_retain'], 
+                                delt = massevol_prop['t_step']
+                                )
+            elif massevol_prop['type'] == 'euler': 
+                descendant.mass[q_ancestors], descendant.sfr[q_ancestors] = \
+                        mass_evol.integrated_euler(
+                                logsfr_quiescent, 
+                                ancestor.mass[q_ancestors], 
+                                t_ancestor, 
+                                t_descendant, 
+                                f_retain=massevol_prop['f_retain'], 
+                                delt = massevol_prop['t_step']
+                                )
 
-        if nsnap_descendant == 1: 
+        elif massevol_prop['name'] == 'sham': 
+            descendant.sfr[q_ancestors] = logsfr_quiescent(descendant.mass[q_ancestors], t_descendant)
+
+        if nsnap_descendant == 1:       # Final Snapshot -------------------------------
 
             # star-forming evolution 
             # quenching probability (just quiescent fraction)
@@ -135,6 +139,7 @@ def sf_inherit(nsnap_descendants,
             randoms = np.random.uniform(0, 1, len(sf_ancestors)) 
         
             # determine which SF galaxies are quenching or not 
+            # based on quenching probability 
             is_qing = np.where(P_q > randoms) 
             is_notqing = np.where(P_q <= randoms)
             
@@ -156,7 +161,9 @@ def sf_inherit(nsnap_descendants,
                     )
         
             # final quenched SSFR. This is specified due to the fact that 
-            # there's a lower bound on the SSFR
+            # there's a lower bound on the SSFR. These values are effectively 
+            # hardcoded in order to reproduce the quiescent peak of the SSFR 
+            # distribution
             q_ssfr_mean = get_q_ssfr_mean(descendant.mass[sf_ancestors])
             final_q_ssfr = 0.18 * np.random.randn(len(sf_ancestors)) + q_ssfr_mean 
         
@@ -177,12 +184,8 @@ def sf_inherit(nsnap_descendants,
 
         def logsfr_m_t(logmass, t_input): 
 
-            if sfrevol_massdep:  
-                # SFR evolution based on solving an ODE of SFR
-                avglogsfr = logsfr_mstar_z(logmass, z_ancestor)
-            else: 
-                # SFR evolution based on just time evolution 
-                avglogsfr = ancestor.avg_sfr[sf_ancestors]
+            # SFR evolution based on solving an ODE of SFR
+            avglogsfr = logsfr_mstar_z(logmass, z_ancestor)
 
             # log(SFR)_SFMS evolutionfrom t0 to tQ
             logsfr_sfms = sfr_evol.logsfr_sfms_evol(
@@ -212,28 +215,33 @@ def sf_inherit(nsnap_descendants,
         #print 'SHAM Masses : ', descendant.mass[sf_ancestors]
 
         if massevol_prop['name'] == 'integrated': 
+            #start_time = time.time()
+            if massevol_prop['type'] == 'rk4': 
+                descendant.mass[sf_ancestors], descendant.sfr[sf_ancestors] = \
+                        mass_evol.integrated_rk4(
+                                logsfr_m_t, 
+                                ancestor.mass[sf_ancestors], 
+                                t_ancestor, 
+                                t_descendant, 
+                                f_retain = massevol_prop['f_retain'], 
+                                delt = massevol_prop['t_step']
+                                )
+            elif massevol_prop['type'] == 'euler': 
+                descendant.mass[sf_ancestors], descendant.sfr[sf_ancestors] = \
+                        mass_evol.integrated_euler(
+                                logsfr_m_t, 
+                                ancestor.mass[sf_ancestors], 
+                                t_ancestor, 
+                                t_descendant, 
+                                f_retain = massevol_prop['f_retain'], 
+                                delt = massevol_prop['t_step']
+                                )
 
-            start_time = time.time()
-            descendant.mass[sf_ancestors], descendant.sfr[sf_ancestors] = \
-                    mass_evol.integrated_rk4(
-                            logsfr_m_t, 
-                            ancestor.mass[sf_ancestors], 
-                            t_ancestor, 
-                            t_descendant, 
-                            f_retain = massevol_prop['f_retain'], 
-                            delt = massevol_prop['t_step']
-                            )
+            if np.min(descendant.mass[sf_ancestors] - ancestor.mass[sf_ancestors]) < 0.0: 
+                raise ValueError("Integrated mass can't reduce the mass")
             #print 'integration time ', (time.time() - start_time)
         
-            #print 'Integrated Masses : ', descendant.mass[sf_ancestors]
-        
-            #print 'blah', descendant.sfr[sf_ancestors]
-            #print 'dlah', logsfr_m_t(descendant.mass[sf_ancestors], t_descendant)
-
         elif massevol_prop['name'] == 'sham': 
-            if sfrevol_massdep:
-                raise ValueError("You can't both have SHAM masses SFR(M*(t),t) dependence!")
-
             descendant.sfr[sf_ancestors] = logsfr_m_t(
                     descendant.mass[sf_ancestors], 
                     t_descendant

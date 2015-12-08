@@ -3,6 +3,9 @@ import time
 
 from lineage import Lineage
 from sf_inherit import sf_inherit 
+from util.cenque_utility import get_t_nsnap
+
+# --- plotting --- 
 from plotting.plot_fq import PlotFq
 from plotting.plot_sfms import PlotSFMS
 from plotting.plot_ssfr import PlotSSFR
@@ -335,7 +338,6 @@ def qaplot_sf_inherit_average_scatter(
 
         plt.close()
 
-
 def sf_inherited_lineage(
         n_step, 
         nsnap_ancestor = 20, 
@@ -345,6 +347,7 @@ def sf_inherited_lineage(
         massevol_prop = {'name': 'sham'}
         ): 
     '''
+    Write out SF Inherited Lineage to file in order for faster access in the future. 
     '''
     if sfrevol_massdep: 
         sfrevol_massdep_str = 'SFRMt_'
@@ -454,8 +457,9 @@ def track_sf_pop_sfms_evol(
 
     for i_snap in nsnap_range: 
         descendant = getattr(bloodline, 'descendant_cq_snapshot'+str(i_snap))
-    
-        gal_assigned = np.where(descendant.gal_type != '')# 'quiescent')
+        
+        if i_snap == nsnap_range[0]: 
+            gal_assigned = np.where(descendant.gal_type != 'quiescent')
 
         if i_snap == nsnap_range[0]: 
             sf_masses = descendant.mass[gal_assigned]
@@ -489,10 +493,42 @@ def track_sf_pop_sfms_evol(
     
     sfms_fig_file = ''.join([
         'figure/', 
-        'qaplot_sf_inherit_sfms', file_str, '_galaxytrack.png'
+        'qaplot_sf_inherit_sfms', file_str, '_sf_galaxytrack.png'
         ])
     fig.savefig(sfms_fig_file, bbox_inches="tight")
     plt.close()
+    
+    for attr in ['sfr', 'mass', 'ssfr']: 
+
+        fig = plt.figure(figsize=(15,8))
+        sub = fig.add_subplot(111)
+    
+        for i in xrange(n_gal): #sf_masses.shape[1]):
+            
+            if attr == 'sfr': 
+                attr_val = sf_sfrs[:,i]
+            elif attr == 'mass': 
+                attr_val = sf_masses[:,i]
+            elif attr == 'ssfr': 
+                attr_val = sf_sfrs[:,i] - sf_masses[:,i]
+
+            sub.plot( get_t_nsnap(nsnap_range), 
+                    attr_val, 
+                    color=pretty_colors[i % 20],
+                    lw=2
+                    )
+
+        sub.set_xlim([3, 14.0])
+        sub.set_ylabel(r'$\mathtt{log\;'+attr.upper()+'}$')
+        sub.set_xlabel(r'$\mathtt{t_{cosmic}}$')
+    
+        attr_fig_file = ''.join([
+            'figure/', 
+            'qaplot_sf_inherit_', attr, '_', file_str, '_galaxytrack.png'
+            ])
+        fig.savefig(attr_fig_file, bbox_inches="tight")
+        #plt.show()
+        plt.close()
 
 if __name__=="__main__":
     #qaplot_sf_inherit_average_scatter(
@@ -502,22 +538,23 @@ if __name__=="__main__":
     #        sfrevol_massdep = True, 
     #        massevol_prop = {'name': 'integrated', 'f_retain': 0.6, 't_step': 0.1}
     #        )
-    #sf_inherited_lineage(
-    #        29, 
-    #        nsnap_ancestor = 20, 
-    #        scatter = 0.0, 
-    #        sfrevol_prop = {'name': 'newamp_squarewave', 'freq_range': [2.*np.pi, 20.*np.pi], 'phase_range': [0,1], 'sigma': 0.3},
-    #        sfrevol_massdep = True, 
-    #        massevol_prop = {'name': 'integrated', 'f_retain': 0.6, 't_step': 0.1}
-    #        )
 
-    track_sf_pop_sfms_evol(
+    sf_inherited_lineage(
             29, 
-            10,
+            nsnap_ancestor = 20, 
+            scatter = 0.0, 
             sfrevol_prop = {'name': 'newamp_squarewave', 'freq_range': [2.*np.pi, 20.*np.pi], 'phase_range': [0,1], 'sigma': 0.3},
             sfrevol_massdep = True, 
-            massevol_prop = {'name': 'integrated', 'f_retain': 0.6, 't_step': 0.1}
+            massevol_prop = {'name': 'integrated', 'type': 'euler', 'f_retain': 0.6, 't_step': 0.01}
             )
+
+    #track_sf_pop_sfms_evol(
+    #        29, 
+    #        5,
+    #        sfrevol_prop = {'name': 'newamp_squarewave', 'freq_range': [2.*np.pi, 20.*np.pi], 'phase_range': [0,1], 'sigma': 0.3},
+    #        sfrevol_massdep = True, 
+    #        massevol_prop = {'name': 'integrated', 'f_retain': 0.6, 't_step': 0.01}
+    #        )
     
 '''
     qaplot_sf_inherit_average_scatter(
