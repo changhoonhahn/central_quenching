@@ -9,7 +9,7 @@ from treepm.sham import SMFClass
 
 class PlotSMF(Plots): 
 
-    def __init__(self, cenque=None, **kwargs): 
+    def __init__(self, **kwargs): 
         ''' 
         Child class of Plots class that describes SMF plots for 
         different class objects including CenQue and GroupCat

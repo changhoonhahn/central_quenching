@@ -429,6 +429,20 @@ class CenQue:
         '''
         plt.close() # in case there's another plot
 
+        smf_plot = PlotSMF()
+        smf_plot.cenque(self, **pltkwargs)
+        smf_plot.analyti(self, self.zsnap)
+        smf_plot.set_axes()
+
+        if 'savefig' in pltkwargs.keys():
+            if isinstance(pltkwargs['savefig'], str): 
+                ssfr_plot.save_fig(pltkwargs['savefig'])
+            else: 
+                ValueError('savefig = figure_file_name')
+            return None
+        else: 
+            return smf_plot
+
     # --- Quiescent Fraction ---
     def Fq(self, **fq_kwargs):
         '''
