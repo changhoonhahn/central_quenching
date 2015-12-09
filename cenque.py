@@ -504,7 +504,8 @@ class CenQue:
 
         plt.close()
 
-        mm_plot = PlotMstarMhalo(self, **pltkwargs)
+        mm_plot = PlotMstarMhalo()
+        mm_plot.cenque(self, **pltkwargs)
         
         if 'savefig' in pltkwargs.keys():
             if isinstance(pltkwargs['savefig'], str): 

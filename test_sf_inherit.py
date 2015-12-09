@@ -39,7 +39,6 @@ def qaplot_sf_inherit(
                 pq_prop = pq_dict, 
                 tau_prop = tau_dict, 
                 sfrevol_prop = sfrevol_prop, 
-                sfrevol_massdep = sfrevol_massdep,
                 massevol_prop = massevol_prop, 
                 quiet = True, 
                 scatter = scatter
@@ -58,17 +57,22 @@ def qaplot_sf_inherit(
         '_', 
         str(nsnap_ancestor), 'ancestor_', 
         str(nsnap_descendant), 'descendant_', 
-        str(round(scatter)), 'Mscatter_', 
+        str(round(scatter, 1)), 'Mscatter_', 
         sfrevol_prop['name'], '_sfrevol_SFRMt_',
         massevol_str, '_massevol'
         ])
 
     attr_list = []
-    if ssfr: attr_list.append('ssfr')
-    if fq: attr_list.append('fq')
-    if tau: attr_list.append('tau')
-    if sfms: attr_list.append('sfms')
-    if mass_scatter: attr_list.append('mass_scatter')
+    if ssfr: 
+        attr_list.append('ssfr')
+    if fq: 
+        attr_list.append('fq')
+    if tau: 
+        attr_list.append('tau')
+    if sfms: 
+        attr_list.append('sfms')
+    if mass_scatter: 
+        attr_list.append('mass_scatter')
 
     for attr in attr_list: 
         fig_name = ''.join([
@@ -470,13 +474,14 @@ def abc_posterior_median(n_step):
 """
 
 if __name__=="__main__":
-    #qaplot_sf_inherit(
-    #    nsnap_ancestor = 20, nsnap_descendant = 1, 
-    #    scatter = 0.0, 
-    #    sfrevol_prop = {'name': 'newamp_squarewave', 'freq_range': [2.*np.pi, 20.*np.pi], 'phase_range': [0,1], 'sigma': 0.3},
-    #    massevol_prop = {'name': 'sham'},
-    #    ssfr=True, fq=False, tau=False, mass_scatter=False, sfms=False
-    #    )
+    qaplot_sf_inherit(
+        nsnap_ancestor = 20, nsnap_descendant = 1, 
+        scatter = 0.2, 
+        sfrevol_prop = {'name': 'newamp_squarewave', 'freq_range': [2.*np.pi, 20.*np.pi], 'phase_range': [0,1], 'sigma': 0.3},
+        massevol_prop = {'name': 'integrated', 'type': 'euler', 'f_retain': 0.6, 't_step': 0.01},
+        ssfr=False, fq=False, tau=False, mass_scatter=True, sfms=False
+        )
+
     #qaplot_sf_inherit_average_scatter(
     #        [1],
     #        sfrevol_prop = {'name': 'newamp_squarewave', 'freq_range': [2.*np.pi, 20.*np.pi], 'phase_range': [0,1], 'sigma': 0.3},
@@ -484,17 +489,17 @@ if __name__=="__main__":
     #        )   # {'name': 'notperiodic'}
 
     #for integ in ['euler', 'rk4']:
-    start_time = time.time()
-    sf_inherited_lineage(
-            29, 
-            nsnap_ancestor = 20, 
-            scatter = 0.0, 
-            sfrevol_prop = {
-                'name': 'newamp_squarewave', 'freq_range': [2.*np.pi, 20.*np.pi], 'phase_range': [0,1], 'sigma': 0.3
-                },
-            massevol_prop = {'name': 'integrated', 'type': 'euler', 'f_retain': 0.6, 't_step': 0.0025}
-            )
-    print (time.time() - start_time)/60.0, ' minutes'
+    #start_time = time.time()
+    #sf_inherited_lineage(
+    #        29, 
+    #        nsnap_ancestor = 20, 
+    #        scatter = 0.0, 
+    #        sfrevol_prop = {
+    #            'name': 'newamp_squarewave', 'freq_range': [2.*np.pi, 20.*np.pi], 'phase_range': [0,1], 'sigma': 0.3
+    #            },
+    #        massevol_prop = {'name': 'integrated', 'type': 'euler', 'f_retain': 0.6, 't_step': 0.0025}
+    #        )
+    #print (time.time() - start_time)/60.0, ' minutes'
 
     #track_sf_pop_sfms_evol(
     #        10,
