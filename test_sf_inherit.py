@@ -15,7 +15,7 @@ from defutility.plotting import prettyplot
 from defutility.plotting import prettycolors
 
 def qaplot_sf_inherit(
-        n_step, nsnap_ancestor = 20, nsnap_descendant = 1, 
+        nsnap_ancestor = 20, nsnap_descendant = 1, n_step = 29, 
         scatter = 0.0, 
         sfrevol_prop = {'name': 'squarewave', 'freq_range': [0.0, 2*np.pi], 'phase_range': [0, 1]},
         massevol_prop = {'name': 'sham'},
@@ -49,13 +49,18 @@ def qaplot_sf_inherit(
     else: 
         raise ValueError('Specified nsnap_descedant does not reference a descendant')
 
+    if massevol_prop['name'] == 'sham': 
+        massevol_str = massevol_prop['name']
+    else: 
+        massevol_str = ''.join([massevol_prop['type'], massevol_prop['name']])
+
     lineage_str = ''.join([ 
         '_', 
         str(nsnap_ancestor), 'ancestor_', 
         str(nsnap_descendant), 'descendant_', 
         str(round(scatter)), 'Mscatter_', 
         sfrevol_prop['name'], '_sfrevol_SFRMt_',
-        massevol_prop['name'], '_massevol'
+        massevol_str, '_massevol'
         ])
 
     attr_list = []
@@ -94,104 +99,6 @@ def qaplot_sf_inherit(
             descendant.plotMstarMhalo(savefig = fig_name)
     
     return None
-
-def qaplot_sf_inherit_nosfr_scatter(
-        n_step, 
-        nsnap_descendants,
-        nsnap_ancestor = 20, 
-        scatter = 0.0, 
-        sfrevol_prop = {'name': 'squarewave', 'freq_range': [0.0, 2*np.pi], 'phase_range': [0, 1]},
-        sfrevol_massdep = False,
-        massevol_prop = {'name': 'sham'}
-        ):
-    '''
-    Test Lineage SF Inherit function for the case where there's no scatter in 
-    the SFMS
-    '''
-    
-    if sfrevol_massdep: 
-        sfrevol_massdep_str = 'SFRMt_'
-    else: 
-        sfrevol_massdep_str = 'SFRM0t_'
-
-    posterior_file = ''.join([
-        'dat/pmc_abc/', 
-        'theta_t', 
-        str(n_step), 
-        '.dat'])
-
-    theta = np.loadtxt(
-            posterior_file, 
-            unpack = True
-            ) 
-
-    med_theta = [] 
-    for i_param in xrange(len(theta)):
-        med_theta.append( 
-                np.median(theta[i_param])
-                )
-
-    bloodline = sf_inherit(
-            nsnap_descendants, 
-            nsnap_ancestor = nsnap_ancestor, 
-            ancestor_sf_prop = {'name': 'average_noscatter'}, 
-            pq_prop = {'slope': med_theta[0], 'yint': med_theta[1]}, 
-            tau_prop = {
-                'name': 'line', 'fid_mass': 11.1, 'slope': med_theta[2], 'yint': med_theta[3]
-                }, 
-            sfrevol_prop = sfrevol_prop, 
-            sfrevol_massdep = sfrevol_massdep,
-            massevol_prop = massevol_prop, 
-            quiet = True, 
-            scatter = scatter
-            )
-    
-    prettyplot()
-    pretty_colors = prettycolors()
-    
-    sfr_mstar_z, sig_sfr_mstar_z = get_param_sfr_mstar_z()
-
-    for nsnap_descendant in nsnap_descendants: 
-        descendant = getattr(bloodline, 'descendant_cq_snapshot'+str(nsnap_descendant))
-
-        fig = plt.figure()
-        sub = fig.add_subplot(111)
-
-        sf_gal = np.where(descendant.gal_type == 'star-forming')
-
-        sub.scatter(
-                descendant.mass[sf_gal], 
-                descendant.sfr[sf_gal], 
-                color=pretty_colors[nsnap_descendant],
-                s=10
-                )
-        sub.plot(np.arange(8.5, 12.0, 0.1), 
-                sfr_mstar_z(np.arange(8.5, 12.0, 0.1), get_z_nsnap(nsnap_descendant)), 
-                c = 'k', 
-                ls = '--', 
-                lw = 3 
-                )
-        sub.set_xlim([9.0, 12.0])
-        sub.set_ylim([-5.0, 2.0])
-        sub.set_xlabel(r'$\mathtt{M_*}$')
-        sub.set_ylabel(r'$\mathtt{log\;SFR}$')
-    
-        file_str = ''.join([ 
-            '_', 
-            str(nsnap_ancestor), 'ancestor_', 
-            str(nsnap_descendant), 'descendant_', 
-            str(round(scatter)), 'Mscatter_', 
-            sfrevol_prop['name'], '_sfrevol_',
-            sfrevol_massdep_str, 
-            massevol_prop['name'], '_massevol'
-            ])
-
-        sfms_fig_file = ''.join([
-            'figure/', 
-            'qaplot_sf_inherit_sfms', file_str, '_no_sfr_scatter_twoslope_sfms.png'
-            ])
-        fig.savefig(sfms_fig_file, bbox_inches='tight')
-        plt.close()
 
 def qaplot_sf_inherit_average_scatter(
         nsnap_descendants, nsnap_ancestor = 20, scatter = 0.0, n_step = 29,
@@ -247,7 +154,7 @@ def qaplot_sf_inherit_average_scatter(
 
             fig_name = ''.join([
                 'figure/', 
-                'qaplot_sf_inherit_sfms', justsf_str, lineage_str, '_twoslope_sfms.png'
+                'qaplot_sf_inherit_sfms', lineage_str, justsf_str, '_twoslope_sfms.png'
                 ])
 
             sfms_plot = descendant.plotSFMS(justsf=justsf, bovyplot=True)
@@ -419,9 +326,15 @@ def track_sf_pop_sfms_evol(
 
         sub.set_xlim([3, 14.0])
         sub.set_ylabel(r'$\mathtt{log\;'+attr.upper()+'}$')
+
         if i_attr == 2:
+            sub.set_ylim([-11.0, -8.0])
             sub.set_xlabel(r'$\mathtt{t_{cosmic}}$', fontsize=30)
-        else: 
+        elif i_attr == 1: 
+            sub.set_ylim([7.5, 11.0])
+            sub.set_xticklabels([])
+        elif i_attr == 0: 
+            sub.set_ylim([-2.0, 1.5])
             sub.set_xticklabels([])
     
     attr_fig_file = ''.join([
@@ -456,27 +369,135 @@ def abc_posterior_median(n_step):
 
     return med_theta 
 
+"""
+    def qaplot_sf_inherit_nosfr_scatter(
+            n_step, 
+            nsnap_descendants,
+            nsnap_ancestor = 20, 
+            scatter = 0.0, 
+            sfrevol_prop = {'name': 'squarewave', 'freq_range': [0.0, 2*np.pi], 'phase_range': [0, 1]},
+            sfrevol_massdep = False,
+            massevol_prop = {'name': 'sham'}
+            ):
+        '''
+        Test Lineage SF Inherit function for the case where there's no scatter in 
+        the SFMS
+        '''
+        
+        if sfrevol_massdep: 
+            sfrevol_massdep_str = 'SFRMt_'
+        else: 
+            sfrevol_massdep_str = 'SFRM0t_'
+
+        posterior_file = ''.join([
+            'dat/pmc_abc/', 
+            'theta_t', 
+            str(n_step), 
+            '.dat'])
+
+        theta = np.loadtxt(
+                posterior_file, 
+                unpack = True
+                ) 
+
+        med_theta = [] 
+        for i_param in xrange(len(theta)):
+            med_theta.append( 
+                    np.median(theta[i_param])
+                    )
+
+        bloodline = sf_inherit(
+                nsnap_descendants, 
+                nsnap_ancestor = nsnap_ancestor, 
+                ancestor_sf_prop = {'name': 'average_noscatter'}, 
+                pq_prop = {'slope': med_theta[0], 'yint': med_theta[1]}, 
+                tau_prop = {
+                    'name': 'line', 'fid_mass': 11.1, 'slope': med_theta[2], 'yint': med_theta[3]
+                    }, 
+                sfrevol_prop = sfrevol_prop, 
+                sfrevol_massdep = sfrevol_massdep,
+                massevol_prop = massevol_prop, 
+                quiet = True, 
+                scatter = scatter
+                )
+        
+        prettyplot()
+        pretty_colors = prettycolors()
+        
+        sfr_mstar_z, sig_sfr_mstar_z = get_param_sfr_mstar_z()
+
+        for nsnap_descendant in nsnap_descendants: 
+            descendant = getattr(bloodline, 'descendant_cq_snapshot'+str(nsnap_descendant))
+
+            fig = plt.figure()
+            sub = fig.add_subplot(111)
+
+            sf_gal = np.where(descendant.gal_type == 'star-forming')
+
+            sub.scatter(
+                    descendant.mass[sf_gal], 
+                    descendant.sfr[sf_gal], 
+                    color=pretty_colors[nsnap_descendant],
+                    s=10
+                    )
+            sub.plot(np.arange(8.5, 12.0, 0.1), 
+                    sfr_mstar_z(np.arange(8.5, 12.0, 0.1), get_z_nsnap(nsnap_descendant)), 
+                    c = 'k', 
+                    ls = '--', 
+                    lw = 3 
+                    )
+            sub.set_xlim([9.0, 12.0])
+            sub.set_ylim([-5.0, 2.0])
+            sub.set_xlabel(r'$\mathtt{M_*}$')
+            sub.set_ylabel(r'$\mathtt{log\;SFR}$')
+        
+            file_str = ''.join([ 
+                '_', 
+                str(nsnap_ancestor), 'ancestor_', 
+                str(nsnap_descendant), 'descendant_', 
+                str(round(scatter)), 'Mscatter_', 
+                sfrevol_prop['name'], '_sfrevol_',
+                sfrevol_massdep_str, 
+                massevol_prop['name'], '_massevol'
+                ])
+
+            sfms_fig_file = ''.join([
+                'figure/', 
+                'qaplot_sf_inherit_sfms', file_str, '_no_sfr_scatter_twoslope_sfms.png'
+                ])
+            fig.savefig(sfms_fig_file, bbox_inches='tight')
+            plt.close()
+"""
+
 if __name__=="__main__":
+    #qaplot_sf_inherit(
+    #    nsnap_ancestor = 20, nsnap_descendant = 1, 
+    #    scatter = 0.0, 
+    #    sfrevol_prop = {'name': 'newamp_squarewave', 'freq_range': [2.*np.pi, 20.*np.pi], 'phase_range': [0,1], 'sigma': 0.3},
+    #    massevol_prop = {'name': 'sham'},
+    #    ssfr=True, fq=False, tau=False, mass_scatter=False, sfms=False
+    #    )
     #qaplot_sf_inherit_average_scatter(
     #        [1],
     #        sfrevol_prop = {'name': 'newamp_squarewave', 'freq_range': [2.*np.pi, 20.*np.pi], 'phase_range': [0,1], 'sigma': 0.3},
     #        massevol_prop = {'name': 'integrated', 'type': 'euler', 'f_retain': 0.6, 't_step': 0.01}
     #        )   # {'name': 'notperiodic'}
-    #for integ in ['euler', 'rk4']:
-    #    start_time = time.time()
-    #    sf_inherited_lineage(
-    #            29, 
-    #            nsnap_ancestor = 20, 
-    #            scatter = 0.0, 
-    #            sfrevol_prop = {
-    #                'name': 'newamp_squarewave', 'freq_range': [2.*np.pi, 20.*np.pi], 'phase_range': [0,1], 'sigma': 0.3
-    #                },
-    #            massevol_prop = {'name': 'integrated', 'type': integ, 'f_retain': 0.6, 't_step': 0.01}
-    #            )
-    #    print (time.time() - start_time)/60.0, ' minutes'
 
-    track_sf_pop_sfms_evol(
-            10,
-            sfrevol_prop = {'name': 'newamp_squarewave', 'freq_range': [2.*np.pi, 20.*np.pi], 'phase_range': [0,1], 'sigma': 0.3},
-            massevol_prop = {'name': 'integrated', 'type': 'euler', 'f_retain': 0.6, 't_step': 0.01}
+    #for integ in ['euler', 'rk4']:
+    start_time = time.time()
+    sf_inherited_lineage(
+            29, 
+            nsnap_ancestor = 20, 
+            scatter = 0.0, 
+            sfrevol_prop = {
+                'name': 'newamp_squarewave', 'freq_range': [2.*np.pi, 20.*np.pi], 'phase_range': [0,1], 'sigma': 0.3
+                },
+            massevol_prop = {'name': 'integrated', 'type': 'euler', 'f_retain': 0.6, 't_step': 0.0025}
             )
+    print (time.time() - start_time)/60.0, ' minutes'
+
+    #track_sf_pop_sfms_evol(
+    #        10,
+    #        sfrevol_prop = {'name': 'newamp_squarewave', 'freq_range': [2.*np.pi, 20.*np.pi], 'phase_range': [0,1], 'sigma': 0.3},
+    #        massevol_prop = {'name': 'integrated', 'type': 'euler', 'f_retain': 0.6, 't_step': 0.01}
+    #        )
