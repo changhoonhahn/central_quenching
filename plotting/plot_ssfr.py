@@ -9,6 +9,7 @@ import matplotlib.pyplot as plt
 
 # --- Local --- 
 from plots import Plots
+from ssfr import Ssfr
 from util.cenque_utility import get_q_ssfr_mean
 from sfms.fitting import get_param_sfr_mstar_z
 from group_catalog.group_catalog import central_catalog
@@ -161,8 +162,8 @@ class PlotSSFR(Plots):
         Plot sSFR distribution for Group Catalog data
         '''
     
-        #ssfr_dist = Ssfr()
-        #ssfr_bin_mid, ssfr_hist = ssfr_dist.groupcat(Mrcut=Mrcut)
+        ssfr_dist = Ssfr()
+        ssfr_bin_mid, ssfr_hist = ssfr_dist.groupcat(Mrcut=Mrcut)
     
         for i_mass, panel_mass in enumerate(self.panel_mass_bins):       # loop through each panel 
 

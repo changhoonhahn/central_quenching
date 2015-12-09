@@ -16,6 +16,7 @@ import json
 import matplotlib.pyplot as plt
 
 #---- Local ----
+from smf import SMF
 from ssfr import Ssfr
 from assign_sfr import assign_sfr 
 from util.mass_bins import simple_mass_bin
@@ -23,6 +24,7 @@ from central_subhalo import CentralSubhalos
 from quiescent_fraction import sfq_classify
 # -- plotting --
 from plotting.plot_fq import PlotFq
+from plotting.plot_smf import PlotSMF
 from plotting.plot_tau import PlotTau
 from plotting.plot_ssfr import PlotSSFR
 from plotting.plot_sfms import PlotSFMS
@@ -410,6 +412,22 @@ class CenQue:
             return None
         else: 
             return ssfr_plot
+
+    # --- SMF ---
+    def SMF(self, **smf_kwargs):
+        ''' 
+        Calculate the Stellar Mass Function of Cenque Object
+        '''
+        if cenque.mass is None: 
+            raise ValueError
+        smf = SMF()
+        return smf.cenque(self, **smf_kwargs)
+
+    def plotSMF(self, **pltkwargs): 
+        '''
+        Plot SMF of CenQue object using PlotSMF object 
+        '''
+        plt.close() # in case there's another plot
 
     # --- Quiescent Fraction ---
     def Fq(self, **fq_kwargs):
