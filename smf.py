@@ -9,6 +9,8 @@ from central_subhalo import CentralSubhalos
 from central_subhalo import Subhalos
 from treepm.sham import SMFClass 
 
+from util.cenque_utility import get_z_nsnap
+
 class SMF(object): 
 
     def __init__(self, **kwargs): 
@@ -19,7 +21,7 @@ class SMF(object):
         self.mass = None
         self.phi = None
 
-    def cenque(self, cq_obj, dlogm='', box=None):
+    def cenque(self, cq_obj, dlogm='', box=None, h=0.7):
         '''
         Calculate the SMF for given CenQue Class Object
 
@@ -32,30 +34,9 @@ class SMF(object):
         box : 
             Box length (default is 250 Mpc/h)
         '''
-        if not dlogm: 
-            dlogm = 0.1 # log M bin size
-        if not box: 
-            box = 250   # 250 Mpc/h Box length
+        return smf(cq_obj.mass, dlogm=dlogm, box=box, h=h)
 
-        m_arr = np.arange(8.0, 12.1, dlogm)
-
-        vol = box ** 3
-        
-        mass, phi = [], [] 
-        for mi in m_arr: 
-            mass_bin = np.where(
-                    (cq_obj.mass > mi) & 
-                    (cq_obj.mass <= mi+dlogm)
-                    )
-
-            ngal_bin = len(cq_obj.mass[mass_bin])
-            
-            mass.append(mi + 0.5 * dlogm)
-            phi.append(np.float(ngal_bin)/vol) 
-
-        return np.array(mass), np.array(phi)/dlogm
-
-    def centralsubhalos(self, cen_obj, dlogm='', box=None): 
+    def centralsubhalos(self, cen_obj, dlogm='', box=None, h=0.7): 
         '''
         Calculate the SMF for given CentralSubhalos Class Object
 
@@ -68,28 +49,7 @@ class SMF(object):
         box : 
             Box length (default is 250 Mpc/h)
         '''
-        if not dlogm: 
-            dlogm = 0.1 # log M bin size
-        if not box: 
-            box = 250   # 250 Mpc/h Box length
-
-        m_arr = np.arange(8.0, 12.1, dlogm)
-
-        vol = box ** 3
-        
-        mass, phi = [], [] 
-        for mi in m_arr: 
-            mass_bin = np.where(
-                    (cen_obj.mass > mi) & 
-                    (cen_obj.mass <= mi+dlogm)
-                    )
-
-            ngal_bin = len(cen_obj.mass[mass_bin])
-            
-            mass.append(mi + 0.5 * dlogm)
-            phi.append(np.float(ngal_bin)/vol) 
-
-        return np.array(mass), np.array(phi)/dlogm
+        return smf(cen_obj.mass, dlogm=dlogm, box=box, h=h)
 
     def analytic(self, redshift, dlogm=''): 
         '''
@@ -108,10 +68,38 @@ class SMF(object):
         
         mass, phi = [], [] 
         for mi in m_arr: 
-            phi.append(MF.numden(mi, mi+dlogm))
             mass.append(mi + 0.5 * dlogm)
+            phi.append(MF.numden(mi, mi+dlogm)/dlogm)
 
-        return np.array(mass), np.array(phi)/dlogm
+        #print 'Analytic ', np.sum(np.array(phi))
+        return np.array(mass), np.array(phi)
+
+def smf(masses, dlogm='', box=None, h=0.7): 
+    '''
+    Calculate SMF given masses
+    '''
+    if not dlogm: 
+        dlogm = 0.1 # log M bin size
+    if not box: 
+        box = 250   # 250 Mpc/h Box length
+
+    m_arr = np.arange(8.0, 12.1, dlogm)
+
+    vol = box ** 3  # box volume
+        
+    mass, phi = [], [] 
+    for mi in m_arr: 
+        mass_bin = np.where(
+                (masses > mi) & 
+                (masses <= mi+dlogm)
+                )
+
+        ngal_bin = len(masses[mass_bin])
+        
+        mass.append(mi + 0.5 * dlogm)
+        phi.append(np.float(ngal_bin)/vol/dlogm * h**3) 
+
+    return np.array(mass), np.array(phi)
 
 def test_smf(): 
     '''
@@ -121,25 +109,24 @@ def test_smf():
     sub = fig.add_subplot(111)
 
     # central subhalo catalog 
-    censub = Subhalos(scatter = 0.2)
-    #censub.build_catalogs(snapshots=[10])
-    censub.read(10)
+    censub = CentralSubhalos(scatter = 0.0)
+    censub.build_catalogs(snapshots=[20])
+    censub.read(20)
 
     smf = SMF()
-    mass, phi = smf.analytic(0.6313) 
-    sub.plot(mass, phi) 
+    mass, phi = smf.centralsubhalos(censub)
+    sub.plot(mass, phi, lw=4, c='gray') 
     print np.sum(phi)
 
-    mass, phi = smf.centralsubhalos(censub)
-    sub.plot(mass, phi * 0.7**3) 
-    print np.sum(phi* 0.7**3)
+    analytic_mass, analytic_phi = smf.analytic(get_z_nsnap(20)) 
+    sub.plot(analytic_mass, analytic_phi, lw=4, ls='--', c='k') 
+    print np.sum(phi)
 
     sub.set_yscale('log')
     sub.set_ylim([10**-5, 10**-1])
-    sub.set_xlim([7.0, 12.0])
+    sub.set_xlim([8.75, 12.0])
 
     plt.show()
 
 if __name__ == '__main__': 
     test_smf()
-

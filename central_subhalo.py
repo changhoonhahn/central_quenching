@@ -15,7 +15,8 @@ from utilities import utility as wetzel_util
 class CentralSubhalos(object): 
     def __init__(self, scatter = 0.0): 
         '''
-        Class that describes the Central Subhalo Catalogs generated from Andrew Wetzel's TreePM merger tree code 
+        Class that describes the Central Subhalo Catalogs generated 
+        from Andrew Wetzel's TreePM merger tree code.
 
         '''
         self.scatter = scatter
@@ -77,8 +78,8 @@ class CentralSubhalos(object):
 
         for i_snap in self.snapshots: 
             central_indices = wetzel_util.utility_catalog.indices_ilk(sub[i_snap], ilk = 'cen') 
-            
-            print 'Number of Central Subhalos in Snapshot ', i_snap, '=', len(central_indices) 
+            print 'Number of Central Subhalos in Snapshot ', i_snap, '=', len(central_indices)
+            print 'out of ', len(sub[i_snap]['halo.m'])
     
             # subhalo properties
             mhalo     = (sub[i_snap]['halo.m'])[central_indices]     # M_halo
@@ -217,9 +218,12 @@ class Subhalos(CentralSubhalos):
         return None
 
 if __name__=='__main__': 
-    censub = CentralSubhalos(scatter = 0.2)
-    #censub.build_catalogs()
-    censub.read(10)
-    print censub.__dict__.keys()
-    #print censub.snapshot
-    #print getattr(censub, 'halo.m.max')
+
+    for scat in [0.0, 0.2]:
+        censub = CentralSubhalos(scatter = scat)
+        censub.build_catalogs(snapshots=range(1,21))
+    
+        censub = Subhalos(scatter = scat)
+        censub.build_catalogs(snapshots=range(1,21))
+        #print censub.snapshot
+        #print getattr(censub, 'halo.m.max')
