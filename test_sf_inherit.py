@@ -19,7 +19,7 @@ def qaplot_sf_inherit(
         scatter = 0.0, 
         sfrevol_prop = {'name': 'squarewave', 'freq_range': [0.0, 2*np.pi], 'phase_range': [0, 1]},
         massevol_prop = {'name': 'sham'},
-        ssfr=True, fq=False, tau=False, mass_scatter=False, sfms=False
+        ssfr=True, fq=False, tau=False, mass_scatter=False, sfms=False, smf=False
         ):
     '''
     QAPlots for SF inherit module. 
@@ -73,6 +73,8 @@ def qaplot_sf_inherit(
         attr_list.append('sfms')
     if mass_scatter: 
         attr_list.append('mass_scatter')
+    if smf: 
+        attr_list.append('smf')
 
     for attr in attr_list: 
         fig_name = ''.join([
@@ -97,6 +99,8 @@ def qaplot_sf_inherit(
                     )
         elif attr == 'tau':                         # Quenching Timescale
             descendant.plotTau(savefig = fig_name)
+        elif attr == 'smf':                         # Stellar Mass Function
+            descendant.plotSMF(savefig = fig_name)
         elif attr == 'sfms':                        # Star Forming Main Sequence 
             descendant.plotSFMS(justsf=True, bovyplot=True, savefig = fig_name)
         elif attr == 'mass_scatter':                # Stellar Mass - Halo Mass 
@@ -349,11 +353,11 @@ def track_sf_pop_sfms_evol(
     #plt.show()
     plt.close()
 
-def qaplot_sf_inherited_lienage(
+def qaplot_sf_inherited_lineage(
         nsnap_range=None, nsnap_ancestor = 20, scatter = 0.0, n_step = 29, 
         sfrevol_prop = {'name': 'squarewave', 'freq_range': [0.0, 2*np.pi], 'phase_range': [0, 1]},
         massevol_prop = {'name': 'sham'}, 
-        ssfr=True, fq=False, tau=False, sfms=False, mass_scatter=False
+        ssfr=True, fq=False, tau=False, sfms=False, mass_scatter=False, smf=False
         ): 
     '''
     '''
@@ -395,6 +399,8 @@ def qaplot_sf_inherited_lienage(
         attr_list.append('tau')
     if sfms: 
         attr_list.append('sfms')
+    if smf: 
+        attr_list.append('smf')
     if mass_scatter: 
         attr_list.append('mass_scatter')
     
@@ -426,6 +432,8 @@ def qaplot_sf_inherited_lienage(
                 descendant.plotTau(savefig = fig_name)
             elif attr == 'sfms':                        # Star Forming Main Sequence 
                 descendant.plotSFMS(justsf=True, bovyplot=True, savefig = fig_name)
+            elif attr == 'smf': 
+                descendant.plotSMF(savefig = fig_name)
             elif attr == 'mass_scatter':                # Stellar Mass - Halo Mass 
                 descendant.plotMstarMhalo(savefig = fig_name)
     return None
@@ -555,13 +563,13 @@ def abc_posterior_median(n_step):
 """
 
 if __name__=="__main__":
-    #qaplot_sf_inherit(
-    #    nsnap_ancestor = 20, nsnap_descendant = 1, 
-    #    scatter = 0.2, 
-    #    sfrevol_prop = {'name': 'newamp_squarewave', 'freq_range': [2.*np.pi, 20.*np.pi], 'phase_range': [0,1], 'sigma': 0.3},
-    #    massevol_prop = {'name': 'integrated', 'type': 'euler', 'f_retain': 0.6, 't_step': 0.01},
-    #    ssfr=False, fq=False, tau=False, mass_scatter=True, sfms=False
-    #    )
+    qaplot_sf_inherit(
+        nsnap_ancestor = 20, nsnap_descendant = 19, 
+        scatter = 0.0, 
+        sfrevol_prop = {'name': 'newamp_squarewave', 'freq_range': [2.*np.pi, 20.*np.pi], 'phase_range': [0,1], 'sigma': 0.3},
+        massevol_prop = {'name': 'sham'}, #{'name': 'integrated', 'type': 'euler', 'f_retain': 0.6, 't_step': 0.01},
+        ssfr=False, fq=False, tau=False, mass_scatter=False, sfms=False, smf=True
+        )
 
     #qaplot_sf_inherit_average_scatter(
     #        [1],
@@ -581,14 +589,14 @@ if __name__=="__main__":
     #        massevol_prop = {'name': 'integrated', 'type': 'euler', 'f_retain': 0.6, 't_step': 0.0025}
     #        )
     #print (time.time() - start_time)/60.0, ' minutes'
-    for tstep in [0.01, 0.0025]: 
-        for integ in ['euler', 'rk4']: 
-            qaplot_sf_inherited_lienage(
-                    nsnap_range=[1],
-                    sfrevol_prop = {'name': 'newamp_squarewave', 'freq_range': [2.*np.pi, 20.*np.pi], 'phase_range': [0,1], 'sigma': 0.3}, 
-                    massevol_prop = {'name': 'integrated', 'type': integ, 'f_retain': 0.6, 't_step': tstep}, 
-                    ssfr=False, fq=False, tau=False, sfms=True, mass_scatter=False
-                    )
+    #for tstep in [0.01, 0.0025]: 
+    #    for integ in ['euler', 'rk4']: 
+    #        qaplot_sf_inherited_lineage(
+    #                nsnap_range=[1],
+    #                sfrevol_prop = {'name': 'newamp_squarewave', 'freq_range': [2.*np.pi, 20.*np.pi], 'phase_range': [0,1], 'sigma': 0.3}, 
+    #                massevol_prop = {'name': 'integrated', 'type': integ, 'f_retain': 0.6, 't_step': tstep}, 
+    #                ssfr=False, fq=False, tau=False, sfms=False, mass_scatter=False, smf=True
+    #                )
     #track_sf_pop_sfms_evol(
     #        10,
     #        sfrevol_prop = {'name': 'newamp_squarewave', 'freq_range': [2.*np.pi, 20.*np.pi], 'phase_range': [0,1], 'sigma': 0.3},

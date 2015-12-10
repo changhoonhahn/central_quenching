@@ -418,7 +418,7 @@ class CenQue:
         ''' 
         Calculate the Stellar Mass Function of Cenque Object
         '''
-        if cenque.mass is None: 
+        if self.mass is None: 
             raise ValueError
         smf = SMF()
         return smf.cenque(self, **smf_kwargs)
@@ -430,13 +430,17 @@ class CenQue:
         plt.close() # in case there's another plot
 
         smf_plot = PlotSMF()
-        smf_plot.cenque(self, **pltkwargs)
-        smf_plot.analyti(self, self.zsnap)
+        smf_plot.cenque(self)
+        if self.zsnap < 0.1: 
+            redshift = 0.1
+        else: 
+            redshift = self.zsnap
+        smf_plot.analytic(redshift)
         smf_plot.set_axes()
 
         if 'savefig' in pltkwargs.keys():
             if isinstance(pltkwargs['savefig'], str): 
-                ssfr_plot.save_fig(pltkwargs['savefig'])
+                smf_plot.save_fig(pltkwargs['savefig'])
             else: 
                 ValueError('savefig = figure_file_name')
             return None
