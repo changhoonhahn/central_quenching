@@ -15,7 +15,6 @@ from assign_sfr import assign_sfr
 from util.cenque_utility import intersection_index
 
 class Lineage(object): 
-
     def __init__(self, nsnap_ancestor = 13, quiet = True, **kwargs):
         """
         Class that describes the galaxy ancestors and descendants of 
@@ -31,83 +30,76 @@ class Lineage(object):
         self.descendant_cq = None
         self.file_name = None
 
-    def ancestor(self, cenque_type='sf_assigned', scatter=0.0, sf_prop={'name': 'average'}, clobber=False):
-        """
-        Specify ancestor of lineage with a CenQue obj at snapshot nsnap_ancestor. 
-        """
-
-        self.ancestor_cq = CenQue(n_snap = self.nsnap_ancestor, scatter = scatter)
-        self.ancestor_cenque_type = cenque_type 
-        self.ancestor_cq.cenque_type = cenque_type 
-        self.mass_scatter = scatter
+    def ancestor(self, 
+            subhalo_prop = {'scatter': 0.0, 'source': 'li-drory-march'}, 
+            sfr_prop = {'fq': {'name': 'wetzelsmooth'}, 'sfr': {'name': 'average'}},
+            clobber = False):
+        ''' 
+        Specify ancestor of lineage with a SFR assigned CenQue obj at snapshot nsnap_ancestor. 
+        ''' 
+        self.ancestor_cq = CenQue(
+                n_snap=self.nsnap_ancestor, 
+                subhalo_prop=subhalo_prop, 
+                sfr_prop=sfr_prop)
+        self.ancestor_cq.cenque_type = 'sf_assigned' 
+        self.subhalo_prop = subhalo_prop 
+        self.sfr_prop = sfr_prop
         
         if np.array([os.path.isfile(self.ancestor_cq.file()), not clobber]).all(): 
             print 'Reading ', self.ancestor_cq.file()
             self.ancestor_cq.readin()
         else: 
-            self.ancestor_cq.import_treepm(self.nsnap_ancestor, scatter=scatter)
-
-            if cenque_type == 'sf_assigned': 
-                print 'Assigning SFR'
-                self.ancestor_cq = assign_sfr(self.ancestor_cq, sf_prop=sf_prop)
-
+            self.ancestor_cq.import_treepm(self.nsnap_ancestor)
+            print 'Assigning SFR'
+            self.ancestor_cq.assign_sfr(quiet=False)
             self.ancestor_cq.writeout()
-        
-        if self.ancestor_cenque_type == 'sf_assigned': 
-            self.ancestor_sf_prop = self.ancestor_cq.sf_prop
-            self.ancestor_fq_prop = self.ancestor_cq.fq_prop
 
         return None
 
     def file(self): 
-        """ 
+        ''' 
         File name of Lineage object. Specifies the prescription used for 
         assigning star formation properties to the ancestor, which is the only main parameter 
-        """
+        ''' 
+        # properties that are specified for SF assignment
+        if 'sfr_prop' not in self.__dict__.keys():
+            raise ValueError
+        if 'subhalo_prop' not in self.__dict__.keys():
+            raise ValueError
 
-        if self.ancestor_cenque_type == 'treepm_import':
-            
-            ancestor_str = ''
-
-        elif self.ancestor_cenque_type == 'sf_assigned':
-    
-            # properties that are specified for SF assignment
-            if 'ancestor_sf_prop' not in self.__dict__.keys():
-                raise ValueError
-                #self.sf_prop = {'name': 'average'}
-            if 'ancestor_fq_prop' not in self.__dict__.keys():
-                raise ValueError
-                #self.fq_prop = {'name': 'wetzelsmooth'}
-            
-            ancestor_str = '_'
-            if self.ancestor_fq_prop['name'] == 'wetzelsmooth': 
-                ancestor_str += 'wetzelsmooth' 
-            ancestor_str +='_fq'
-
-            ancestor_str += '_'
-            if self.ancestor_sf_prop['name'] == 'average': 
-                ancestor_str += 'average'
-            elif self.ancestor_sf_prop['name'] == 'average_noscatter': 
-                ancestor_str += 'average_noscatter'
-            else: 
-                raise NotImplementedError
-            ancestor_str += '_sfassign'
-                
-        else: 
-            raise NameError
-
+        file_spec_str = self._file_spec(
+                subhalo_prop = self.subhalo_prop, 
+                sfr_prop = self.sfr_prop
+                )
+        
         lineage_filename = ''.join([
             'dat/lineage/', 
-            'lineage_ancestor_', 
+            'lineage_ancestor.snapshot', 
             str(self.nsnap_ancestor), 
-            ancestor_str, 
-            '_descendants',
-            '_mass_scatter', 
-            str(round(self.mass_scatter, 1)), 
-            '.hdf5'
+            file_spec_str, 
+            '_descendants.hdf5'
             ]) 
 
         return lineage_filename
+
+    def _file_spec(self, subhalo_prop = None, sfr_prop  = None): 
+        
+        if subhalo_prop is None: 
+            raise ValueError
+
+        subhalo_str = ''.join([
+            '_subhalo.scatter', str(subhalo_prop['scatter']), 
+            '.source-', subhalo_prop['source']
+            ])
+
+        if sfr_prop is not None: 
+            sfr_str = ''.join([
+                '_sfr.fq-', sfr_prop['fq']['name'], 
+                '.sfr-', sfr_prop['sfr']['name']])
+        else: 
+            sfr_str = ''
+
+        return ''.join([subhalo_str, sfr_str])
 
     def writeout(self): 
         """ 
@@ -225,10 +217,10 @@ class Lineage(object):
         return None 
 
     def descend(self):
-        """
+        '''
         Find descendants by tracking parents and children through TreePM's halos. 
         (Really only has to run once)
-        """
+        '''
         
         if not self.ancestor_cq: 
             raise ValueError('specify ancestor')
@@ -236,7 +228,6 @@ class Lineage(object):
         parent_cq = self.ancestor_cq 
     
         for i_snap in range(1, self.nsnap_ancestor)[::-1]:    
-    
             # import CenQue object from TreePM
             child_cq = CenQue() 
             child_cq.import_treepm(i_snap, scatter=self.mass_scatter) 
@@ -336,6 +327,12 @@ class Lineage(object):
 if __name__=="__main__": 
     for scat in [0.0, 0.2]:
         bloodline = Lineage(nsnap_ancestor = 20)
-        bloodline.ancestor(scatter = scat, sf_prop={'name': 'average'}, clobber=True) 
+        bloodline.ancestor(
+                subhalo_prop = {'scatter': scat, 'source': 'li-march'}, 
+                sfr_prop = {
+                    'fq': {'name': 'wetzelsmooth'}, 
+                    'sfr': {'name': 'average'}
+                    }, 
+                clobber=True) 
         bloodline.descend() 
         bloodline.writeout()

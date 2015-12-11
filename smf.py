@@ -5,9 +5,7 @@ Stellar Mass Function (SMF) of objects
 '''
 import numpy as np 
 
-from central_subhalo import CentralSubhalos
-from central_subhalo import Subhalos
-from treepm.sham import SMFClass 
+from sham_hack import SMFClass 
 
 from util.cenque_utility import get_z_nsnap
 
@@ -51,7 +49,7 @@ class SMF(object):
         '''
         return smf(cen_obj.mass, dlogm=dlogm, box=box, h=h)
 
-    def analytic(self, redshift, dlogm=''): 
+    def analytic(self, redshift, dlogm='', source='li-drory-march'): 
         '''
         Analytic best-fit SMF from Li-Drory-March (Andrew's Treepm Code)
 
@@ -64,7 +62,10 @@ class SMF(object):
             dlogm = 0.1
         m_arr = np.arange(8.0, 12.1, dlogm)
 
-        MF = SMFClass(source='li-drory-march', redshift=redshift)
+        if redshift < 0.1:
+            redshift = 0.1
+
+        MF = SMFClass(source=source, redshift=redshift)
         
         mass, phi = [], [] 
         for mi in m_arr: 
@@ -109,18 +110,47 @@ def test_smf():
     sub = fig.add_subplot(111)
 
     # central subhalo catalog 
-    censub = CentralSubhalos(scatter = 0.0)
-    censub.build_catalogs(snapshots=[20])
-    censub.read(20)
+    #censub = Subhalos(scatter = 0.0)
+    #censub.build_catalogs(snapshots=[20])
+    censub.read(1)
 
     smf = SMF()
     mass, phi = smf.centralsubhalos(censub)
     sub.plot(mass, phi, lw=4, c='gray') 
     print np.sum(phi)
 
-    analytic_mass, analytic_phi = smf.analytic(get_z_nsnap(20)) 
+    analytic_mass, analytic_phi = smf.analytic(get_z_nsnap(1)) 
     sub.plot(analytic_mass, analytic_phi, lw=4, ls='--', c='k') 
-    print np.sum(phi)
+    print np.sum(analytic_phi)
+
+    sub.set_yscale('log')
+    sub.set_ylim([10**-8, 10**-1])
+    sub.set_xlim([7.0, 12.0])
+
+    plt.show()
+
+def test_smf_evol(type='analytic'): 
+    '''
+    Quick code to test the evolution of SMF
+    '''
+    fig = plt.figure(figsize=(10,10))
+    sub = fig.add_subplot(111)
+    for isnap in range(1, 21): 
+    
+        # central subhalo catalog 
+        #censub = Subhalos(scatter = 0.0)
+        ##censub.build_catalogs(snapshots=[20])
+        #censub.read(isnap)
+
+        smf = SMF()
+        #mass, phi = smf.centralsubhalos(censub)
+        #sub.plot(mass, phi, lw=4, c='gray') 
+        #print np.sum(phi)
+        
+        if type == 'analytic': 
+            analytic_mass, analytic_phi = smf.analytic(get_z_nsnap(isnap)) 
+            sub.plot(analytic_mass, analytic_phi, lw=4, ls='--', c='k') 
+            print np.sum(analytic_phi)
 
     sub.set_yscale('log')
     sub.set_ylim([10**-5, 10**-1])
@@ -129,4 +159,4 @@ def test_smf():
     plt.show()
 
 if __name__ == '__main__': 
-    test_smf()
+    test_smf_evol()

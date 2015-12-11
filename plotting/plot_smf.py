@@ -3,6 +3,8 @@
 SMF plotting class 
 
 '''
+import matplotlib.pyplot as plt
+
 from smf import SMF
 from plots import Plots
 from treepm.sham import SMFClass 
@@ -67,7 +69,7 @@ class PlotSMF(Plots):
                 label=smf_label
                 )
     
-    def analytic(self, redshift): 
+    def analytic(self, redshift, **kwargs): 
         '''
         Analytic SMF at redshift 
         '''
@@ -115,13 +117,14 @@ class PlotSMF(Plots):
         '''
 
         self.sub.set_ylim([10**-5, 10**-1])
-        self.sub.set_xlim([8.75, 12.0])
+        self.sub.set_xlim([7.5, 12.0])
+        self.sub.set_yscale('log')
 
         # x and y labels
-        self.subs.set_xlabel(r'Mass $\mathtt{M_*}$') 
-        self.subs.set_ylabel(r'Stellar Mass Function $\mathtt{\Phi}$', fontsize=20) 
+        self.sub.set_xlabel(r'Mass $\mathtt{M_*}$') 
+        self.sub.set_ylabel(r'Stellar Mass Function $\mathtt{\Phi}$', fontsize=20) 
         
-        self.subs.legend(loc='upper left', frameon=False)
+        self.sub.legend(loc='upper left', frameon=False)
 
         return None
 

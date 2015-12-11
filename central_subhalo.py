@@ -5,42 +5,64 @@
 """
 import h5py
 import numpy as np
+import os.path
 
 # --- Local --- 
-import pyfits
-from treepm import sham
+from smf import SMF
+#from treepm import sham
+import sham_hack as sham
 from treepm import subhalo_io 
+from util.cenque_utility import get_z_nsnap
 from utilities import utility as wetzel_util
 
+from defutility.plotting import prettyplot
+from defutility.plotting import prettycolors 
+
 class CentralSubhalos(object): 
-    def __init__(self, scatter = 0.0): 
+    def __init__(self, **kwargs): 
         '''
         Class that describes the Central Subhalo Catalogs generated 
         from Andrew Wetzel's TreePM merger tree code.
 
         '''
-        self.scatter = scatter
+        self.kwargs = kwargs
 
-    def file(self, snapshot): 
-        ''' File name of output 
+    def file(self, **spec_kwargs): 
+        ''' File name of output file given snapshot 
         '''
+        self.spec_str = self.file_spec(**spec_kwargs)
         # write to hdf5 file 
         subsham_cen_file = ''.join([ 
-            'dat/wetzel_tree/', 
-            'subhalo_sham_centrals_snapshot', 
-            str(snapshot), 
-            '_scatter', 
-            str(self.scatter), 
-            '.hdf5'
+            'dat/wetzel_tree/', 'subhalo_sham.centrals.snapshot', 
+            str(spec_kwargs['snapshot']), self.spec_str, '.hdf5'
             ]) 
 
         return subsham_cen_file 
 
-    def read(self, snapshot): 
+    def file_spec(self, **spec_kwargs): 
         '''
+        file specifier string that describes the key choices of parameters in the file
+        '''
+        spec_str = ''.join([
+            '.scatter', str(spec_kwargs['scatter']),
+            '.source_', spec_kwargs['source']
+            ])
+        return spec_str 
 
+    def read(self, snapshot, scatter = 0.0, source='li-drory-march' ): 
         '''
-        snapshot_file = self.file(snapshot)
+        '''
+        spec_kwargs = {
+                'scatter': scatter, 
+                'snapshot': snapshot, 
+                'source' : source
+                }
+
+        snapshot_file = self.file(**spec_kwargs)
+        if not os.path.isfile(snapshot_file): 
+            print snapshot_file, ' does NOT exist'
+            print 'Now building'
+            self.build_catalogs(snapshots=range(1,21), scatter = scatter, source=source)
 
         f = h5py.File(snapshot_file, 'r')
         grp = f['cenque_data']
@@ -53,10 +75,12 @@ class CentralSubhalos(object):
 
         return None
     
-    def build_catalogs(self, snapshots = range(1,21)): 
+    def build_catalogs(self, snapshots = range(1,21), scatter = 0.0, source='li-drory-march'): 
         '''
-        Build catalogs
+        Build subhalo snapshot catalogs
         '''
+        self.source = source
+        self.scatter = scatter
         self.snapshots = snapshots
     
         # read in TreePM Subhalo snapshots from z~0.0502 to z~1.0833
@@ -73,6 +97,7 @@ class CentralSubhalos(object):
                 'm.star', 
                 scat = self.scatter, 
                 dis_mf = 0.0, 
+                source = self.source,
                 zis = self.snapshots
                 ) 
 
@@ -102,8 +127,13 @@ class CentralSubhalos(object):
                 parent.astype(int)
             else: 
                 parent = wetzel_util.utility_catalog.indices_tree(sub, i_snap, i_snap+1, central_indices) 
-            
-            subsham_cen_file = self.file(i_snap)    # output name
+        
+            spec_kwargs = {
+                    'scatter': self.scatter, 
+                    'snapshot': i_snap, 
+                    'source' : self.source
+                    }
+            subsham_cen_file = self.file(**spec_kwargs)    # output name
             f = h5py.File(subsham_cen_file, 'w') 
 
             grp = f.create_group('cenque_data') 
@@ -137,25 +167,24 @@ class Subhalos(CentralSubhalos):
         '''
         super(Subhalos, self).__init__(scatter = scatter) 
 
-    def file(self, snapshot): 
+    def file(self, **spec_kwargs): 
         ''' File name of output 
         '''
+        self.spec_str = self.file_spec(**spec_kwargs)
         # write to hdf5 file 
         subsham_cen_file = ''.join([ 
-            'dat/wetzel_tree/', 
-            'subhalo_sham_all_snapshot', 
-            str(snapshot), 
-            '_scatter', 
-            str(self.scatter), 
-            '.hdf5'
+            'dat/wetzel_tree/', 'subhalo_sham.all.snapshot', 
+            str(spec_kwargs['snapshot']), self.spec_str, '.hdf5'
             ]) 
 
         return subsham_cen_file 
 
-    def build_catalogs(self, snapshots = range(1,21)): 
+    def build_catalogs(self, snapshots = range(1,21), scatter = 0.0, source='li-drory-march'): 
         '''
-        Build catalogs
+        Build subhalo snapshot catalogs
         '''
+        self.source = source
+        self.scatter = scatter
         self.snapshots = snapshots
     
         # read in TreePM Subhalo snapshots from z~0.0502 to z~1.0833
@@ -172,16 +201,21 @@ class Subhalos(CentralSubhalos):
                 'm.star', 
                 scat = self.scatter, 
                 dis_mf = 0.0, 
-                zis = self.snapshots
+                source = self.source, 
+                zis = self.snapshots 
                 ) 
 
         for i_snap in self.snapshots: 
+            
+            print 'Number of Subhalos in Snapshot ', i_snap, ' =', len(sub[i_snap]['halo.m'])
+
             # subhalo properties
             mhalo     = (sub[i_snap]['halo.m'])     # M_halo
             mhalo_max = (sub[i_snap]['m.max'])     # M_halo
             mstar     = (sub[i_snap]['m.star'])     # M* of subhalo
             pos       = (sub[i_snap]['pos'])        # position of subhalo
             ilk       = (sub[i_snap]['ilk'])        # classification flag in case we want to consider centrals and virtual centrals separately 
+            print mstar
 
             # keep track of child indices for subhalo
             if i_snap == np.min(self.snapshots):     
@@ -190,6 +224,7 @@ class Subhalos(CentralSubhalos):
                 child.astype(int)
             else: 
                 child = wetzel_util.utility_catalog.indices_tree(sub, i_snap, i_snap-1, range(len(mhalo)))
+                print len(mhalo), len(child)
 
             if i_snap == np.max(self.snapshots):     # parent index of subhalo
                 parent = np.zeros(len(mhalo))
@@ -197,10 +232,16 @@ class Subhalos(CentralSubhalos):
                 parent.astype(int)
             else: 
                 parent = wetzel_util.utility_catalog.indices_tree(sub, i_snap, i_snap+1, range(len(mhalo)))
+                print len(parent), len(parent)
             
-            subsham_cen_file = self.file(i_snap)    # output name
-            f = h5py.File(subsham_cen_file, 'w') 
-
+            spec_kwargs = {
+                    'scatter': self.scatter, 
+                    'snapshot': i_snap, 
+                    'source' : self.source
+                    }
+            subsham_file = self.file(**spec_kwargs)    # output name
+            f = h5py.File(subsham_file, 'w') 
+            
             grp = f.create_group('cenque_data') 
             
             grp.attrs['snapshot'] = i_snap
@@ -217,13 +258,56 @@ class Subhalos(CentralSubhalos):
 
         return None
 
-if __name__=='__main__': 
+def test_subhalos_smf(scatter = 0.0, source='li-drory-march', type='all'): 
+    '''
+    Test subhalos by comparing their SMFs to analytic SMFs 
 
-    for scat in [0.0, 0.2]:
-        censub = CentralSubhalos(scatter = scat)
-        censub.build_catalogs(snapshots=range(1,21))
+    test_subhalos_smf(scatter = 0.0, source='li-march', type='all')
+    test_subhalos_smf(scatter = 0.0, source='li-march', type='central')
+    '''
+    prettyplot()
+    pretty_colors = prettycolors()
+
+    fig = plt.figure(figsize=(10,10))
+    sub = fig.add_subplot(111)
+    for i_snap in range(1, 21):
+        smf = SMF()
     
-        censub = Subhalos(scatter = scat)
-        censub.build_catalogs(snapshots=range(1,21))
-        #print censub.snapshot
-        #print getattr(censub, 'halo.m.max')
+        if type == 'all': 
+            subh = Subhalos()
+        elif type == 'central': 
+            subh = CentralSubhalos()
+        else: 
+            raise ValueError
+
+        subh.read(i_snap, scatter=scatter, source=source)
+        
+        subh_mass, subh_phi = smf.centralsubhalos(subh)
+        sub.plot(subh_mass, subh_phi, lw=4, c='gray') 
+
+        analytic_mass, analytic_phi = smf.analytic(get_z_nsnap(i_snap), source=source) 
+        sub.plot(analytic_mass, analytic_phi, lw=4, ls='--', c='k', 
+                label=r"$ z = "+str(round(get_z_nsnap(i_snap),2))+"$") 
+
+    sub.set_yscale('log')
+    sub.set_ylim([10**-5, 10**-1])
+    sub.set_xlim([8.0, 12.0])
+    #sub.legend(loc='upper right')
+    if type == 'all': 
+        subhalo_str = 'subhalo' 
+    elif type == 'central': 
+        subhalo_str = 'central_subhalo' 
+    else: 
+        raise ValueError
+    fig.savefig(
+            ''.join([
+                'figure/'
+                'qaplot_', subhalo_str, '_', source, '.png'
+                ]), 
+            bbox_inches='tight'
+            )
+    plt.close()
+
+if __name__=='__main__': 
+    test_subhalos_smf(scatter = 0.2, source='li-march', type='all')
+    test_subhalos_smf(scatter = 0.2, source='li-march', type='central')
