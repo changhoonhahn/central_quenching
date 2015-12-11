@@ -21,25 +21,18 @@ import numpy as np
 import warnings
 
 # --- Local ----
-from quiescent_fraction import get_fq
-from util import cenque_utility as util
-from util.tau_quenching import get_quenching_efold
-from sfms.fitting import get_param_sfr_mstar_z
-
-#---- Local ----
 from smf import SMF
 from ssfr import Ssfr
 from assign_sfr import assign_sfr 
+from quiescent_fraction import get_fq
+from util import cenque_utility as util
 from util.mass_bins import simple_mass_bin
 from central_subhalo import CentralSubhalos
 from quiescent_fraction import sfq_classify
+from sfms.fitting import get_param_sfr_mstar_z
+
 # -- plotting --
-from plotting.plot_fq import PlotFq
-from plotting.plot_smf import PlotSMF
-from plotting.plot_tau import PlotTau
-from plotting.plot_ssfr import PlotSSFR
-from plotting.plot_sfms import PlotSFMS
-from plotting.plot_mstar_mhalo import PlotMstarMhalo
+from plotting import plots 
 
 class CenQue: 
 
@@ -47,7 +40,6 @@ class CenQue:
         ''' Class that descirbes the central quenching (CenQue) galaxy 
         catalog
         '''
-
         self.kwargs = kwargs
     
         # TreePM properties
@@ -351,7 +343,7 @@ class CenQue:
         '''
         plt.close() # in case there's another plot
 
-        ssfr_plot = PlotSSFR()
+        ssfr_plot = plots.PlotSSFR()
         ssfr_plot.cenque(self, **pltkwargs)
 
         if 'groupcat' in pltkwargs.keys(): 
@@ -387,7 +379,7 @@ class CenQue:
         '''
         plt.close() # in case there's another plot
 
-        smf_plot = PlotSMF()
+        smf_plot = plots.PlotSMF()
         smf_plot.cenque(self)
         if self.zsnap < 0.1: 
             redshift = 0.1
@@ -446,7 +438,7 @@ class CenQue:
         '''
         plt.close() # in case there's another plot
 
-        fq_plot = PlotFq() 
+        fq_plot = plots.PlotFq() 
         fq_plot.cenque(self, **pltkwargs)
 
         if 'param' in pltkwargs.keys():
@@ -471,10 +463,9 @@ class CenQue:
         '''
         Plot quenching timescale 
         '''
-
         plt.close() 
 
-        tau_plot = PlotTau(self.tau_prop)
+        tau_plot = plots.PlotTau(self.tau_prop)
 
         if 'savefig' in pltkwargs.keys():
             if isinstance(pltkwargs['savefig'], str): 
@@ -498,7 +489,7 @@ class CenQue:
 
         plt.close()
 
-        mm_plot = PlotMstarMhalo()
+        mm_plot = plots.PlotMstarMhalo()
         mm_plot.cenque(self, **pltkwargs)
         
         if 'savefig' in pltkwargs.keys():
@@ -522,7 +513,7 @@ class CenQue:
         '''
         plt.close() 
 
-        sfms_plot = PlotSFMS()
+        sfms_plot = plots.PlotSFMS()
         sfms_plot.cenque(self, **pltkwargs)
         
         if 'savefig' in pltkwargs.keys():
@@ -561,8 +552,7 @@ class CenQue:
 
             '''
             # time the code 
-            if not quiet: 
-                start_time = time.time()
+            start_time = time.time()
 
             if self.mass == None: 
                 raise ValueError()
@@ -688,8 +678,7 @@ class CenQue:
             if len(assign_fail[0]) > 0: 
                 raise ValueError('Function failed!')
     
-            if not quiet: 
-                print 'Assign SFR function takes', (time.time()-start_time)/60.0, ' minutes'
+            print 'Assign SFR function takes', (time.time()-start_time)/60.0, ' minutes'
 
             if 'evol_from' in self.cenque_type: 
                 pass
