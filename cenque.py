@@ -23,7 +23,7 @@ import warnings
 # --- Local ----
 from smf import SMF
 from ssfr import Ssfr
-from assign_sfr import assign_sfr 
+#from assign_sfr import assign_sfr 
 from quiescent_fraction import get_fq
 from util import cenque_utility as util
 from util.mass_bins import simple_mass_bin
@@ -35,7 +35,6 @@ from sfms.fitting import get_param_sfr_mstar_z
 from plotting import plots 
 
 class CenQue: 
-
     def __init__(self, **kwargs): 
         ''' Class that descirbes the central quenching (CenQue) galaxy 
         catalog
@@ -119,17 +118,20 @@ class CenQue:
         
         centsub = CentralSubhalos()
         centsub.read(nsnap, scatter=self.subhalo_prop['scatter'], source=self.subhalo_prop['source'])
+        print centsub.file_name
 
-        self.data_columns = ['mass', 'halo_mass', 'parent', 'child', 'ilk', 'snap_index', 'pos']
-        for col in self.data_columns: 
-            if col == 'halo_mass': 
-                # maximum halo mass from halo merger tree.
-                # this halo mass is used for SHAM rather
-                setattr(self, col, getattr(centsub, 'halo.m.max'))
-            elif col == 'snap_index': 
-                setattr(self, col, getattr(centsub, 'index'))
+        self.data_columns = [] 
+        for col in centsub.data_columns: 
+            if col == 'halo.m.max': 
+                newcol = 'halo_mass'
+            elif col == 'index': 
+                newcol = 'snap_index'
+            elif col == 'halo.m': 
+                continue 
             else: 
-                setattr(self, col, getattr(centsub, col))
+                newcol = col
+            setattr(self, newcol, getattr(centsub, col))
+            self.data_columns.append(newcol)
         
         # Meta data 
         self.metadata = [ 'nsnap', 'zsnap', 't_cosmic', 't_step', 'cenque_type', 'subhalo_prop']
@@ -385,9 +387,11 @@ class CenQue:
             redshift = 0.1
         else: 
             redshift = self.zsnap
-        smf_plot.analytic(redshift)
+        smf_plot.analytic(redshift, source=self.subhalo_prop['source'])
         smf_plot.set_axes()
 
+        if 'show' in pltkwargs.keys(): 
+            smf_plot.show()
         if 'savefig' in pltkwargs.keys():
             if isinstance(pltkwargs['savefig'], str): 
                 smf_plot.save_fig(pltkwargs['savefig'])
@@ -678,7 +682,7 @@ class CenQue:
             if len(assign_fail[0]) > 0: 
                 raise ValueError('Function failed!')
     
-            print 'Assign SFR function takes', (time.time()-start_time)/60.0, ' minutes'
+            print 'Assign SFR function takes', (time.time()-start_time), ' seconds'
 
             if 'evol_from' in self.cenque_type: 
                 pass

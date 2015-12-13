@@ -57,8 +57,8 @@ class CentralSubhalos(object):
                 'snapshot': snapshot, 
                 'source' : source
                 }
-
         snapshot_file = self.file(**spec_kwargs)
+        self.file_name = snapshot_file
         if not os.path.isfile(snapshot_file): 
             print snapshot_file, ' does NOT exist'
             print 'Now building'
@@ -69,9 +69,11 @@ class CentralSubhalos(object):
 
         for i_meta, metadatum in enumerate(grp.attrs.keys()): 
             setattr(self, metadatum, (grp.attrs.values())[i_meta])
+        self.metadata = [str(key) for key in grp.attrs.keys()]
 
         for datum in grp.keys():
             setattr(self, datum, grp[datum][:])
+        self.data_columns = [str(key) for key in grp.keys()]
 
         return None
     
@@ -115,18 +117,19 @@ class CentralSubhalos(object):
 
             # keep track of child indices for subhalo
             if i_snap == np.min(self.snapshots):     
-                child = np.zeros(len(central_indices))
-                child = child - 999.
-                child.astype(int)
+                child = np.repeat(-999, len(central_indices))
             else: 
                 child = wetzel_util.utility_catalog.indices_tree(sub, i_snap, i_snap-1, central_indices) 
 
             if i_snap == np.max(self.snapshots):     # parent index of subhalo
-                parent = np.zeros(len(central_indices))
-                parent = parent - 999.
-                parent.astype(int)
+                parent = np.repeat(-999, len(central_indices))
             else: 
                 parent = wetzel_util.utility_catalog.indices_tree(sub, i_snap, i_snap+1, central_indices) 
+            
+            if i_snap == np.max(self.snapshots):     # parent index of subhalo
+                ancestor = np.repeat(-999, len(central_indices))
+            else: 
+                ancestor = wetzel_util.utility_catalog.indices_tree(sub, i_snap, np.max(self.snapshots), central_indices) 
         
             spec_kwargs = {
                     'scatter': self.scatter, 
@@ -139,6 +142,7 @@ class CentralSubhalos(object):
             grp = f.create_group('cenque_data') 
             
             grp.attrs['snapshot'] = i_snap
+            
             grp.create_dataset('index', data=central_indices)
             grp.create_dataset('pos', data=pos) 
             grp.create_dataset('ilk', data=ilk)
@@ -147,6 +151,7 @@ class CentralSubhalos(object):
             grp.create_dataset('parent', data=parent)
             grp.create_dataset('halo.m', data=mhalo)
             grp.create_dataset('halo.m.max', data=mhalo_max)
+            grp.create_dataset('ancestor'+str(np.max(self.snapshots)), data=ancestor)
             
             print 'M*: min ', np.min(mstar), ' max ', np.max(mstar), ' mean ', np.mean(mstar)
             print 'Snapshot ', i_snap,' has ', len(child[child >= 0]), ' parents that have children' 
@@ -258,6 +263,7 @@ class Subhalos(CentralSubhalos):
 
         return None
 
+
 def test_subhalos_smf(scatter = 0.0, source='li-drory-march', type='all'): 
     '''
     Test subhalos by comparing their SMFs to analytic SMFs 
@@ -272,7 +278,6 @@ def test_subhalos_smf(scatter = 0.0, source='li-drory-march', type='all'):
     sub = fig.add_subplot(111)
     for i_snap in range(1, 21):
         smf = SMF()
-    
         if type == 'all': 
             subh = Subhalos()
         elif type == 'central': 
@@ -291,7 +296,7 @@ def test_subhalos_smf(scatter = 0.0, source='li-drory-march', type='all'):
 
     sub.set_yscale('log')
     sub.set_ylim([10**-5, 10**-1])
-    sub.set_xlim([8.0, 12.0])
+    sub.set_xlim([6.0, 12.0])
     #sub.legend(loc='upper right')
     if type == 'all': 
         subhalo_str = 'subhalo' 
@@ -308,6 +313,55 @@ def test_subhalos_smf(scatter = 0.0, source='li-drory-march', type='all'):
             )
     plt.close()
 
+
+def test_orphan_subhalo_smf(scatter = 0.0, source='li-drory-march'): 
+    '''
+    SMF for orphan subhalos
+    '''
+    prettyplot()
+    pretty_colors = prettycolors()
+
+    fig = plt.figure(figsize=(10,10))
+    sub = fig.add_subplot(111)
+    for i_snap in xrange(1,20):
+        smf = SMF()
+        subh = CentralSubhalos()
+        subh.read(i_snap, scatter=scatter, source=source)
+
+        subh_mass, subh_phi = smf.centralsubhalos(subh)
+        sub.plot(subh_mass, subh_phi, lw=4, c='gray') 
+        
+        orphan = np.where(subh.ancestor20 < 0)
+        
+        orph_mass, orph_phi = smf.smf(subh.mass[orphan])
+        sub.plot(orph_mass, orph_phi, lw=2, ls='--', c='k') 
+    
+        # non orphan SMF
+        #sub.plot(subh_mass, subh_phi - orph_phi, lw=4, c='k') 
+
+    sub.set_yscale('log')
+    sub.set_ylim([10**-5, 10**-1])
+    sub.set_xlim([6.0, 12.0])
+    #sub.legend(loc='upper right')
+    subhalo_str = ''.join([
+            'orphan_central_subhalo.scatter', 
+            str(round(scatter, 2)), 
+            '.source-', source
+            ])
+
+    fig.savefig(
+            ''.join([
+                'figure/'
+                'qaplot_', subhalo_str, '.png'
+                ]), 
+            bbox_inches='tight'
+            )
+    plt.close()
+
+
 if __name__=='__main__': 
-    test_subhalos_smf(scatter = 0.2, source='li-march', type='all')
-    test_subhalos_smf(scatter = 0.2, source='li-march', type='central')
+    #for scat in [ 0.0, 0.2 ]: 
+    #    subh = CentralSubhalos() 
+    #    subh.build_catalogs(snapshots = range(1, 21), scatter=scat, source='li-march')
+    #    del subh
+    test_orphan_subhalo_smf(scatter=0.0, source='li-march')

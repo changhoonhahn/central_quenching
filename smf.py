@@ -60,7 +60,7 @@ class SMF(object):
         '''
         if not dlogm: 
             dlogm = 0.1
-        m_arr = np.arange(8.0, 12.1, dlogm)
+        m_arr = np.arange(6.0, 12.1, dlogm)
 
         if redshift < 0.1:
             redshift = 0.1
@@ -75,6 +75,33 @@ class SMF(object):
         #print 'Analytic ', np.sum(np.array(phi))
         return np.array(mass), np.array(phi)
 
+    def smf(self, masses, dlogm='', box=None, h=0.7): 
+        '''
+        Calculate SMF given masses
+        '''
+        if not dlogm: 
+            dlogm = 0.1 # log M bin size
+        if not box: 
+            box = 250   # 250 Mpc/h Box length
+
+        m_arr = np.arange(6.0, 12.1, dlogm)
+
+        vol = box ** 3  # box volume
+            
+        mass, phi = [], [] 
+        for mi in m_arr: 
+            mass_bin = np.where(
+                    (masses > mi) & 
+                    (masses <= mi+dlogm)
+                    )
+
+            ngal_bin = len(masses[mass_bin])
+            
+            mass.append(mi + 0.5 * dlogm)
+            phi.append(np.float(ngal_bin)/vol/dlogm * h**3) 
+
+        return np.array(mass), np.array(phi)
+
 def smf(masses, dlogm='', box=None, h=0.7): 
     '''
     Calculate SMF given masses
@@ -84,7 +111,7 @@ def smf(masses, dlogm='', box=None, h=0.7):
     if not box: 
         box = 250   # 250 Mpc/h Box length
 
-    m_arr = np.arange(8.0, 12.1, dlogm)
+    m_arr = np.arange(6.0, 12.1, dlogm)
 
     vol = box ** 3  # box volume
         
