@@ -6,6 +6,8 @@ Plotting class objects
 import numpy as np 
 import matplotlib.pyplot as plt
 
+# SMF
+from smf import SMF
 # M*-Mhalo plot
 import bovy_plot as bovy
 from util import cenque_utility as util
@@ -30,11 +32,17 @@ class Plots(object):
 
         self.fig = plt.figure(figsize=[10, 10])
         self.sub = self.fig.add_subplot(1,1,1)
+
     def save_fig(self, file_name): 
         '''
         save figure  to file_name
         '''
         self.fig.savefig(file_name, bbox_inches = 'tight')
+        return None
+
+    def show(self): 
+        plt.show()
+        plt.close()
         return None
 
 
@@ -781,7 +789,6 @@ class PlotSSFR(Plots):
         return None
 
 
-
 # Stellar Mass Function 
 class PlotSMF(Plots): 
     def __init__(self, **kwargs): 
@@ -790,9 +797,6 @@ class PlotSMF(Plots):
         different class objects including CenQue and GroupCat
         '''
         super(PlotSMF, self).__init__(**kwargs)
-
-        self.fig = plt.figure(figsize=(10,10))
-        self.sub = self.fig.add_subplot(111)
 
     def cenque(self, cenque, type='total', **kwargs): 
         ''' 
@@ -842,7 +846,7 @@ class PlotSMF(Plots):
                 label=smf_label)
         return None
     
-    def analytic(self, redshift, **kwargs): 
+    def analytic(self, redshift, source='li-drory-march', **kwargs): 
         '''
         Analytic SMF at redshift 
         '''
@@ -870,7 +874,7 @@ class PlotSMF(Plots):
         else:
             line_width = 3
         smf = SMF()
-        mass, phi = smf.analytic(redshift) 
+        mass, phi = smf.analytic(redshift, source=source) 
         
         self.sub.plot(mass, phi, 
                 c=line_color, ls=line_style, lw=line_width,
