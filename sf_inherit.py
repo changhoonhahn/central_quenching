@@ -47,8 +47,6 @@ def sf_inherit(nsnap_descendants,
         Property dictionary that dictates the quenching probability. Keys are 'slope' and 'yint'
     tau_prop : 
         Property dictionary that dictates the quenching timescale. Keys are 'name', 'fid_mass', 'slope', and 'yint'
-
-
     '''
     # make sure that snapshot = 1 is included among imported descendants
     # and the first element of the list
@@ -278,4 +276,3 @@ def sf_inherit(nsnap_descendants,
         setattr(bloodline, 'descendant_cq_snapshot'+str(nsnap_descendant), descendant)
 
     return bloodline 
-

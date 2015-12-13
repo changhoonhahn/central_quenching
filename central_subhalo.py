@@ -341,7 +341,7 @@ def test_orphan_subhalo_smf(scatter = 0.0, source='li-drory-march'):
 
     sub.set_yscale('log')
     sub.set_ylim([10**-5, 10**-1])
-    sub.set_xlim([6.0, 12.0])
+    sub.set_xlim([7.5, 12.0])
     #sub.legend(loc='upper right')
     subhalo_str = ''.join([
             'orphan_central_subhalo.scatter', 
