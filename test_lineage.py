@@ -110,14 +110,14 @@ def ancestoral_past(nsnap_ancestor,
     plt.show()
 
 if __name__=='__main__': 
-    lineage_smf(20, 
-            descendants = [1],
-            subhalo_prop = {'scatter': 0.0, 'source': 'li-march'}, 
-            sfr_prop = { 'fq': {'name': 'wetzelsmooth'}, 'sfr': {'name': 'average'}}
-            )
-
-    #ancestoral_past(
-    #        20, 
+    #lineage_smf(20, 
+    #        descendants = [1],
     #        subhalo_prop = {'scatter': 0.0, 'source': 'li-march'}, 
     #        sfr_prop = { 'fq': {'name': 'wetzelsmooth'}, 'sfr': {'name': 'average'}}
     #        )
+
+    ancestoral_past(
+            20, 
+            subhalo_prop = {'scatter': 0.0, 'source': 'li-march'}, 
+            sfr_prop = { 'fq': {'name': 'wetzelsmooth'}, 'sfr': {'name': 'average'}}
+            )

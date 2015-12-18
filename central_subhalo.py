@@ -129,12 +129,6 @@ class CentralSubhalos(object):
                 parent = wetzel_util.utility_catalog.indices_tree(
                         sub, i_snap, i_snap+1, central_indices) 
             
-            if i_snap == np.max(self.snapshots):     # ancestor index of subhalo
-                ancestor = np.repeat(-999, len(central_indices))
-            else: 
-                ancestor = wetzel_util.utility_catalog.indices_tree(
-                        sub, i_snap, np.max(self.snapshots), central_indices) 
-            
             spec_kwargs = {
                     'scatter': self.scatter, 
                     'snapshot': i_snap, 
@@ -155,7 +149,16 @@ class CentralSubhalos(object):
             grp.create_dataset('parent', data=parent)
             grp.create_dataset('halo.m', data=mhalo)
             grp.create_dataset('halo.m.max', data=mhalo_max)
-            grp.create_dataset('ancestor'+str(np.max(self.snapshots)), data=ancestor)
+
+            if i_snap == np.max(self.snapshots):     # ancestor index of subhalo
+                ancestor = np.repeat(-999, len(central_indices))
+                grp.create_dataset('ancestor'+str(np.max(self.snapshots)), data=ancestor)
+            else: 
+                for ii_snap in range(i_snap+1, np.max(self.snapshots)+1): 
+                    print i_snap, ii_snap
+                    ancestor = wetzel_util.utility_catalog.indices_tree(
+                            sub, i_snap, ii_snap, central_indices)
+                    grp.create_dataset('ancestor'+str(ii_snap), data=ancestor)
             
             f.close() 
 

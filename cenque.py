@@ -27,6 +27,7 @@ from ssfr import Ssfr
 from quiescent_fraction import get_fq
 from util import cenque_utility as util
 from util.mass_bins import simple_mass_bin
+from central_subhalo import Subhalos
 from central_subhalo import CentralSubhalos
 from quiescent_fraction import sfq_classify
 from sfms.fitting import get_param_sfr_mstar_z
@@ -117,6 +118,7 @@ class CenQue:
                     raise ValueError
         
         centsub = CentralSubhalos()
+        #centsub = Subhalos()
         centsub.read(nsnap, scatter=self.subhalo_prop['scatter'], source=self.subhalo_prop['source'])
         print centsub.file_name
 
