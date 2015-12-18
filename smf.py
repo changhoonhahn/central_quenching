@@ -84,7 +84,7 @@ class SMF(object):
         if not box: 
             box = 250   # 250 Mpc/h Box length
 
-        m_arr = np.arange(6.0, 12.1, dlogm)
+        m_arr = np.arange(0.0, 12.1, dlogm)
 
         vol = box ** 3  # box volume
             

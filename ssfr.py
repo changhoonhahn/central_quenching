@@ -15,7 +15,6 @@ from sfms.fitting import get_param_sfr_mstar_z
 from group_catalog.group_catalog import central_catalog
 
 class Ssfr(object): 
-
     def __init__(self, **kwargs): 
         """ Class that describes the sSFR distribution of a CenQue object
         """

@@ -532,164 +532,165 @@ class CenQue:
             return sfms_plot 
     
     def assign_sfr(self, sfr_prop = None, quiet=True, **kwargs):
-            ''' 
-            Assign Star Formation Rates to CenQue class object based on 
-            properties listed in keyword sfr_prop, which specifies the 
-            analytic quiescsent fraction prescription and the SFR assignment
-            method. Namely, 'gal_type', 'sfr', and 'ssfr' are assigned to 
-            M* and M_halo values.
+        ''' 
+        Assign Star Formation Rates to CenQue class object based on 
+        properties listed in keyword sfr_prop, which specifies the 
+        analytic quiescsent fraction prescription and the SFR assignment
+        method. Namely, 'gal_type', 'sfr', and 'ssfr' are assigned to 
+        M* and M_halo values.
 
-            Goes through mass bins and then classifies unassigned 
-            galaxies into quiescent/star-forming based on quiescent fraction 
-            function. 
-    
-            Then SF properties are assigned to the galaxies. For quiescent 
-            galaxies the sSFR is drawn from a log normal distribution about 
-            some predeterimined mu_sSFR. For star-forming galaxies, SFR is
-            sampled from a designated SF-MS model. 
-    
-            Parameters
-            ----------
-            sfr_prop : (dict)
-                Dictionary that specifies the SFR assignment properties and the 
-                quiescent fraction properties used in the method  
+        Goes through mass bins and then classifies unassigned 
+        galaxies into quiescent/star-forming based on quiescent fraction 
+        function. 
 
-            '''
-            # time the code 
-            start_time = time.time()
+        Then SF properties are assigned to the galaxies. For quiescent 
+        galaxies the sSFR is drawn from a log normal distribution about 
+        some predeterimined mu_sSFR. For star-forming galaxies, SFR is
+        sampled from a designated SF-MS model. 
 
-            if self.mass == None: 
-                raise ValueError()
-            if self.zsnap == None: 
-                raise ValueError()
-            
-            if self.sfr_prop is None: 
-                self.sfr_prop = sfr_prop
-                self.metadata.append('sfr_prop')
-            else: 
-                if sfr_prop: 
-                    if self.sfr_prop != sfr_prop: 
-                        raise ValueError('SFR properties do not match')
-            fq_dict = self.sfr_prop['fq']       # dictionary that specifies fq properties
-            sfr_dict = self.sfr_prop['sfr']     # dictionary that specifies sfr properties
+        Parameters
+        ----------
+        sfr_prop : (dict)
+            Dictionary that specifies the SFR assignment properties and the 
+            quiescent fraction properties used in the method  
 
-            mass_bin_low  = self.mass_bins.mass_low
-            mass_bin_mid  = self.mass_bins.mass_mid
-            mass_bin_high = self.mass_bins.mass_high
-            # only keep galaxies within the mass range and with children 
-            keep = np.where(
-                    (self.mass > mass_bin_low.min()) & 
-                    (self.mass <= mass_bin_high.max()) & 
-                    (self.child >= 0) 
-                    ) 
-            ngal_keep = len(keep[0])
-            if (np.min(self.mass) < mass_bin_low.min()) or (np.max(self.mass) > mass_bin_high.max()): 
-                self.sample_trim(keep) 
-            
-            for attrib in ['gal_type', 'sfr', 'ssfr']: 
-                if attrib not in self.data_columns: 
-                    self.data_columns.append(attrib)
+        '''
+        # time the code 
+        start_time = time.time()
 
-            if self.gal_type is None:         
-                self.gal_type = np.repeat('', ngal_keep).astype('|S16') 
-                self.sfr      = np.repeat(-999., ngal_keep) 
-                self.ssfr     = np.repeat(-999., ngal_keep)
-
-            # analytic mu_SFR(M*, z) with randomly sampled normal delta_SFR. 
-            sfr_mstar_z, sig_sfr_mstar_z = get_param_sfr_mstar_z()
-
-            if 'delta_sfr' not in self.__dict__.keys(): 
-                self.delta_sfr = np.repeat(-999., ngal_keep)
-            if 'avg_sfr' not in self.__dict__.keys(): 
-                self.avg_sfr = np.repeat(-999., ngal_keep)
-            for attrib in ['avg_sfr', 'delta_sfr']: 
-                if attrib not in self.data_columns: 
-                    self.data_columns.append(attrib)
-
-            # f_Q(M_*mid, z_snapshot) 
-            qf_massbin = get_fq(mass_bin_mid, self.zsnap, lit = fq_dict['name']) 
-
-            unassigned = [ 
-                    np.where(
-                        (self.mass > mass_bin_low[i_m]) &
-                        (self.mass <= mass_bin_high[i_m]) &
-                        (self.gal_type == ''))[0]
-                    for i_m in xrange(self.mass_bins.nbins)
-                    ]
-            # Ngal(M_mid), Ngal,Q(M_mid) and Ngal,SF(M_mid)
-            ngal_massbin = np.array([x.size for x in unassigned])
-            ngal_q_massbin = np.rint(qf_massbin * ngal_massbin.astype(float)).astype(int)
-            ngal_sf_massbin = ngal_massbin - ngal_q_massbin
-
-            # fail-safe for ngal_q_massbin
-            if len(np.where(ngal_q_massbin > ngal_massbin)[0]) > 0: 
-                ngal_q_massbin[np.where(ngal_q_massbin > ngal_massbin)] = \
-                        ngal_massbin[np.where(ngal_q_massbin > ngal_massbin)]
-
-            for i_m in xrange(self.mass_bins.nbins):     # loop through mass bins
-                if ngal_massbin[i_m] == 0: 
-                    continue
-                #begin_loop_time = time.time()
-                if not quiet: 
-                    print mass_bin_low[i_m], ' < M < ', mass_bin_high[i_m]
-                    print 'fQ = ', qf_massbin[i_m], ' Ngal = ', ngal_massbin[i_m]
-                    print 'Ngal,Q = ', ngal_q_massbin[i_m], ' Ngal,SF = ', ngal_sf_massbin[i_m]
-
-                shuffled = np.arange(ngal_massbin[i_m])
-                np.random.seed()
-                np.random.shuffle(shuffled)
-                i_q_end = ngal_q_massbin[i_m]
+        if self.mass == None: 
+            raise ValueError()
+        if self.zsnap == None: 
+            raise ValueError()
         
-                # Randomly select ngal_q_massbin quiescent galaxies from the 
-                # massbin. Assign gal_type = 'quiescent', sSFR and SFR 
-                # based on log-normal distribution of SSFR with 0.18 dex scatter
-                if i_q_end > 0: 
-                    i_q_massbin = unassigned[i_m][shuffled[:i_q_end]]
-                    self.gal_type[i_q_massbin] = 'quiescent'   
+        if self.sfr_prop is None: 
+            self.sfr_prop = sfr_prop
+            self.metadata.append('sfr_prop')
+        else: 
+            if sfr_prop: 
+                if self.sfr_prop != sfr_prop: 
+                    raise ValueError('SFR properties do not match')
+        fq_dict = self.sfr_prop['fq']       # dictionary that specifies fq properties
+        sfr_dict = self.sfr_prop['sfr']     # dictionary that specifies sfr properties
 
-                    mu_q_ssfr = util.get_q_ssfr_mean(self.mass[i_q_massbin]) 
-                    if len(i_q_massbin) != ngal_q_massbin[i_m]:
-                        raise ValueError
-                    self.ssfr[i_q_massbin] = 0.18 * np.random.randn(ngal_q_massbin[i_m]) + mu_q_ssfr 
-                    self.sfr[i_q_massbin]  = self.ssfr[i_q_massbin] + self.mass[i_q_massbin]
+        mass_bin_low  = self.mass_bins.mass_low
+        mass_bin_mid  = self.mass_bins.mass_mid
+        mass_bin_high = self.mass_bins.mass_high
+
+        #keep = np.where(
+        #        (self.mass > mass_bin_low.min()) & 
+        #        (self.mass <= mass_bin_high.max()) & 
+        #        (self.child >= 0) 
+        #        ) 
+        #ngal_keep = len(keep[0])
+        #if (np.min(self.mass) < mass_bin_low.min()) or (np.max(self.mass) > mass_bin_high.max()): 
+        #    self.sample_trim(keep) 
+        ngal_keep = len(self.mass)
         
-                # ngal_sf_massbin starforming galaxies from the massbin. Assign 
-                # them 'star-forming' gal_type and sSFR and SFR in some manner
-                if ngal_sf_massbin[i_m] > 0: 
-                    i_sf_massbin = (unassigned[i_m])[shuffled[i_q_end:]]
-                    self.gal_type[i_sf_massbin] = 'star-forming'
+        for attrib in ['gal_type', 'sfr', 'ssfr']: 
+            if attrib not in self.data_columns: 
+                self.data_columns.append(attrib)
+
+        if self.gal_type is None:         
+            self.gal_type = np.repeat('', ngal_keep).astype('|S16') 
+            self.sfr      = np.repeat(-999., ngal_keep) 
+            self.ssfr     = np.repeat(-999., ngal_keep)
+
+        # analytic mu_SFR(M*, z) with randomly sampled normal delta_SFR. 
+        sfr_mstar_z, sig_sfr_mstar_z = get_param_sfr_mstar_z()
+
+        if 'delta_sfr' not in self.__dict__.keys(): 
+            self.delta_sfr = np.repeat(-999., ngal_keep)
+        if 'avg_sfr' not in self.__dict__.keys(): 
+            self.avg_sfr = np.repeat(-999., ngal_keep)
+        for attrib in ['avg_sfr', 'delta_sfr']: 
+            if attrib not in self.data_columns: 
+                self.data_columns.append(attrib)
+
+        # f_Q(M_*mid, z_snapshot) 
+        qf_massbin = get_fq(mass_bin_mid, self.zsnap, lit = fq_dict['name']) 
+
+        unassigned = [ 
+                np.where(
+                    (self.mass > mass_bin_low[i_m]) &
+                    (self.mass <= mass_bin_high[i_m]) &
+                    (self.gal_type == ''))[0]
+                for i_m in xrange(self.mass_bins.nbins)
+                ]
+        # Ngal(M_mid), Ngal,Q(M_mid) and Ngal,SF(M_mid)
+        ngal_massbin = np.array([x.size for x in unassigned])
+        ngal_q_massbin = np.rint(qf_massbin * ngal_massbin.astype(float)).astype(int)
+        ngal_sf_massbin = ngal_massbin - ngal_q_massbin
+
+        # fail-safe for ngal_q_massbin
+        if len(np.where(ngal_q_massbin > ngal_massbin)[0]) > 0: 
+            ngal_q_massbin[np.where(ngal_q_massbin > ngal_massbin)] = \
+                    ngal_massbin[np.where(ngal_q_massbin > ngal_massbin)]
+
+        for i_m in xrange(self.mass_bins.nbins):     # loop through mass bins
+            if ngal_massbin[i_m] == 0: 
+                continue
+            #begin_loop_time = time.time()
+            if not quiet: 
+                print mass_bin_low[i_m], ' < M < ', mass_bin_high[i_m]
+                print 'fQ = ', qf_massbin[i_m], ' Ngal = ', ngal_massbin[i_m]
+                print 'Ngal,Q = ', ngal_q_massbin[i_m], ' Ngal,SF = ', ngal_sf_massbin[i_m]
+
+            shuffled = np.arange(ngal_massbin[i_m])
+            np.random.seed()
+            np.random.shuffle(shuffled)
+            i_q_end = ngal_q_massbin[i_m]
+    
+            # Randomly select ngal_q_massbin quiescent galaxies from the 
+            # massbin. Assign gal_type = 'quiescent', sSFR and SFR 
+            # based on log-normal distribution of SSFR with 0.18 dex scatter
+            if i_q_end > 0: 
+                i_q_massbin = unassigned[i_m][shuffled[:i_q_end]]
+                self.gal_type[i_q_massbin] = 'quiescent'   
+
+                mu_q_ssfr = util.get_q_ssfr_mean(self.mass[i_q_massbin]) 
+                if len(i_q_massbin) != ngal_q_massbin[i_m]:
+                    raise ValueError
+                self.ssfr[i_q_massbin] = 0.18 * np.random.randn(ngal_q_massbin[i_m]) + mu_q_ssfr 
+                self.sfr[i_q_massbin]  = self.ssfr[i_q_massbin] + self.mass[i_q_massbin]
+    
+            # ngal_sf_massbin starforming galaxies from the massbin. Assign 
+            # them 'star-forming' gal_type and sSFR and SFR in some manner
+            if ngal_sf_massbin[i_m] > 0: 
+                i_sf_massbin = (unassigned[i_m])[shuffled[i_q_end:]]
+                self.gal_type[i_sf_massbin] = 'star-forming'
+                
+                mu_sf_sfr = sfr_mstar_z(self.mass[i_sf_massbin], self.zsnap)
+                if  sfr_dict['name'] == 'average': 
+                    sigma_sf_sfr = sig_sfr_mstar_z(self.mass[i_sf_massbin], self.zsnap)
+                elif sfr_dict['name'] == 'average_noscatter': 
+                    sigma_sf_sfr = 0.0
+                else:
+                    raise NotImplementedError
                     
-                    mu_sf_sfr = sfr_mstar_z(self.mass[i_sf_massbin], self.zsnap)
-                    if  sfr_dict['name'] == 'average': 
-                        sigma_sf_sfr = sig_sfr_mstar_z(self.mass[i_sf_massbin], self.zsnap)
-                    elif sfr_dict['name'] == 'average_noscatter': 
-                        sigma_sf_sfr = 0.0
-                    else:
-                        raise NotImplementedError
-                        
-                    self.avg_sfr[i_sf_massbin] = mu_sf_sfr
-                    self.delta_sfr[i_sf_massbin] = sigma_sf_sfr * np.random.randn(ngal_sf_massbin[i_m])
-                    self.sfr[i_sf_massbin] = mu_sf_sfr + self.delta_sfr[i_sf_massbin]
+                self.avg_sfr[i_sf_massbin] = mu_sf_sfr
+                self.delta_sfr[i_sf_massbin] = sigma_sf_sfr * np.random.randn(ngal_sf_massbin[i_m])
+                self.sfr[i_sf_massbin] = mu_sf_sfr + self.delta_sfr[i_sf_massbin]
 
-                    if not quiet:
-                        print 'Starforming galaxies: '
-                        print 'Average(SFR) = ',np.mean(mu_sf_sfr),' sigma(SFR) = ',sigma_sf_sfr 
+                if not quiet:
+                    print 'Starforming galaxies: '
+                    print 'Average(SFR) = ',np.mean(mu_sf_sfr),' sigma(SFR) = ',sigma_sf_sfr 
 
-                self.ssfr[i_sf_massbin] = self.sfr[i_sf_massbin] - self.mass[i_sf_massbin]
+            self.ssfr[i_sf_massbin] = self.sfr[i_sf_massbin] - self.mass[i_sf_massbin]
 
-            # double check that SF assign didn't fail anywhere
-            assign_fail = np.where((self.sfr == -999.0) | (self.ssfr == -999.0))
-            if len(assign_fail[0]) > 0: 
-                raise ValueError('Function failed!')
-    
-            print 'Assign SFR function takes', (time.time()-start_time), ' seconds'
+        # double check that SF assign didn't fail anywhere
+        #assign_fail = np.where((self.sfr == -999.0) | (self.ssfr == -999.0))
+        #if len(assign_fail[0]) > 0: 
+        #    raise ValueError('Function failed!')
 
-            if 'evol_from' in self.cenque_type: 
-                pass
-            else: 
-                self.cenque_type = 'sf_assigned'
+        print 'Assign SFR function takes', (time.time()-start_time), ' seconds'
 
-            return None
+        if 'evol_from' in self.cenque_type: 
+            pass
+        else: 
+            self.cenque_type = 'sf_assigned'
+
+        return None
 
 """
     def build_cenque_importsnap(snapshots, scatter = 0.0): 

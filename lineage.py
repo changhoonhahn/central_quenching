@@ -87,7 +87,6 @@ class Lineage(object):
         return lineage_filename
 
     def _file_spec(self, subhalo_prop = None, sfr_prop  = None): 
-        
         if subhalo_prop is None: 
             raise ValueError
 
@@ -206,29 +205,42 @@ class Lineage(object):
         if not self.ancestor_cq: 
             raise ValueError('specify ancestor')
         parent_cq = self.ancestor_cq 
-    
+        
+        child_cq_list = [] 
         for i_snap in range(1, self.nsnap_ancestor)[::-1]:    
             # import CenQue object from TreePM
             child_cq = CenQue() 
             child_cq.import_treepm(i_snap, subhalo_prop = self.subhalo_prop) 
-        
+            child_cq_list.append(child_cq)
+    
+        for i_snap in range(1, self.nsnap_ancestor)[::-1]:    
             # remove galaxies below the min and max mass
-            keep = np.where(
-                    (child_cq.mass > np.min(child_cq.mass_bins.mass_low)) & 
-                    (child_cq.mass <= np.max(child_cq.mass_bins.mass_high))
-                    ) 
-            child_cq.sample_trim(keep)
-            n_child = len(keep[0])
+            #keep = np.where(
+            #        (child_cq.mass > np.min(child_cq.mass_bins.mass_low)) & 
+            #        (child_cq.mass <= np.max(child_cq.mass_bins.mass_high))
+            #        ) 
+            #child_cq.sample_trim(keep)
             
+            #nozero = np.where(child_cq.mass > 0)
             ancestor_index = getattr(child_cq, 'ancestor'+str(self.nsnap_ancestor))
             has_ancestor = np.where(ancestor_index > 0)
-            print 'Children with parents ', len(has_ancestor[0]), \
-                    ' All children ', len(child_cq.parent)
+            print 'Children with ancestors ', len(has_ancestor[0]), ' All children ', len(child_cq.parent)
+            for ii in range(i_snap+1, self.nsnap_ancestor)[::-1]:
+                ii_ancestor = getattr(child_cq, 'ancestor'+str(ii))[has_ancestor]
+                print len(np.where(ii_ancestor < 0.)[0])
+            child_cq.sample_trim(has_ancestor)  # trim sample
 
-            child_cq.sample_trim(has_ancestor)
+            #ancestors, children = intersection_index(self.ancestor_cq.snap_index, child_cq.ancestor20)
+            #print len(self.ancestor_cq.snap_index[ancestors]), len(self.ancestor_cq.snap_index)
+            #print len(child_cq.ancestor20[children]), len(child_cq.ancestor20)
+
+            #parents, children = intersection_index(parent_cq.snap_index, child_cq.ancestor20)
+            #print len(parent_cq.snap_index[parents]), len(parent_cq.snap_index)
+            #print len(child_cq.ancestor20[children]), len(child_cq.ancestor20)
+
             setattr(self, 'descendant_cq_snapshot'+str(i_snap), child_cq)
-            parent_cq = child_cq
-        
+            #parent_cq = child_cq
+
         return None
 
     def _descend_old(self, quiet=True):
