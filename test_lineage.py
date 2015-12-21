@@ -86,7 +86,7 @@ def ancestoral_past(nsnap_ancestor,
     noancestor = ancestor_index[np.invert(np.in1d(ancestor_index, ancestor.snap_index))]
     print 'No Ancestor Ngal=', len(noancestor)
     
-    centsub = Subhalos()
+    centsub = CentralSubhalos()
     centsub.read(nsnap_ancestor, scatter=subhalo_prop['scatter'], source=subhalo_prop['source'])
     
     prettyplot()
@@ -108,6 +108,8 @@ def ancestoral_past(nsnap_ancestor,
     sub.set_yscale("log")
     sub.legend()
     plt.show()
+
+
 
 if __name__=='__main__': 
     #lineage_smf(20, 

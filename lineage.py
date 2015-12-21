@@ -206,12 +206,12 @@ class Lineage(object):
             raise ValueError('specify ancestor')
         parent_cq = self.ancestor_cq 
         
-        #child_cq_list = [] 
-        #for i_snap in range(1, self.nsnap_ancestor):    
-        #    # import CenQue object from TreePM
-        #    child_cq = CenQue() 
-        #    child_cq.import_treepm(i_snap, subhalo_prop = self.subhalo_prop) 
-        #    child_cq_list.append(child_cq)
+        child_cq_list = [] 
+        for i_snap in range(1, self.nsnap_ancestor):    
+            # import CenQue object from TreePM
+            child_cq = CenQue() 
+            child_cq.import_treepm(i_snap, subhalo_prop = self.subhalo_prop) 
+            child_cq_list.append(child_cq)
     
         for i_snap in range(1, self.nsnap_ancestor)[::-1]:    
             # remove galaxies below the min and max mass
@@ -229,19 +229,18 @@ class Lineage(object):
             print 'Snanpshot ', i_snap
             print 'Children with ancestors ', len(has_ancestor[0]), ' All children ', len(child_cq.parent)
         
-            '''
             for ii in range(i_snap+1, self.nsnap_ancestor)[::-1]:
                 ii_ancestor = getattr(child_cq, 'ancestor'+str(ii))[has_ancestor]
-                ancestors, children = intersection_index(
-                        child_cq_list[ii-1].snap_index,
-                        ii_ancestor)
+                ancestors = range(len(child_cq_list[ii-1].snap_index))[np.in1d(child_cq_list[ii-1].snap_index, ii_ancestor)]
+                #intersection_index(
+                #        child_cq_list[ii-1].snap_index,
+                #        ii_ancestor)
                 print ii, child_cq_list[ii-1].nsnap
                 print 'these should be the same', len(children), len(ii_ancestor)
                 print child_cq_list[ii-1].mass[ancestors]
-                print len(np.where(ii_ancestor < 0.)[0])
+                #print len(np.where(ii_ancestor < 0.)[0])
 
-            child_cq.sample_trim(has_ancestor)  # trim sample
-            '''
+            #child_cq.sample_trim(has_ancestor)  # trim sample
             ancestors, children = intersection_index(self.ancestor_cq.snap_index, child_cq.ancestor20[has_ancestor])
             print len(self.ancestor_cq.snap_index[ancestors]), len(self.ancestor_cq.snap_index)
             print len(child_cq.ancestor20[has_ancestor[0][children]]), len(child_cq.ancestor20[has_ancestor])
