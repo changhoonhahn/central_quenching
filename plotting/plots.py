@@ -844,7 +844,7 @@ class PlotSMF(Plots):
         self.sub.plot(mass, phi, 
                 c=line_color, ls=line_style, lw=line_width,
                 label=smf_label)
-        return None
+        return mass, phi 
     
     def analytic(self, redshift, source='li-drory-march', **kwargs): 
         '''
