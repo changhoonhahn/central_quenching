@@ -12,7 +12,7 @@ import warnings
 
 from cenque import CenQue
 from assign_sfr import assign_sfr
-from util.cenque_utility import intersection_index
+import util.cenque_utility as util
 
 class Lineage(object): 
     def __init__(self, nsnap_ancestor = 20, **kwargs):
@@ -204,8 +204,7 @@ class Lineage(object):
         '''
         if not self.ancestor_cq: 
             raise ValueError('specify ancestor')
-        parent_cq = self.ancestor_cq 
-        
+
         child_cq_list = [] 
         for i_snap in range(1, self.nsnap_ancestor):    
             # import CenQue object from TreePM
@@ -214,40 +213,52 @@ class Lineage(object):
             child_cq_list.append(child_cq)
     
         for i_snap in range(1, self.nsnap_ancestor)[::-1]:    
-            # remove galaxies below the min and max mass
-            child_cq = CenQue() 
-            child_cq.import_treepm(i_snap, subhalo_prop = self.subhalo_prop) 
-            #keep = np.where(
-            #        (child_cq.mass > np.min(child_cq.mass_bins.mass_low)) & 
-            #        (child_cq.mass <= np.max(child_cq.mass_bins.mass_high))
-            #        ) 
-            #child_cq.sample_trim(keep)
             
-            #nozero = np.where(child_cq.mass > 0)
+            child_cq = child_cq_list[i_snap-1]
             ancestor_index = getattr(child_cq, 'ancestor'+str(self.nsnap_ancestor))
-            has_ancestor = np.where(ancestor_index > 0)
+
+            # has ancestors at nsnap_ancestor
+            has_ancestor, has_descendant = util.intersection_index(ancestor_index, self.ancestor_cq.snap_index)
             print 'Snanpshot ', i_snap
-            print 'Children with ancestors ', len(has_ancestor[0]), ' All children ', len(child_cq.parent)
-        
-            for ii in range(i_snap+1, self.nsnap_ancestor)[::-1]:
-                ii_ancestor = getattr(child_cq, 'ancestor'+str(ii))[has_ancestor]
-                ancestors = range(len(child_cq_list[ii-1].snap_index))[np.in1d(child_cq_list[ii-1].snap_index, ii_ancestor)]
-                #intersection_index(
-                #        child_cq_list[ii-1].snap_index,
-                #        ii_ancestor)
-                print ii, child_cq_list[ii-1].nsnap
-                print 'these should be the same', len(children), len(ii_ancestor)
-                print child_cq_list[ii-1].mass[ancestors]
-                #print len(np.where(ii_ancestor < 0.)[0])
+            print 'Children with ancestors ', len(has_ancestor), ' All children ', len(child_cq.snap_index)
+    
+            nsnap_genesis = np.repeat(-999, len(child_cq.snap_index))
+            mass_genesis = np.repeat(-999., len(child_cq.snap_index)) 
+            ancs = ancestor_index[has_ancestor] # ancestor indices
+    
+            # go through higher redshift snapshots in order to determine when the
+            # subhalo was first "started"
+            for ii_snap in range(i_snap, self.nsnap_ancestor): 
+                
+                ii_child = child_cq_list[ii_snap-1]
+                ii_anc, anc_ii = util.intersection_index(getattr(ii_child, 'ancestor'+str(self.nsnap_ancestor)), ancs)
+                
+                massive = np.where(ii_child.mass[ii_anc] > 0.0)
 
-            #child_cq.sample_trim(has_ancestor)  # trim sample
-            ancestors, children = intersection_index(self.ancestor_cq.snap_index, child_cq.ancestor20[has_ancestor])
-            print len(self.ancestor_cq.snap_index[ancestors]), len(self.ancestor_cq.snap_index)
-            print len(child_cq.ancestor20[has_ancestor[0][children]]), len(child_cq.ancestor20[has_ancestor])
-            child_cq.sample_trim(has_ancestor[0][children])  # trim sample
+                nsnap_genesis[has_ancestor[anc_ii[massive]]] = ii_snap
+                mass_genesis[has_ancestor[anc_ii[massive]]] = ii_child.mass[ii_anc[massive]]
+    
+            massive_ancestor = np.where(self.ancestor_cq.mass[has_descendant] > 0.0)
+            nsnap_genesis[has_ancestor[massive_ancestor]] = self.nsnap_ancestor 
+            mass_genesis[has_ancestor[massive_ancestor]] = self.ancestor_cq.mass[massive_ancestor]
 
+            #print nsnap_massive[has_ancestor][:100]
+            tsnap_genesis = np.repeat(-999, len(child_cq.snap_index))
+            zsnap_genesis = np.repeat(-999, len(child_cq.snap_index))
+
+            nonneg = np.where(nsnap_genesis[has_ancestor] > 0)
+            tsnap_genesis[has_ancestor[nonneg]] = util.get_t_nsnap(nsnap_genesis[has_ancestor[nonneg]])
+            zsnap_genesis[has_ancestor[nonneg]] = util.get_z_nsnap(nsnap_genesis[has_ancestor[nonneg]])
+
+            #neg = np.where(nsnap_massive[has_ancestor] < 0)
+            #print child_cq.mass[has_ancestor[neg]]
+
+            child_cq.sample_trim(has_ancestor)  # trim sample to only keep galaxies that have ancestors at nsnap_ancestor
+            setattr(child_cq, 'nsnap_genesis', nsnap_genesis[has_ancestor])
+            setattr(child_cq, 'tsnap_genesis', tsnap_genesis[has_ancestor])
+            setattr(child_cq, 'zsnap_genesis', zsnap_genesis[has_ancestor])
+            setattr(child_cq, 'mass_genesis', mass_genesis[has_ancestor])
             setattr(self, 'descendant_cq_snapshot'+str(i_snap), child_cq)
-            #parent_cq = child_cq
 
         return None
 
@@ -277,7 +288,7 @@ class Lineage(object):
             # parents who have children and children who have parents. The following 
             # matches the parents to children based on snap_index attribute of parent CenQue
             # and parent attribute of child CenQue 
-            parents, children = intersection_index(parent_cq.snap_index, child_cq.parent)
+            parents, children = util.intersection_index(parent_cq.snap_index, child_cq.parent)
             print 'Parents with children ', len(parents), ' All parents ', len(parent_cq.snap_index)
             print 'Children with parents ', len(children), ' All children ', len(child_cq.parent)
 

@@ -347,7 +347,7 @@ def get_tsnap(redshift):
     return t_of_z(redshift) 
 
 def get_z_nsnap(nsnap): 
-    ''' Given redshift, return cosmic time using spline interpolation of snapshot table
+    ''' Given snapshot, return redshift using snapshot table
 
     Parameters
     ----------
@@ -364,7 +364,7 @@ def get_z_nsnap(nsnap):
     return z[nsnap]
 
 def get_t_nsnap(nsnap): 
-    ''' Given redshift, return cosmic time using spline interpolation of snapshot table
+    ''' Given snapshot, return cosmic time using snapshot table
 
     Parameters
     ----------
