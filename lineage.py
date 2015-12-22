@@ -5,6 +5,7 @@ Lineage CenQue object ancestor and descendants
 """
 import os
 import json 
+import time
 import h5py
 import random 
 import numpy as np
@@ -211,6 +212,11 @@ class Lineage(object):
             child_cq = CenQue() 
             child_cq.import_treepm(i_snap, subhalo_prop = self.subhalo_prop) 
             child_cq_list.append(child_cq)
+
+        anc_nsnap_genesis = np.repeat(-999, len(self.ancestor_cq.snap_index))
+        anc_tsnap_genesis = np.repeat(-999., len(self.ancestor_cq.snap_index))
+        anc_zsnap_genesis = np.repeat(-999., len(self.ancestor_cq.snap_index))
+        anc_mass_genesis = np.repeat(-999., len(self.ancestor_cq.snap_index))
     
         for i_snap in range(1, self.nsnap_ancestor)[::-1]:    
             
@@ -223,6 +229,8 @@ class Lineage(object):
             print 'Children with ancestors ', len(has_ancestor), ' All children ', len(child_cq.snap_index)
     
             nsnap_genesis = np.repeat(-999, len(child_cq.snap_index))
+            tsnap_genesis = np.repeat(-999., len(child_cq.snap_index))
+            zsnap_genesis = np.repeat(-999., len(child_cq.snap_index))
             mass_genesis = np.repeat(-999., len(child_cq.snap_index)) 
             ancs = ancestor_index[has_ancestor] # ancestor indices
     
@@ -237,14 +245,14 @@ class Lineage(object):
 
                 nsnap_genesis[has_ancestor[anc_ii[massive]]] = ii_snap
                 mass_genesis[has_ancestor[anc_ii[massive]]] = ii_child.mass[ii_anc[massive]]
+                anc_nsnap_genesis[has_descendant[anc_ii[massive]]] = ii_snap
+                anc_mass_genesis[has_descendant[anc_ii[massive]]] = ii_child.mass[ii_anc[massive]]
     
             massive_ancestor = np.where(self.ancestor_cq.mass[has_descendant] > 0.0)
             nsnap_genesis[has_ancestor[massive_ancestor]] = self.nsnap_ancestor 
-            mass_genesis[has_ancestor[massive_ancestor]] = self.ancestor_cq.mass[massive_ancestor]
-
-            #print nsnap_massive[has_ancestor][:100]
-            tsnap_genesis = np.repeat(-999, len(child_cq.snap_index))
-            zsnap_genesis = np.repeat(-999, len(child_cq.snap_index))
+            mass_genesis[has_ancestor[massive_ancestor]] = self.ancestor_cq.mass[has_descendant[massive_ancestor]]
+            anc_nsnap_genesis[has_descendant[massive_ancestor]] = self.nsnap_ancestor 
+            anc_mass_genesis[has_descendant[massive_ancestor]] = self.ancestor_cq.mass[has_descendant[massive_ancestor]]
 
             nonneg = np.where(nsnap_genesis[has_ancestor] > 0)
             tsnap_genesis[has_ancestor[nonneg]] = util.get_t_nsnap(nsnap_genesis[has_ancestor[nonneg]])
@@ -258,7 +266,20 @@ class Lineage(object):
             setattr(child_cq, 'tsnap_genesis', tsnap_genesis[has_ancestor])
             setattr(child_cq, 'zsnap_genesis', zsnap_genesis[has_ancestor])
             setattr(child_cq, 'mass_genesis', mass_genesis[has_ancestor])
+            child_cq.data_columns += ['nsnap_genesis', 'tsnap_genesis', 'zsnap_genesis', 'mass_genesis']
+
             setattr(self, 'descendant_cq_snapshot'+str(i_snap), child_cq)
+
+        self.ancestor_cq.data_columns += ['nsnap_genesis', 'tsnap_genesis', 'zsnap_genesis', 'mass_genesis']
+
+        positive = np.where(anc_nsnap_genesis > 0)
+        anc_tsnap_genesis[positive] = util.get_t_nsnap(anc_nsnap_genesis[positive])
+        anc_zsnap_genesis[positive] = util.get_z_nsnap(anc_nsnap_genesis[positive])
+
+        setattr(self.ancestor_cq, 'nsnap_genesis', anc_nsnap_genesis)
+        setattr(self.ancestor_cq, 'tsnap_genesis', anc_tsnap_genesis)
+        setattr(self.ancestor_cq, 'zsnap_genesis', anc_zsnap_genesis)
+        setattr(self.ancestor_cq, 'mass_genesis', anc_mass_genesis)
 
         return None
 
@@ -355,6 +376,7 @@ class Lineage(object):
 
 if __name__=="__main__": 
     for scat in [0.0, 0.2]:
+        start_time = time.time()
         bloodline = Lineage(nsnap_ancestor = 20)
         bloodline.ancestor(
                 subhalo_prop = {'scatter': scat, 'source': 'li-march'}, 
@@ -365,3 +387,4 @@ if __name__=="__main__":
                 clobber=True) 
         bloodline.descend() 
         bloodline.writeout()
+        print 'lineage construction and write out takes ', (time.time() - start_time)/60.0
