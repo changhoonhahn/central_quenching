@@ -53,7 +53,7 @@ def lineage_smf(nsnap_ancestor, descendants = None,
         d_mass, d_phi = smf_plot.cenque(descendant)
         subh_mass, subh_phi = smf.centralsubhalos(subh)
         smf_plot.sub.plot(subh_mass, subh_phi, lw=4, ls='--', c='gray')
-        print (subh_phi - d_phi)/d_phi
+        #print (subh_phi - d_phi)/d_phi
 
         smf_plot.analytic(
                 descendant.zsnap, 
@@ -61,13 +61,12 @@ def lineage_smf(nsnap_ancestor, descendants = None,
                 label=None)
 
     smf_plot.set_axes()
-    smf_plot.save_fig(
-            ''.join([
-                'figure/', 
+    smf_plot_file = ''.join(['figure/', 
                 'qaplot_lineage_ancestor', str(nsnap_ancestor), 
                 descendant._file_spec(subhalo_prop = descendant.subhalo_prop, sfr_prop = descendant.sfr_prop), 
                 'smf.png'
-                ]))
+                ])
+    smf_plot.save_fig(smf_plot_file)
 
 def ancestoral_past(nsnap_ancestor, 
         subhalo_prop = {'scatter': 0.0, 'source': 'li-march'}, 
@@ -112,14 +111,14 @@ def ancestoral_past(nsnap_ancestor,
 
 
 if __name__=='__main__': 
-    #lineage_smf(20, 
-    #        descendants = [1],
-    #        subhalo_prop = {'scatter': 0.0, 'source': 'li-march'}, 
-    #        sfr_prop = { 'fq': {'name': 'wetzelsmooth'}, 'sfr': {'name': 'average'}}
-    #        )
-
-    ancestoral_past(
-            20, 
+    lineage_smf(20, 
+            descendants = [1],
             subhalo_prop = {'scatter': 0.0, 'source': 'li-march'}, 
             sfr_prop = { 'fq': {'name': 'wetzelsmooth'}, 'sfr': {'name': 'average'}}
             )
+
+    #ancestoral_past(
+    #        20, 
+    #        subhalo_prop = {'scatter': 0.0, 'source': 'li-march'}, 
+    #        sfr_prop = { 'fq': {'name': 'wetzelsmooth'}, 'sfr': {'name': 'average'}}
+    #        )
