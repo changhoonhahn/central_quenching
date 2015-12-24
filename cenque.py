@@ -533,7 +533,7 @@ class CenQue:
         else: 
             return sfms_plot 
     
-    def assign_sfr(self, sfr_prop = None, quiet=True, **kwargs):
+    def _assign_sfr(self, sfr_prop = None, quiet=True, **kwargs):
         ''' 
         Assign Star Formation Rates to CenQue class object based on 
         properties listed in keyword sfr_prop, which specifies the 
@@ -693,6 +693,82 @@ class CenQue:
             self.cenque_type = 'sf_assigned'
 
         return None
+
+def AssignSFR(mass, redshift, sfr_prop=None):
+    ''' Assign star-forming properties based on the input mass and redshift. 
+    Return gal_type, SFR, and sSFR given a set of masses and redshifts.
+
+    Parameters
+    ----------
+    mass : 
+        Stellar mass
+    redshift : 
+        Corresponding redshift
+    sfr_prop : 
+        Dictionary that specifies the star-forming properties.
+
+    Notes
+    -----
+
+    '''
+    # time the code 
+    start_time = time.time()
+    if self.sfr_prop is None: 
+        raise ValueError('Specify SFR Properties dictionary')
+    fq_dict = sfr_prop['fq']       # dictionary that specifies fq properties
+    sfr_dict = sfr_prop['sfr']     # dictionary that specifies sfr properties
+
+    ngal = len(mass)
+    gal_type = np.repeat('', ngal).astype('|S16') 
+    sfr      = np.repeat(-999., ngal) 
+    ssfr     = np.repeat(-999., ngal)
+    if sfr_dict['name'] == 'average': 
+        # analytic mu_SFR(M*, z) with randomly sampled normal delta_SFR. 
+        sfr_mstar_z, sig_sfr_mstar_z = get_param_sfr_mstar_z()
+        delta_sfr   = np.repeat(-999., ngal)
+        avg_sfr     = np.repeat(-999., ngal)
+    else: 
+        raise NotImplementedError
+
+    # massive galaxies
+    massive = np.where(mass > 0.0)
+    ngal_massive = len(massive[0])
+
+    # f_Q(M*, z) for each massive galaxy
+    qf = get_fq(mass[massive], redshift[massive], lit=fq_dict['name']) 
+
+    # determine quiescent/star-forming based on random's 
+    # comparison to quiescent fraction
+    np.random.seed()
+    rand = np.random.uniform(0., 1., ngal_massive)
+    quiescent = np.where(rand <= qf)
+    starforming = np.where(rand > qf)
+    ngal_q = len(quiescent[0])
+    ngal_sf = len(starforming[0])
+
+    # quiescent 
+    gal_type[massive[quiescent]] = 'quiescent'
+    mu_q_ssfr = util.get_q_ssfr_mean(mass[massive[quiescent]]) 
+    ssfr[massive[quiescent]] = 0.18 * np.random.randn(ngal_q) + mu_q_ssfr 
+    sfr[massive[quiescent]]  = ssfr[massive[quiescent]] + mass[massive[quiescent]]
+    
+    # star-forming 
+    gal_type[massive[starforming]] = 'star-forming'
+    mu_sf_sfr = sfr_mstar_z(mass[massive[starforming]], redshift[massive[starforming]])
+    if sfr_dict['name'] == 'average': 
+        sigma_sf_sfr = sig_sfr_mstar_z(mass[massive[starforming]], redshift[massive[starforming]])
+    else:
+        raise NotImplementedError
+    avg_sfr[massive[starforming]] = mu_sf_sfr
+    delta_sfr[massive[starforming]] = sigma_sf_sfr * np.random.randn(ngal_sf)
+    sfr[massive[starforming]] = mu_sf_sfr + delta_sfr[massive[starforming]]
+    ssfr[massive[starforming]] = sfr[massive[starforming]] - mass[massive[starforming]]
+    
+    print 'Assign SFR took ', time.time() - start_time  
+    if sfr_dict['name'] == 'average': 
+        return [gal_type, sfr, ssfr, delta_sfr, avg_sfr] 
+    else: 
+        return [gal_type, sfr, ssfr]
 
 """
     def build_cenque_importsnap(snapshots, scatter = 0.0): 

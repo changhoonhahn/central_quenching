@@ -12,7 +12,8 @@ import numpy as np
 import warnings
 
 from cenque import CenQue
-from assign_sfr import assign_sfr
+from cenque import AssignSFR 
+#from assign_sfr import assign_sfr
 import util.cenque_utility as util
 
 class Lineage(object): 
@@ -29,35 +30,37 @@ class Lineage(object):
         self.sfr_prop = None            # properties used for SFR assign 
         self.subhalo_prop = None        # properties used for subhalo SHAM
 
-    def ancestor(self, subhalo_prop = None, sfr_prop = None, clobber = False):
+    def assign_sfr_ancestor(self, sfr_prop = None):
         ''' 
-        Specify ancestor of lineage with a SFR assigned CenQue obj at snapshot nsnap_ancestor. 
+        Assign SFR properties to the 'ancestor_cq' object using mass_genesis, tsnap_genesis
+
+        Notes
+        -----
         ''' 
-        if self.subhalo_prop is None: 
-            self.subhalo_prop = subhalo_prop 
-        else: 
-            if subhalo_prop and  self.subhalo_prop != subhalo_prop: 
-                raise ValueError
+        if self.ancestor_cq is None: 
+            raise ValueError('Run self.descend() method first')
+        # SFR properties
         if self.sfr_prop is None: 
-            self.sfr_prop = sfr_prop
+            if sfr_prop is not None: 
+                self.sfr_prop = sfr_prop
+            else: 
+                raise ValueError
         else: 
             if sfr_prop and self.sfr_prop != sfr_prop: 
                 raise ValueError
-
-        self.ancestor_cq = CenQue(
-                n_snap = self.nsnap_ancestor, 
-                subhalo_prop = self.subhalo_prop, 
-                sfr_prop = self.sfr_prop)
-        self.ancestor_cq.cenque_type = 'sf_assigned' 
-        
-        if np.array([os.path.isfile(self.ancestor_cq.file()), not clobber]).all(): 
-            print 'Reading ', self.ancestor_cq.file()
-            self.ancestor_cq.readin()
+    
+        if sfr_prop['sfr']['name'] == 'average':
+            gal_type, sfr, ssfr, delta_sfr, avg_sfr = AssignSFR(
+                    self.ancestor_cq.mass_genesis, self.ancestor_cq.zsnap_genesis, sfr_prop = self.sfr_prop
+                    )
         else: 
-            self.ancestor_cq.import_treepm(self.nsnap_ancestor)
-            print 'Assigning SFR'
-            self.ancestor_cq.assign_sfr(quiet=True)
-            self.ancestor_cq.writeout()
+            raise NotImplementedError
+
+        self.ancestor_cq.sfr = sfr
+        self.ancestor_cq.ssfr = ssfr
+        self.ancestor_cq.gal_type = gal_type 
+        self.ancestor_cq.avg_sfr = avg_sfr
+        self.ancestor_cq.delta_sfr = delta_sfr
 
         return None
 
@@ -198,19 +201,37 @@ class Lineage(object):
         f.close() 
         return None 
 
-    def descend(self, quiet=True):
+    def descend(self, subhalo_prop = None, quiet=True, clobber=False):
         '''
         Find descendants by tracking parents and children through TreePM's halos. 
         (Really only has to run once)
         '''
-        if not self.ancestor_cq: 
-            raise ValueError('specify ancestor')
+        if self.subhalo_prop is None:
+            if subhalo_prop is not None: 
+                self.subhalo_prop = subhalo_prop
+            else:
+                raise ValueError
+
+        # Import subhalos for nsnap <= nsnap_ancestor 
+        self.ancestor_cq = CenQue(n_snap = self.nsnap_ancestor, subhalo_prop = self.subhalo_prop)
+        self.ancestor_cq.cenque_type = 'treepm_import' 
+        if np.array([os.path.isfile(self.ancestor_cq.file()), not clobber]).all(): 
+            print 'Reading ', self.ancestor_cq.file()
+            self.ancestor_cq.readin()
+        else: 
+            self.ancestor_cq.import_treepm(self.nsnap_ancestor)
+            self.ancestor_cq.writeout()
 
         child_cq_list = [] 
         for i_snap in range(1, self.nsnap_ancestor):    
-            # import CenQue object from TreePM
-            child_cq = CenQue() 
-            child_cq.import_treepm(i_snap, subhalo_prop = self.subhalo_prop) 
+            child_cq = CenQue(n_snap = self.nsnap_ancestor, subhalo_prop = self.subhalo_prop) 
+            child_cq.cenque_type = 'treepm_import'
+            if np.array([os.path.isfile(child_cq.file()), not clobber]).all(): 
+                print 'Reading ', child_cq.file()
+                child_cq.readin()
+            else: 
+                child_cq.import_treepm(self.nsnap_ancestor)
+                child_cq.writeout()
             child_cq_list.append(child_cq)
 
         anc_nsnap_genesis = np.repeat(-999, len(self.ancestor_cq.snap_index))
@@ -219,7 +240,7 @@ class Lineage(object):
         anc_mass_genesis = np.repeat(-999., len(self.ancestor_cq.snap_index))
     
         for i_snap in range(1, self.nsnap_ancestor)[::-1]:    
-            
+
             child_cq = child_cq_list[i_snap-1]
             ancestor_index = getattr(child_cq, 'ancestor'+str(self.nsnap_ancestor))
 
@@ -378,13 +399,7 @@ if __name__=="__main__":
     for scat in [0.0, 0.2]:
         start_time = time.time()
         bloodline = Lineage(nsnap_ancestor = 20)
-        bloodline.ancestor(
-                subhalo_prop = {'scatter': scat, 'source': 'li-march'}, 
-                sfr_prop = {
-                    'fq': {'name': 'wetzelsmooth'}, 
-                    'sfr': {'name': 'average'}
-                    }, 
-                clobber=True) 
-        bloodline.descend() 
+        bloodline.descend(subhalo_prop = {'scatter': scat, 'source': 'li-march'}) 
+        bloodline.assign_sfr_ancestor(sfr_prop = {'fq': {'name': 'wetzelsmooth'}, 'sfr': {'name': 'average'}})
         bloodline.writeout()
         print 'lineage construction and write out takes ', (time.time() - start_time)/60.0
