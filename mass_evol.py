@@ -29,8 +29,12 @@ def integrated(type, logsfr, logmass0, t0, tf, f_retain=0.6, delt=0.025, **sfrkw
     f_retain : 
         fraction of stellar mass not lost from SNe and winds from Wetzel Paper
     '''
-    niter = int(np.round( (tf-t0)/delt )) 
-    delt = (tf - t0)/np.float(niter) 
+    if isinstance(t0, float): 
+        niter = int(np.round( (tf-t0)/delt )) 
+        delt = (tf - t0)/np.float(niter) 
+    elif isinstance(t0, np.ndarray): 
+        niter = int(np.round( (tf-np.min(t0))/delt )) 
+        delt = (tf - t0)/np.float(niter) 
     
     t_n_1 = t0 
     logSFR_n_1 = logsfr(logmass0, t0, **sfrkwargs)

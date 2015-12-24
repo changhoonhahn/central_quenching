@@ -25,12 +25,21 @@ def get_param_sfr_mstar_z():
         #else: 
         #    z_in = 0.9
 
+
         lowmass = np.where(mstar < 9.5)
         not_lowmass = np.where(mstar >= 9.5)
+        if isinstance(z_in, float):
+            z_lowmass = z_in
+            z_notlowmass = z_in
+        elif isinstance(z_in, np.ndarray): 
+            z_lowmass = z_in[lowmass]
+            z_notlowmass = z_in[not_lowmass]
+        else: 
+            raise TypeError
 
         mu_SFR = np.zeros(len(mstar))
-        mu_SFR[not_lowmass] = 0.5*(mstar[not_lowmass] - 9.5) - 0.5 + 0.76 * z_in
-        mu_SFR[lowmass] = (mstar[lowmass] - 9.5) - 0.5 + 0.76 * z_in
+        mu_SFR[not_lowmass] = 0.5*(mstar[not_lowmass] - 9.5) - 0.5 + 0.76 * z_notlowmass
+        mu_SFR[lowmass] = (mstar[lowmass] - 9.5) - 0.5 + 0.76 * z_lowmass
         #mu_SFR = 0.5*(mstar - 10.5) + 0.76 * z_in
         #mu_SFR = 0.65*(mstar - 10.5) + 0.76 * (z_in - 0.01)
         return mu_SFR

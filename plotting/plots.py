@@ -6,6 +6,7 @@ Plotting class objects
 import numpy as np 
 import matplotlib.pyplot as plt
 
+from central_subhalo import CentralSubhalos
 # SMF
 from smf import SMF
 # M*-Mhalo plot
@@ -404,6 +405,7 @@ class PlotSFMS(Plots):
                     scatter=True, 
                     color=color, 
                     s=3, 
+                    levels=[0.68, 0.95, 0.997], #1,2,3 sigmas
                     xrange=[9.0, 12.0], 
                     yrange=[-5.0, 2.0], 
                     xlabel='\mathtt{M_*}', 
@@ -845,6 +847,18 @@ class PlotSMF(Plots):
                 c=line_color, ls=line_style, lw=line_width,
                 label=smf_label)
         return mass, phi 
+
+    def central_subhalo(self, nsnap, subhalo_prop = None):
+        smf = SMF()
+        subh = CentralSubhalos()
+        subh.read(
+                nsnap, 
+                scatter=subhalo_prop['scatter'], 
+                source=subhalo_prop['source'])
+        subh_mass, subh_phi = smf.centralsubhalos(subh)
+        self.sub.plot(subh_mass, subh_phi, lw=4, ls='--', c='gray', label='Central Subhalos')
+
+        return None
     
     def analytic(self, redshift, source='li-drory-march', **kwargs): 
         '''

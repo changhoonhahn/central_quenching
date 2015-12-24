@@ -390,6 +390,7 @@ class CenQue:
         else: 
             redshift = self.zsnap
         smf_plot.analytic(redshift, source=self.subhalo_prop['source'])
+        smf_plot.central_subhalo(self.nsnap, subhalo_prop=self.subhalo_prop)
         smf_plot.set_axes()
 
         if 'show' in pltkwargs.keys(): 
@@ -709,11 +710,11 @@ def AssignSFR(mass, redshift, sfr_prop=None):
 
     Notes
     -----
-
+    * Takes ~1.5 seconds for assign_sfr_ancestor in lineage object
     '''
     # time the code 
     start_time = time.time()
-    if self.sfr_prop is None: 
+    if sfr_prop is None: 
         raise ValueError('Specify SFR Properties dictionary')
     fq_dict = sfr_prop['fq']       # dictionary that specifies fq properties
     sfr_dict = sfr_prop['sfr']     # dictionary that specifies sfr properties
@@ -731,8 +732,8 @@ def AssignSFR(mass, redshift, sfr_prop=None):
         raise NotImplementedError
 
     # massive galaxies
-    massive = np.where(mass > 0.0)
-    ngal_massive = len(massive[0])
+    massive = np.where(mass > 0.0)[0]
+    ngal_massive = len(massive)
 
     # f_Q(M*, z) for each massive galaxy
     qf = get_fq(mass[massive], redshift[massive], lit=fq_dict['name']) 

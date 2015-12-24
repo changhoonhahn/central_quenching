@@ -17,16 +17,14 @@ def lineage_smf(nsnap_ancestor, descendants = None,
     '''
     Test SMF of lineage 
     '''
+    # read in lineage
     if descendants is None: 
         descendants = range(1, nsnap_ancestor)
-
     bloodline = Lineage(nsnap_ancestor = nsnap_ancestor)
-    bloodline.ancestor(subhalo_prop = subhalo_prop, sfr_prop = sfr_prop)
-    bloodline.readin(range(1, nsnap_ancestor)) 
+    bloodline.readin(range(1, nsnap_ancestor), subhalo_prop = subhalo_prop, sfr_prop = sfr_prop) 
     
     smf_plot = plots.PlotSMF()
     # plot ancestor 
-
     ancestor = getattr(bloodline, 'ancestor_cq')
     smf_plot.cenque(ancestor)   # lineage ancestor
     smf_plot.analytic(
@@ -67,6 +65,30 @@ def lineage_smf(nsnap_ancestor, descendants = None,
                 'smf.png'
                 ])
     smf_plot.save_fig(smf_plot_file)
+
+def lineage_ancestor_sfms(nsnap_ancestor, descendants = None, 
+        subhalo_prop = {'scatter': 0.0, 'source': 'li-march'}, 
+        sfr_prop = { 'fq': {'name': 'wetzelsmooth'}, 'sfr': {'name': 'average'}}
+        ): 
+    '''
+    Test SFMS of lineage ancestor_cq
+    '''
+    # read in lineage
+    if descendants is None: 
+        descendants = range(1, nsnap_ancestor)
+    bloodline = Lineage(nsnap_ancestor = nsnap_ancestor)
+    bloodline.readin(range(1, nsnap_ancestor), subhalo_prop = subhalo_prop, sfr_prop = sfr_prop) 
+    
+    ancestor = getattr(bloodline, 'ancestor_cq')
+    sfms_plot = plots.PlotSFMS()
+    sfms_plot.cenque(ancestor, justsf=True)   # lineage ancestor
+    descendant = getattr(bloodline, 'descendant_cq_snapshot1')
+    sfms_plot_file = ''.join(['figure/', 
+                'qaplot_lineage_ancestor', str(nsnap_ancestor), 
+                descendant._file_spec(subhalo_prop = descendant.subhalo_prop, sfr_prop = descendant.sfr_prop), 
+                'sfms.png'
+                ])
+    sfms_plot.save_fig(sfms_plot_file)
 
 def ancestoral_past(nsnap_ancestor, 
         subhalo_prop = {'scatter': 0.0, 'source': 'li-march'}, 
@@ -111,8 +133,13 @@ def ancestoral_past(nsnap_ancestor,
 
 
 if __name__=='__main__': 
-    lineage_smf(20, 
-            descendants = [1],
+    #lineage_smf(20, 
+    #        descendants = [1, 10],
+    #        subhalo_prop = {'scatter': 0.0, 'source': 'li-march'}, 
+    #        sfr_prop = { 'fq': {'name': 'wetzelsmooth'}, 'sfr': {'name': 'average'}}
+    #        )
+    lineage_ancestor_sfms(20, 
+            descendants = [1, 10],
             subhalo_prop = {'scatter': 0.0, 'source': 'li-march'}, 
             sfr_prop = { 'fq': {'name': 'wetzelsmooth'}, 'sfr': {'name': 'average'}}
             )

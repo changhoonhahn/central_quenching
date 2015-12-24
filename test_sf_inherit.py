@@ -6,59 +6,53 @@ from sf_inherit import sf_inherit
 from util.cenque_utility import get_t_nsnap
 
 # --- plotting --- 
-from plotting.plot_fq import PlotFq
-from plotting.plot_sfms import PlotSFMS
-from plotting.plot_ssfr import PlotSSFR
-from plotting.plot_mstar_mhalo import PlotMstarMhalo
+from plotting.plots import PlotFq
+from plotting.plots import PlotSFMS
+from plotting.plots import PlotSSFR
+from plotting.plots import PlotMstarMhalo
 
 from defutility.plotting import prettyplot
 from defutility.plotting import prettycolors
 
 def qaplot_sf_inherit(
         nsnap_ancestor = 20, nsnap_descendant = 1, n_step = 29, 
-        scatter = 0.0, 
-        sfrevol_prop = {'name': 'squarewave', 'freq_range': [0.0, 2*np.pi], 'phase_range': [0, 1]},
-        massevol_prop = {'name': 'sham'},
+        subhalo_prop = {'scatter': 0.0, 'source': 'li-march'}, 
+        sfr_prop = {'fq': {'name': 'wetzelsmooth'}, 'sfr': {'name': 'average'}},
+        evol_prop = {
+            'sfr': {'name': 'squarewave', 'freq_range': [0.0, 2*np.pi], 'phase_range': [0, 1]},
+            'mass': {'name': 'sham'}},
         ssfr=True, fq=False, tau=False, mass_scatter=False, sfms=False, smf=False
         ):
     '''
     QAPlots for SF inherit module. 
     '''
-
     med_theta = abc_posterior_median(n_step)
-    
-    # quenching probabilyt properties
+    # quenching probabilyt and tau properties from ABC posterior
     pq_dict = {'slope': med_theta[0], 'yint': med_theta[1]}
-    # tau properties
     tau_dict = {'name': 'line', 'fid_mass': 11.1, 'slope': med_theta[2], 'yint': med_theta[3]}
+    evol_prop['pq'] = pq_dict
+    evol_prop['tau'] = tau_dict
 
-    if nsnap_descendant < nsnap_ancestor:   
-        bloodline = sf_inherit(
-                [nsnap_descendant], 
-                nsnap_ancestor = nsnap_ancestor, 
-                pq_prop = pq_dict, 
-                tau_prop = tau_dict, 
-                sfrevol_prop = sfrevol_prop, 
-                massevol_prop = massevol_prop, 
-                quiet = True, 
-                scatter = scatter
-                )
+    bloodline = sf_inherit(
+            nsnap_descendant, 
+            nsnap_ancestor = nsnap_ancestor, 
+            subhalo_prop = subhalo_prop, 
+            sfr_prop = sfr_prop,
+            evol_prop = evol_prop)
 
-        descendant = getattr(bloodline, 'descendant_cq_snapshot'+str(nsnap_descendant))
+    descendant = getattr(bloodline, 'descendant_cq_snapshot'+str(nsnap_descendant))
+
+    if evol_prop['mass']['name'] == 'sham': 
+        massevol_str = 'sham'
     else: 
-        raise ValueError('Specified nsnap_descedant does not reference a descendant')
-
-    if massevol_prop['name'] == 'sham': 
-        massevol_str = massevol_prop['name']
-    else: 
-        massevol_str = ''.join([massevol_prop['type'], massevol_prop['name']])
+        massevol_str = ''.join([evol_prop['mass']['type'], evol_prop['mass']['name']])
 
     lineage_str = ''.join([ 
         '_', 
         str(nsnap_ancestor), 'ancestor_', 
         str(nsnap_descendant), 'descendant_', 
-        str(round(scatter, 1)), 'Mscatter_', 
-        sfrevol_prop['name'], '_sfrevol_SFRMt_',
+        str(round(subhalo_prop['scatter'], 1)), 'Mscatter_', 
+        evol_prop['sfr']['name'], '_sfrevol_SFRMt_',
         massevol_str, '_massevol'
         ])
 
@@ -564,13 +558,13 @@ def abc_posterior_median(n_step):
 
 if __name__=="__main__":
     qaplot_sf_inherit(
-        nsnap_ancestor = 20, nsnap_descendant = 19, 
-        scatter = 0.0, 
-        sfrevol_prop = {'name': 'newamp_squarewave', 'freq_range': [2.*np.pi, 20.*np.pi], 'phase_range': [0,1], 'sigma': 0.3},
-        massevol_prop = {'name': 'sham'}, #{'name': 'integrated', 'type': 'euler', 'f_retain': 0.6, 't_step': 0.01},
-        ssfr=False, fq=False, tau=False, mass_scatter=False, sfms=False, smf=True
+        nsnap_ancestor = 20, nsnap_descendant = 1, 
+        subhalo_prop = {'scatter': 0.0, 'source': 'li-march'}, 
+        sfr_prop = {'fq': {'name': 'wetzelsmooth'}, 'sfr': {'name': 'average'}},
+        evol_prop = {'sfr': {'name': 'notperiodic'}, 'mass': {'name': 'sham'}},
+        ssfr=False, fq=False, tau=False, mass_scatter=False, sfms=True, smf=False
         )
-
+    #'name': 'squarewave', 'freq_range': [2.*np.pi, 20.*np.pi], 'phase_range': [0,1]
     #qaplot_sf_inherit_average_scatter(
     #        [1],
     #        sfrevol_prop = {'name': 'newamp_squarewave', 'freq_range': [2.*np.pi, 20.*np.pi], 'phase_range': [0,1], 'sigma': 0.3},

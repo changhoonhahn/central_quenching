@@ -49,18 +49,19 @@ class Lineage(object):
             if sfr_prop and self.sfr_prop != sfr_prop: 
                 raise ValueError
     
+        # Star-Formation properties based on mass_genesis at redshift, zsnap_genesis
         if sfr_prop['sfr']['name'] == 'average':
             gal_type, sfr, ssfr, delta_sfr, avg_sfr = AssignSFR(
                     self.ancestor_cq.mass_genesis, self.ancestor_cq.zsnap_genesis, sfr_prop = self.sfr_prop
                     )
+            self.ancestor_cq.data_columns += ['sfr', 'ssfr', 'gal_type', 'avg_sfr', 'delta_sfr']
+            self.ancestor_cq.sfr = sfr
+            self.ancestor_cq.ssfr = ssfr
+            self.ancestor_cq.gal_type = gal_type 
+            self.ancestor_cq.avg_sfr = avg_sfr
+            self.ancestor_cq.delta_sfr = delta_sfr
         else: 
             raise NotImplementedError
-
-        self.ancestor_cq.sfr = sfr
-        self.ancestor_cq.ssfr = ssfr
-        self.ancestor_cq.gal_type = gal_type 
-        self.ancestor_cq.avg_sfr = avg_sfr
-        self.ancestor_cq.delta_sfr = delta_sfr
 
         return None
 
@@ -201,7 +202,7 @@ class Lineage(object):
         f.close() 
         return None 
 
-    def descend(self, subhalo_prop = None, quiet=True, clobber=False):
+    def descend(self, subhalo_prop=None, quiet=True, clobber=False):
         '''
         Find descendants by tracking parents and children through TreePM's halos. 
         (Really only has to run once)
@@ -223,14 +224,14 @@ class Lineage(object):
             self.ancestor_cq.writeout()
 
         child_cq_list = [] 
-        for i_snap in range(1, self.nsnap_ancestor):    
-            child_cq = CenQue(n_snap = self.nsnap_ancestor, subhalo_prop = self.subhalo_prop) 
+        for i_snap in range(1, self.nsnap_ancestor): 
+            child_cq = CenQue(n_snap=i_snap, subhalo_prop=self.subhalo_prop) 
             child_cq.cenque_type = 'treepm_import'
             if np.array([os.path.isfile(child_cq.file()), not clobber]).all(): 
                 print 'Reading ', child_cq.file()
                 child_cq.readin()
             else: 
-                child_cq.import_treepm(self.nsnap_ancestor)
+                child_cq.import_treepm(i_snap)
                 child_cq.writeout()
             child_cq_list.append(child_cq)
 
@@ -282,11 +283,13 @@ class Lineage(object):
             #neg = np.where(nsnap_massive[has_ancestor] < 0)
             #print child_cq.mass[has_ancestor[neg]]
 
-            child_cq.sample_trim(has_ancestor)  # trim sample to only keep galaxies that have ancestors at nsnap_ancestor
-            setattr(child_cq, 'nsnap_genesis', nsnap_genesis[has_ancestor])
-            setattr(child_cq, 'tsnap_genesis', tsnap_genesis[has_ancestor])
-            setattr(child_cq, 'zsnap_genesis', zsnap_genesis[has_ancestor])
-            setattr(child_cq, 'mass_genesis', mass_genesis[has_ancestor])
+            # trim sample to only keep galaxies that have ancestors at nsnap_ancestor and 
+            # and 'starts' before nsnap.
+            child_cq.sample_trim(has_ancestor[nonneg])  
+            setattr(child_cq, 'nsnap_genesis', nsnap_genesis[has_ancestor[nonneg]])
+            setattr(child_cq, 'tsnap_genesis', tsnap_genesis[has_ancestor[nonneg]])
+            setattr(child_cq, 'zsnap_genesis', zsnap_genesis[has_ancestor[nonneg]])
+            setattr(child_cq, 'mass_genesis', mass_genesis[has_ancestor[nonneg]])
             child_cq.data_columns += ['nsnap_genesis', 'tsnap_genesis', 'zsnap_genesis', 'mass_genesis']
 
             setattr(self, 'descendant_cq_snapshot'+str(i_snap), child_cq)
@@ -399,7 +402,7 @@ if __name__=="__main__":
     for scat in [0.0, 0.2]:
         start_time = time.time()
         bloodline = Lineage(nsnap_ancestor = 20)
-        bloodline.descend(subhalo_prop = {'scatter': scat, 'source': 'li-march'}) 
+        bloodline.descend(subhalo_prop = {'scatter': scat, 'source': 'li-march'})#, clobber=True) 
         bloodline.assign_sfr_ancestor(sfr_prop = {'fq': {'name': 'wetzelsmooth'}, 'sfr': {'name': 'average'}})
         bloodline.writeout()
         print 'lineage construction and write out takes ', (time.time() - start_time)/60.0
