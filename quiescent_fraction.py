@@ -78,9 +78,9 @@ def get_fq(Mstar, z_in, lit='cosmosinterp'):
         alpha = -1.75
 
         output = qf_z0 * ( 1.0 + z_in )**alpha 
-        if min(output) < 0.0: 
+        if output.min() < 0.0: 
             output[np.where(output < 0.0)] = 0.0
-        if max(output) > 1.0: 
+        if output.max() > 1.0: 
             output[np.where(output > 1.0)] = 1.0
 
         return output 
@@ -164,8 +164,12 @@ def sfr_cut(mstar, zin):
     """ Specific SFR cut off used to classify SF or Quiescent 
     galaxies 
     """
+    lowmass = np.where(mstar < 9.5)
+    factor = np.repeat(0.8, len(mstar))
+    #factor[lowmass] = 1.0 
     #return -0.75 + 0.76*(zin-0.05) + 0.5*(mstar-10.5)
-    return -0.75 + 0.76*(zin-0.04) + 0.5*(mstar-10.5)
+    #return -0.75 + 0.76*(zin-0.04) + 0.5*(mstar-10.5)
+    return -0.75 + 0.76*(zin-0.04) + factor*(mstar-9.5) - 0.8
 
 """
 def cq_fq(cenque): 

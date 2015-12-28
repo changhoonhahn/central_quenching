@@ -11,6 +11,7 @@ from central_subhalo import CentralSubhalos
 from smf import SMF
 from ssfr import Ssfr
 from quiescent_fraction import get_fq
+from quiescent_fraction import sfr_cut 
 # M*-Mhalo plot
 import bovy_plot as bovy
 from util import cenque_utility as util
@@ -414,6 +415,10 @@ class PlotSFMS(Plots):
                     ylabel='\mathtt{log\;SFR}'
                     )
             self.scatter = False
+            plt.plot(
+                    np.arange(9.0, 12.0, 0.1), 
+                    sfr_cut(np.arange(9.0, 12.0, 0.1), cq_obj.zsnap), 
+                    ls='--', lw=3, c='r')
 
         return None   
 

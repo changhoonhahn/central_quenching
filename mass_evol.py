@@ -6,6 +6,7 @@ Author(s): ChangHoon Hahn
 
 
 '''
+import time
 import numpy as np
 
 def integrated(type, logsfr, logmass0, t0, tf, f_retain=0.6, delt=0.025, **sfrkwargs):
@@ -43,6 +44,7 @@ def integrated(type, logsfr, logmass0, t0, tf, f_retain=0.6, delt=0.025, **sfrkw
     if niter > 0: 
         print niter, ' ', type, ' iterations', f_retain, delt
         for i in xrange(niter): 
+            iter_time = time.time()
             t_n = t_n_1 + delt
                 
             if type == 'rk4': 
@@ -50,18 +52,18 @@ def integrated(type, logsfr, logmass0, t0, tf, f_retain=0.6, delt=0.025, **sfrkw
                 k2 = (10.0 ** logsfr(np.log10(10.0**logM_n_1 + (10**9 * delt)/2.0 * k1), t_n_1 + delt/2.0, **sfrkwargs))
                 k3 = (10.0 ** logsfr(np.log10(10.0**logM_n_1 + (10**9 * delt)/2.0 * k2), t_n_1 + delt/2.0, **sfrkwargs) )
                 k4 = (10.0 ** logsfr(np.log10(10.0**logM_n_1 + (10**9 * delt) * k3), t_n_1 + delt, **sfrkwargs))
-                logM_n = np.log10(10.0 ** logM_n_1 + f_retain/6.0 * (delt * 10**9) * (k1 + 2.0*k2 + 2.0*k3 + k4)) 
+                logM_n_1 = np.log10(10.0 ** logM_n_1 + f_retain/6.0 * (delt * 10**9) * (k1 + 2.0*k2 + 2.0*k3 + k4)) 
             elif type == 'euler': 
-                M_n = (10. ** logM_n_1) + delt * 10.**9. * f_retain * (10.** logSFR_n_1)
-                logM_n = np.log10(M_n)
+                #M_n = (10. ** logM_n_1) + delt * 10.**9. * f_retain * (10.** logSFR_n_1)
+                #logM_n = np.log10(M_n)
+                logM_n_1 = np.log10((10. ** logM_n_1) + delt * 10.**9. * f_retain * (10.** logSFR_n_1))
             else: 
                 raise NotImplementedError
             
-            if np.sum(np.isnan(logM_n)) > 0: 
+            if np.sum(np.isnan(logM_n_1)) > 0: 
                 raise ValueError('There are NaNs') 
 
-            logSFR_n_1 = logsfr(logM_n, t_n, **sfrkwargs)
-            logM_n_1 = logM_n
+            logSFR_n_1 = logsfr(logM_n_1, t_n, **sfrkwargs)
             t_n_1 = t_n
     
     # sanity check

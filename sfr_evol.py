@@ -209,13 +209,9 @@ def logsfr_sfms_evol(zi, zf, z_q = None):
     if z_q is None: 
         sfms = 0.76 * (zf - z0)
     else:
-        sfms = np.zeros(len(z0))
-        evol = np.where(zf < z0)[0]
-        
-        sfms[evol] = 0.76 * (z_q[evol] - z0[evol])
-        notqing = np.where(z_q[evol] <= zf)
-        sfms[evol[notqing]] = 0.76 * (zf - z0[evol[notqing]])
-    
+        sfms = 0.76 * (np.maximum(z_q, zf) - z0)
+        notevol = np.where(zf >= z0)
+        sfms[notevol] = 0.0
     return sfms 
 
 def logsfr_quenching(tq, tf, tau=None): 
@@ -226,8 +222,11 @@ def logsfr_quenching(tq, tf, tau=None):
     '''
     qing = np.where(tf >= tq)
     logsfrq = np.zeros(len(tq))
-
-    logsfrq[qing] = np.log10( np.exp( (tq[qing] - tf) / tau[qing] ) ) 
+    
+    if isinstance(tf, float): 
+        logsfrq[qing] = np.log10( np.exp( (tq[qing] - tf) / tau[qing] ) ) 
+    else: 
+        logsfrq[qing] = np.log10( np.exp( (tq[qing] - tf[qing]) / tau[qing] ) ) 
 
     if np.max(logsfrq) > 0.0: 
         i_max = np.argmax(logsfrq)

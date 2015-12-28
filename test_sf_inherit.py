@@ -558,12 +558,12 @@ def abc_posterior_median(n_step):
 """
 
 if __name__=="__main__":
-    #start_time = time.time()
-    #bloodline = Lineage(nsnap_ancestor = 20)
-    #bloodline.descend(subhalo_prop = {'scatter': 0.0, 'source': 'li-march'}, clobber=True) 
-    #bloodline.assign_sfr_ancestor(sfr_prop = {'fq': {'name': 'wetzelsmooth'}, 'sfr': {'name': 'average'}})
-    #bloodline.writeout()
-    #print 'lineage construction and write out takes ', (time.time() - start_time)/60.0
+    start_time = time.time()
+    bloodline = Lineage(nsnap_ancestor = 20)
+    bloodline.descend(subhalo_prop = {'scatter': 0.0, 'source': 'li-march'}, clobber=True) 
+    bloodline.assign_sfr_ancestor(sfr_prop = {'fq': {'name': 'wetzelsmooth'}, 'sfr': {'name': 'average'}})
+    bloodline.writeout()
+    print 'lineage construction and write out takes ', (time.time() - start_time)/60.0
 
     for id in [1]:
         qaplot_sf_inherit(
@@ -571,11 +571,12 @@ if __name__=="__main__":
             subhalo_prop = {'scatter': 0.0, 'source': 'li-march'}, 
             sfr_prop = {'fq': {'name': 'wetzelsmooth'}, 'sfr': {'name': 'average'}},
             evol_prop = {
-                'sfr':  {'name': 'newamp_squarewave', 'freq_range': [2.*np.pi, 20.*np.pi], 'phase_range': [0,1], 'sigma': 0.3},
-                'mass': {'name': 'sham'}
+                'sfr':  {'name': 'newamp_squarewave', 'freq_range': [1.*np.pi, 10.*np.pi], 'phase_range': [0,1], 'sigma': 0.3},
+                'mass': {'name': 'integrated', 'type': 'euler', 'f_retain': 0.6, 't_step': 0.05} 
                 },
-            ssfr=True, fq=True, tau=False, mass_scatter=False, sfms=False, smf=False
+            ssfr=True, fq=True, tau=False, mass_scatter=False, sfms=True, smf=True
             )
+    # {'name': 'integrated', 'type': 'euler', 'f_retain': 0.6, 't_step': 0.05}
     #'name': 'squarewave', 'freq_range': [2.*np.pi, 20.*np.pi], 'phase_range': [0,1]
     #qaplot_sf_inherit_average_scatter(
     #        [1],

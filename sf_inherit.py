@@ -128,10 +128,12 @@ def sf_inherit(nsnap_descendant, nsnap_ancestor = 20,
             ancestor.zsnap_genesis[will[sf_ancestors]], 
             lit=sfr_prop['fq']['name'])
     notallquench = np.where(fq0 < 1.0)
+    noquench = np.where(fqf == 0.0)
     #P_q = np.repeat(0.0, len(sf_ancestors))
     P_q = np.repeat(1.0, len(sf_ancestors))
     P_q[notallquench] = (fqf[notallquench] - fq0[notallquench] ) / (1.0 - fq0[notallquench]) 
     P_q += P_q_offset
+    P_q[noquench] = 0.0
 
     # determine which SF galaxies are quenching or not 
     # based on quenching probability 
@@ -139,8 +141,8 @@ def sf_inherit(nsnap_descendant, nsnap_ancestor = 20,
     randoms = np.random.uniform(0., 1., len(sf_ancestors)) 
     is_qing = np.where(P_q > randoms) 
     is_notqing = np.where(P_q <= randoms)
-    print len(is_qing[0]), ' is quenching'
-    print len(is_notqing[0]), ' is not quenching'
+    #print len(is_qing[0]), ' is quenching'
+    #print len(is_notqing[0]), ' is not quenching'
             
     # initialize SFR evolution parameters
     sfrevol_time = time.time()
@@ -175,6 +177,7 @@ def sf_inherit(nsnap_descendant, nsnap_ancestor = 20,
 
     def logsfr_m_t(logmass, t_input): 
         # SFR evolution based on solving an ODE of SFR
+        logsfr_time = time.time()
         avglogsfr = logsfr_mstar_z(logmass, ancestor.zsnap_genesis[will[sf_ancestors]])
         # log(SFR)_SFMS evolutionfrom t0 to tQ
         logsfr_sfms = sfr_evol.logsfr_sfms_evol(
@@ -189,7 +192,6 @@ def sf_inherit(nsnap_descendant, nsnap_ancestor = 20,
                 delta_sfr=ancestor.delta_sfr[will[sf_ancestors]],
                 sfrevol_param=sfrevol_param_sf, 
                 **sfrevol_prop)
-        # log(SFR)_quenching evolution from tQ to tf
         logsfr_quench = sfr_evol.logsfr_quenching(
                 t_q, 
                 t_input, 
@@ -197,7 +199,7 @@ def sf_inherit(nsnap_descendant, nsnap_ancestor = 20,
         return avglogsfr + logsfr_sfms + logsfr_sfduty + logsfr_quench
          
     if massevol_prop['name'] == 'integrated': 
-        #start_time = time.time()
+        mass_time = time.time()
         descendant.mass[succession[sf_ancestors]], descendant.sfr[succession[sf_ancestors]] = \
                 mass_evol.integrated(
                         massevol_prop['type'],
@@ -210,6 +212,7 @@ def sf_inherit(nsnap_descendant, nsnap_ancestor = 20,
                         )
         if np.min(descendant.mass[succession[sf_ancestors]] - ancestor.mass[will[sf_ancestors]]) < 0.0: 
             raise ValueError("Integrated mass can't reduce the mass")
+        print 'Integrated Masses takes ', time.time() - mass_time
     elif massevol_prop['name'] == 'sham': 
         descendant.sfr[succession[sf_ancestors]] = logsfr_m_t(descendant.mass[succession[sf_ancestors]], t_descendant)
 
