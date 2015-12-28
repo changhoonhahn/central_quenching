@@ -44,8 +44,8 @@ def get_sfrevol_param(ngal, indices, **sfrevol_prop):
     elif sfrevol_prop['name'] == 'newamp_squarewave': 
         # square wave with new amplitude assigned every full period  
 
-        freq = np.array([-999. for i in xrange(ngal)])
-        phase = np.array([-999. for i in xrange(ngal)])
+        freq = np.repeat(-999., ngal)
+        phase = np.repeat(-999., ngal)
 
         freq[indices] = \
                 np.random.uniform(
@@ -61,10 +61,10 @@ def get_sfrevol_param(ngal, indices, **sfrevol_prop):
                         )
         
         # maximum of number of cycles based on frequency 
-        min_period = 2.0 * np.pi / np.max(freq[indices])
+        min_period = 2.0 * np.pi / freq[indices].max()
 
         # overestimated max number of cycles for convenience 
-        n_cycle = int((20.0 + np.max(phase[indices])) // min_period)
+        n_cycle = int((20.0 + phase[indices].max()) // min_period)
 
         amp = np.zeros([ngal, n_cycle])
         amp[indices] = \
@@ -213,9 +213,12 @@ def logsfr_sfms_evol(zi, zf, z_q = None):
     if z_q is None: 
         sfms = 0.76 * (zf - z0)
     else:
-        sfms = 0.76 * (z_q - z0)
-        notqing = np.where(z_q <= zf)
-        sfms[notqing] = 0.76 * (zf - z0)
+        sfms = np.zeros(len(z0))
+        evol = np.where(zf < z0)[0]
+        
+        sfms[evol] = 0.76 * (z_q[evol] - z0[evol])
+        notqing = np.where(z_q[evol] <= zf)
+        sfms[evol[notqing]] = 0.76 * (zf - z0[evol[notqing]])
     
     return sfms 
 

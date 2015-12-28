@@ -557,17 +557,21 @@ def abc_posterior_median(n_step):
 """
 
 if __name__=="__main__":
-    qaplot_sf_inherit(
-        nsnap_ancestor = 20, nsnap_descendant = 1, 
-        subhalo_prop = {'scatter': 0.0, 'source': 'li-march'}, 
-        sfr_prop = {'fq': {'name': 'wetzelsmooth'}, 'sfr': {'name': 'average'}},
-        evol_prop = {'sfr': {'name': 'notperiodic'}, 'mass': {'name': 'sham'}},
-        ssfr=False, fq=False, tau=False, mass_scatter=False, sfms=True, smf=False
-        )
+    for id in [1,3,5,7,9,11,15]:
+        qaplot_sf_inherit(
+            nsnap_ancestor = 20, nsnap_descendant = id, 
+            subhalo_prop = {'scatter': 0.0, 'source': 'li-march'}, 
+            sfr_prop = {'fq': {'name': 'wetzelsmooth'}, 'sfr': {'name': 'average'}},
+            evol_prop = {
+                'sfr':  {'name': 'newamp_squarewave', 'freq_range': [2.*np.pi, 20.*np.pi], 'phase_range': [0,1], 'sigma': 0.3},
+                'mass': {'name': 'sham'}
+                },
+            ssfr=False, fq=False, tau=False, mass_scatter=False, sfms=True, smf=False
+            )
     #'name': 'squarewave', 'freq_range': [2.*np.pi, 20.*np.pi], 'phase_range': [0,1]
     #qaplot_sf_inherit_average_scatter(
     #        [1],
-    #        sfrevol_prop = {'name': 'newamp_squarewave', 'freq_range': [2.*np.pi, 20.*np.pi], 'phase_range': [0,1], 'sigma': 0.3},
+    #        sfrevol_prop = 
     #        massevol_prop = {'name': 'integrated', 'type': 'euler', 'f_retain': 0.6, 't_step': 0.01}
     #        )   # {'name': 'notperiodic'}
 

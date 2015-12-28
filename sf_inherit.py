@@ -115,7 +115,6 @@ def sf_inherit(nsnap_descendant, nsnap_ancestor = 20,
         descendant.mass[succession[q_ancestors]] = ancestor.mass_genesis[will[q_ancestors]]
     descendant.sfr[succession[q_ancestors]] = descendant.ssfr[succession[q_ancestors]] + \
             descendant.mass[succession[q_ancestors]]
-    print 'quiescent evolution profiling : ', time.time() - q_time     
 
     # quenching probability (just for star-forming ancestors)
     # P_Q = ( f_Q(Mf,zf) - f_Q(M0,z0) ) / (1 - f_Q(M0,z0))
@@ -128,52 +127,36 @@ def sf_inherit(nsnap_descendant, nsnap_ancestor = 20,
             ancestor.zsnap_genesis[will[sf_ancestors]], 
             lit=sfr_prop['fq']['name'])
     notallquench = np.where(fq0 < 1.0)
-    P_q = np.repeat(0.0, len(sf_ancestors))
-    # SOMETHING WRONG WITH QUENCHING ASSIGNMENTS
-    # SOMETHING WRONG WITH QUENCHING ASSIGNMENTS
-    # SOMETHING WRONG WITH QUENCHING ASSIGNMENTS
-    # SOMETHING WRONG WITH QUENCHING ASSIGNMENTS
-    # SOMETHING WRONG WITH QUENCHING ASSIGNMENTS
-    # SOMETHING WRONG WITH QUENCHING ASSIGNMENTS
-    # SOMETHING WRONG WITH QUENCHING ASSIGNMENTS
-    # SOMETHING WRONG WITH QUENCHING ASSIGNMENTS
-    # SOMETHING WRONG WITH QUENCHING ASSIGNMENTS
-    # SOMETHING WRONG WITH QUENCHING ASSIGNMENTS
-    #P_q = np.repeat(1.0, len(sf_ancestors))
+    #P_q = np.repeat(0.0, len(sf_ancestors))
+    P_q = np.repeat(1.0, len(sf_ancestors))
+    P_q[notallquench] = (fqf[notallquench] - fq0[notallquench] ) / (1.0 - fq0[notallquench]) 
+    P_q += P_q_offset
 
-    #P_q[notallquench] = (fqf[notallquench] - fq0[notallquench] ) / (1.0 - fq0[notallquench]) 
-    #P_q += P_q_offset
-
-    print 'quiescent evolution profiling : ', time.time() - q_time     
     # determine which SF galaxies are quenching or not 
     # based on quenching probability 
     np.random.seed()
-    randoms = np.random.uniform(0, 1, len(sf_ancestors)) 
+    randoms = np.random.uniform(0., 1., len(sf_ancestors)) 
     is_qing = np.where(P_q > randoms) 
     is_notqing = np.where(P_q <= randoms)
+    print len(is_qing[0]), ' is quenching'
+    print len(is_notqing[0]), ' is not quenching'
             
     # initialize SFR evolution parameters
+    sfrevol_time = time.time()
     sfrevol_param = sfr_evol.get_sfrevol_param(len(descendant.mass), sf_ancestors, **sfrevol_prop)
+    print 'sfr evolution param : ', time.time() - sfrevol_time     
 
     # cosmic time/redshift at which the SF galaxy is quenched 
     # is sampled uniformly between t_ancestor and t_nsnap=1
     np.random.seed()
-    t_q = (t_descendant - ancestor.tsnap_genesis[will[sf_ancestors]]) * np.random.uniform(0,1, len(sf_ancestors))
+    t_q = (t_descendant - ancestor.tsnap_genesis[will[sf_ancestors]]) * np.random.uniform(0., 1., len(sf_ancestors))
     t_q += ancestor.tsnap_genesis[will[sf_ancestors]]
-    z_q = get_zsnap(t_q)
+    z_q = z_of_t(t_q)
     t_q[is_notqing] = 999.0     # galaxies that will never quench
     z_q[is_notqing] = -999.0
     # quenching e-fold timescale
     tau_q = get_quenching_efold(descendant.mass[succession[sf_ancestors]], tau_param=tau_prop)
 
-    print 'quiescent evolution profiling : ', time.time() - q_time     
-    # final quenched SSFR. This is specified due to the fact that 
-    # there's a lower bound on the SSFR. These values are effectively 
-    # hardcoded in order to reproduce the quiescent peak of the SSFR 
-    # distribution
-    q_ssfr_mean = get_q_ssfr_mean(descendant.mass[succession[sf_ancestors]])
-    final_q_ssfr = 0.18 * np.random.randn(len(sf_ancestors)) + q_ssfr_mean 
-    descendant.q_ssfr[sf_ancestors] = final_q_ssfr
     #q_started = np.where(t_q <= t_descendant)   # SF galaxies that have started quenching
     #q_notstarted = np.where(t_q > t_descendant) # SF galaxies taht have NOT started quenching
     descendant.gal_type[succession[sf_ancestors[is_qing]]] = 'quiescent'
@@ -191,15 +174,11 @@ def sf_inherit(nsnap_descendant, nsnap_ancestor = 20,
     def logsfr_m_t(logmass, t_input): 
         # SFR evolution based on solving an ODE of SFR
         avglogsfr = logsfr_mstar_z(logmass, ancestor.zsnap_genesis[will[sf_ancestors]])
-        #avglogsfr = ancestor.sfr[will[sf_ancestors]]
-
         # log(SFR)_SFMS evolutionfrom t0 to tQ
         logsfr_sfms = sfr_evol.logsfr_sfms_evol(
                 ancestor.zsnap_genesis[will[sf_ancestors]],
                 z_of_t(t_input),
-                z_q = z_q
-                )
-
+                z_q = z_q)
         # log(SFR)_duty evolution from t0 to tQ
         logsfr_sfduty = sfr_evol.logsfr_sfduty_fluct(
                 ancestor.tsnap_genesis[will[sf_ancestors]],
@@ -207,19 +186,14 @@ def sf_inherit(nsnap_descendant, nsnap_ancestor = 20,
                 t_q = t_q, 
                 delta_sfr=ancestor.delta_sfr[will[sf_ancestors]],
                 sfrevol_param=sfrevol_param_sf, 
-                **sfrevol_prop
-                )
-
+                **sfrevol_prop)
+        # log(SFR)_quenching evolution from tQ to tf
         logsfr_quench = sfr_evol.logsfr_quenching(
                 t_q, 
                 t_input, 
-                tau=tau_q
-                )
-        
+                tau=tau_q)
         return avglogsfr + logsfr_sfms + logsfr_sfduty + logsfr_quench
          
-        #print 'SHAM Masses : ', descendant.mass[sf_ancestors]
-
     if massevol_prop['name'] == 'integrated': 
         #start_time = time.time()
         descendant.mass[succession[sf_ancestors]], descendant.sfr[succession[sf_ancestors]] = \
@@ -236,9 +210,17 @@ def sf_inherit(nsnap_descendant, nsnap_ancestor = 20,
             raise ValueError("Integrated mass can't reduce the mass")
     elif massevol_prop['name'] == 'sham': 
         descendant.sfr[succession[sf_ancestors]] = logsfr_m_t(descendant.mass[succession[sf_ancestors]], t_descendant)
-        #descendant.sfr[succession[sf_ancestors]] = ancestor.sfr[will[sf_ancestors]]
-    descendant.ssfr[succession[sf_ancestors]] = descendant.sfr[succession[sf_ancestors]] - descendant.mass[succession[sf_ancestors]]
-    print descendant.gal_type
+
+    descendant.ssfr[succession[sf_ancestors]] = \
+            descendant.sfr[succession[sf_ancestors]] - descendant.mass[succession[sf_ancestors]]
+    
+    # final quenched SSFR. This is specified due to the fact that 
+    # there's a lower bound on the SSFR. These values are effectively 
+    # hardcoded in order to reproduce the quiescent peak of the SSFR 
+    # distribution
+    q_ssfr_mean = get_q_ssfr_mean(descendant.mass[succession[sf_ancestors]])
+    final_q_ssfr = 0.18 * np.random.randn(len(sf_ancestors)) + q_ssfr_mean 
+    descendant.q_ssfr[sf_ancestors] = final_q_ssfr
     # ---------------------------------------------------------------------------------------------------
     # Account for over quenching  
     # ---------------------------------------------------------------------------------------------------
@@ -249,7 +231,6 @@ def sf_inherit(nsnap_descendant, nsnap_ancestor = 20,
         descendant.ssfr[succession[sf_ancestors[overquenched]]] = descendant.q_ssfr[succession[sf_ancestors[overquenched]]]
         descendant.sfr[succession[sf_ancestors[overquenched]]] = descendant.ssfr[succession[sf_ancestors[overquenched]]] \
                 + descendant.mass[succession[sf_ancestors[overquenched]]]
-        descendant.gal_type[succession[sf_ancestors[overquenched]]] = 'quiescent'
 
     descendant.data_columns = np.array(list(descendant.data_columns) + ['ssfr', 'sfr', 'q_ssfr', 'gal_type'])
     setattr(bloodline, 'descendant_cq_snapshot'+str(nsnap_descendant), descendant)
