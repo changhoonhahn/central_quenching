@@ -9,6 +9,8 @@ import matplotlib.pyplot as plt
 from central_subhalo import CentralSubhalos
 # SMF
 from smf import SMF
+from ssfr import Ssfr
+from quiescent_fraction import get_fq
 # M*-Mhalo plot
 import bovy_plot as bovy
 from util import cenque_utility as util
@@ -628,15 +630,28 @@ class PlotSSFR(Plots):
                     line_width = kwargs['lw'] 
                 else:
                     line_width = 4
-
-                self.subs[i_mass].plot(
-                        ssfr_bin_mid[i_mass], 
-                        ssfr_hist[i_mass], 
-                        color = line_color, 
-                        lw = line_width, 
-                        ls = line_style, 
-                        label = ssfr_hist_label
-                        ) 
+                
+                if i_mass == 2: 
+                    self.subs[i_mass].plot(
+                            ssfr_bin_mid[i_mass], 
+                            ssfr_hist[i_mass], 
+                            color = line_color, 
+                            lw = line_width, 
+                            ls = line_style, 
+                            label = ssfr_hist_label
+                            ) 
+                    plt.sca(self.subs[i_mass])
+                    plt.xticks([-13, -12, -11, -10, -9, -8])
+                    plt.yticks([0.0, 0.2, 0.4, 0.6, 0.8, 1.0, 1.2, 1.4])
+                else: 
+                    self.subs[i_mass].plot(
+                            ssfr_bin_mid[i_mass], 
+                            ssfr_hist[i_mass], 
+                            color = line_color, 
+                            lw = line_width, 
+                            ls = line_style, 
+                            label = ssfr_hist_label
+                            ) 
         else: 
             for i_mass, panel_mass in enumerate(self.panel_mass_bins):       # loop through each panel 
                 

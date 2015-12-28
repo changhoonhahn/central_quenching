@@ -16,11 +16,11 @@ import sfr_evol
 import mass_evol
 
 from quiescent_fraction import get_fq
-from util.cenque_utility import get_zsnap
 from sfms.fitting import get_param_sfr_mstar_z
-from util.cenque_utility import get_q_ssfr_mean
+from sfms.fitting import get_quiescent_mean_ssfr 
 from util.cenque_utility import intersection_index
 from util.tau_quenching import get_quenching_efold
+
 
 def sf_inherit(nsnap_descendant, nsnap_ancestor = 20, 
         subhalo_prop = {'scatter': 0.0, 'source': 'li-march'}, 
@@ -96,6 +96,7 @@ def sf_inherit(nsnap_descendant, nsnap_ancestor = 20,
     descendant.q_ssfr = np.repeat(-999., n_descendant)
     descendant.gal_type = np.chararray(n_descendant, itemsize=16)
     descendant.gal_type[:] = ''
+    descendant.tau    = np.repeat(-999., n_descendant)
     
     succession, will = intersection_index(
             getattr(descendant, 'ancestor'+str(nsnap_ancestor)), 
@@ -156,6 +157,7 @@ def sf_inherit(nsnap_descendant, nsnap_ancestor = 20,
     z_q[is_notqing] = -999.0
     # quenching e-fold timescale
     tau_q = get_quenching_efold(descendant.mass[succession[sf_ancestors]], tau_param=tau_prop)
+    descendant.tau[succession[sf_ancestors[is_qing]]] = tau_q[is_qing]
 
     #q_started = np.where(t_q <= t_descendant)   # SF galaxies that have started quenching
     #q_notstarted = np.where(t_q > t_descendant) # SF galaxies taht have NOT started quenching
@@ -218,7 +220,8 @@ def sf_inherit(nsnap_descendant, nsnap_ancestor = 20,
     # there's a lower bound on the SSFR. These values are effectively 
     # hardcoded in order to reproduce the quiescent peak of the SSFR 
     # distribution
-    q_ssfr_mean = get_q_ssfr_mean(descendant.mass[succession[sf_ancestors]])
+    #q_ssfr_mean = get_q_ssfr_mean(descendant.mass[succession[sf_ancestors]])
+    q_ssfr_mean = get_quiescent_mean_ssfr(descendant.mass[succession[sf_ancestors]])
     final_q_ssfr = 0.18 * np.random.randn(len(sf_ancestors)) + q_ssfr_mean 
     descendant.q_ssfr[sf_ancestors] = final_q_ssfr
     # ---------------------------------------------------------------------------------------------------
@@ -231,8 +234,9 @@ def sf_inherit(nsnap_descendant, nsnap_ancestor = 20,
         descendant.ssfr[succession[sf_ancestors[overquenched]]] = descendant.q_ssfr[succession[sf_ancestors[overquenched]]]
         descendant.sfr[succession[sf_ancestors[overquenched]]] = descendant.ssfr[succession[sf_ancestors[overquenched]]] \
                 + descendant.mass[succession[sf_ancestors[overquenched]]]
+        descendant.tau[succession[sf_ancestors[overquenched]]] = -999.
 
-    descendant.data_columns = np.array(list(descendant.data_columns) + ['ssfr', 'sfr', 'q_ssfr', 'gal_type'])
+    descendant.data_columns = np.array(list(descendant.data_columns) + ['ssfr', 'sfr', 'q_ssfr', 'gal_type', 'tau'])
     setattr(bloodline, 'descendant_cq_snapshot'+str(nsnap_descendant), descendant)
 
     return bloodline 

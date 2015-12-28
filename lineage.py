@@ -402,7 +402,7 @@ if __name__=="__main__":
     for scat in [0.0, 0.2]:
         start_time = time.time()
         bloodline = Lineage(nsnap_ancestor = 20)
-        bloodline.descend(subhalo_prop = {'scatter': scat, 'source': 'li-march'})#, clobber=True) 
+        bloodline.descend(subhalo_prop = {'scatter': scat, 'source': 'li-march'}, clobber=True) 
         bloodline.assign_sfr_ancestor(sfr_prop = {'fq': {'name': 'wetzelsmooth'}, 'sfr': {'name': 'average'}})
         bloodline.writeout()
         print 'lineage construction and write out takes ', (time.time() - start_time)/60.0

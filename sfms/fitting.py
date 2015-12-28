@@ -17,15 +17,11 @@ from sf_mainseq import get_sfr_mstar_z_envcount
 def get_param_sfr_mstar_z(): 
     """ Parameterized SFR(M*,z)
     """
-
     def avgsfr_sfms(mstar, z_in): 
-
         #if z_in < 0.9: 
         #    pass
         #else: 
         #    z_in = 0.9
-
-
         lowmass = np.where(mstar < 9.5)
         not_lowmass = np.where(mstar >= 9.5)
         if isinstance(z_in, float):
@@ -38,8 +34,8 @@ def get_param_sfr_mstar_z():
             raise TypeError
 
         mu_SFR = np.zeros(len(mstar))
-        mu_SFR[not_lowmass] = 0.5*(mstar[not_lowmass] - 9.5) - 0.5 + 0.76 * z_notlowmass
-        mu_SFR[lowmass] = (mstar[lowmass] - 9.5) - 0.5 + 0.76 * z_lowmass
+        mu_SFR[not_lowmass] = 0.8*(mstar[not_lowmass] - 9.5) - 0.8 + 0.76 * z_notlowmass
+        mu_SFR[lowmass] = (mstar[lowmass] - 9.5) - 0.8 + 0.76 * z_lowmass
         #mu_SFR = 0.5*(mstar - 10.5) + 0.76 * z_in
         #mu_SFR = 0.65*(mstar - 10.5) + 0.76 * (z_in - 0.01)
         return mu_SFR
@@ -49,6 +45,13 @@ def get_param_sfr_mstar_z():
         #return 0.28 + 0.05*(mstar - 10.5)
         
     return [avgsfr_sfms, sigsfr_sfms] 
+
+def get_quiescent_mean_ssfr(mass):
+    '''
+    Calcluate the mean SSFR of the quiescent peak. Hardcoded
+    '''
+    return -0.4 * (mass - 11.1) - 12.61
+
 
 def get_bestfit_sfr_mstar_z(Mrcut=18, fid_mass=10.5, clobber=False):
     ''' Calculate average SFR and standard deviation of the SF main sequence as a 
@@ -109,6 +112,7 @@ def get_bestfit_sfr_mstar_z(Mrcut=18, fid_mass=10.5, clobber=False):
         return 0.3 
         
     return [bestfit_sfms_avgsfr, bestfit_sfms_sigsfr] 
+
 
 def get_bestfit_sfms_groupcat(Mrcut=18, fid_mass=10.5, clobber=False):
     ''' Calculate the linear bestfit parameters for the StarForming 

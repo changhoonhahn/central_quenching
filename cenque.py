@@ -31,6 +31,7 @@ from central_subhalo import Subhalos
 from central_subhalo import CentralSubhalos
 from quiescent_fraction import sfq_classify
 from sfms.fitting import get_param_sfr_mstar_z
+from sfms.fitting import get_quiescent_mean_ssfr 
 
 # -- plotting --
 from plotting import plots 
@@ -409,11 +410,11 @@ class CenQue:
         '''
         Calculate quiescent fraction of CenQue class object
         '''
-        if cenque.zsnap is None: 
+        if self.zsnap is None: 
             raise ValueError
-        if cenque.mass is None: 
+        if self.mass is None: 
             raise ValueError
-        if cenque.sfr is None: 
+        if self.sfr is None: 
             raise ValueError
 
         # Star-forming or Quiescent    
@@ -423,8 +424,8 @@ class CenQue:
         for i_bin in xrange(self.mass_bins.nbins): 
 
             in_massbin = np.where( 
-                    (cenque.mass > self.mass_bins.mass_low[i_bin]) &
-                    (cenque.mass <= self.mass_bins.mass_high[i_bin])
+                    (self.mass > self.mass_bins.mass_low[i_bin]) &
+                    (self.mass <= self.mass_bins.mass_high[i_bin])
                     )
 
             n_massbin = len(in_massbin[0])
@@ -536,6 +537,7 @@ class CenQue:
     
     def _assign_sfr(self, sfr_prop = None, quiet=True, **kwargs):
         ''' 
+        ****No longer supported****
         Assign Star Formation Rates to CenQue class object based on 
         properties listed in keyword sfr_prop, which specifies the 
         analytic quiescsent fraction prescription and the SFR assignment
@@ -749,7 +751,8 @@ def AssignSFR(mass, redshift, sfr_prop=None):
 
     # quiescent 
     gal_type[massive[quiescent]] = 'quiescent'
-    mu_q_ssfr = util.get_q_ssfr_mean(mass[massive[quiescent]]) 
+    #mu_q_ssfr = util.get_q_ssfr_mean(mass[massive[quiescent]]) 
+    mu_q_ssfr = get_quiescent_mean_ssfr(mass[massive[quiescent]])
     ssfr[massive[quiescent]] = 0.18 * np.random.randn(ngal_q) + mu_q_ssfr 
     sfr[massive[quiescent]]  = ssfr[massive[quiescent]] + mass[massive[quiescent]]
     

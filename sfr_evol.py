@@ -23,8 +23,8 @@ def get_sfrevol_param(ngal, indices, **sfrevol_prop):
 
     elif sfrevol_prop['name'] == 'squarewave': 
         # simple square wave with fixed amplitude 
-        period = np.array([-999. for i in xrange(ngal)])
-        phase = np.array([-999. for i in xrange(ngal)])
+        period = np.repeat(-999., ngal)
+        phase = np.repeat(-999., ngal)
 
         period[indices] = \
                 np.random.uniform(
@@ -43,26 +43,23 @@ def get_sfrevol_param(ngal, indices, **sfrevol_prop):
 
     elif sfrevol_prop['name'] == 'newamp_squarewave': 
         # square wave with new amplitude assigned every full period  
-
         freq = np.repeat(-999., ngal)
         phase = np.repeat(-999., ngal)
+
+        n_index = len(indices)
 
         freq[indices] = \
                 np.random.uniform(
                         sfrevol_prop['freq_range'][0], 
                         sfrevol_prop['freq_range'][1], 
-                        size=len(indices)
-                        )
+                        size=n_index)
         phase[indices] = \
                 np.random.uniform(
                         sfrevol_prop['phase_range'][0], 
                         sfrevol_prop['phase_range'][1], 
-                        size=len(indices)
-                        )
-        
+                        size=n_index)
         # maximum of number of cycles based on frequency 
         min_period = 2.0 * np.pi / freq[indices].max()
-
         # overestimated max number of cycles for convenience 
         n_cycle = int((20.0 + phase[indices].max()) // min_period)
 
@@ -71,8 +68,7 @@ def get_sfrevol_param(ngal, indices, **sfrevol_prop):
                 (np.random.normal(
                     loc=0.0, 
                     scale=sfrevol_prop['sigma'], 
-                    size=n_cycle * len(indices)
-                    )
+                    size=n_cycle * n_index)
                     ).reshape([len(indices), n_cycle])
 
         return [freq, phase, amp]

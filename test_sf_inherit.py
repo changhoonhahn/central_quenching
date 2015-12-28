@@ -84,6 +84,7 @@ def qaplot_sf_inherit(
                     groupcat = True, 
                     savefig = fig_name                    
                     )
+            # quenching = True,
         elif attr == 'fq':                          # Quiescent Fraction 
             descendant.plotFq(
                     param=True, 
@@ -557,7 +558,14 @@ def abc_posterior_median(n_step):
 """
 
 if __name__=="__main__":
-    for id in [1,3,5,7,9,11,15]:
+    #start_time = time.time()
+    #bloodline = Lineage(nsnap_ancestor = 20)
+    #bloodline.descend(subhalo_prop = {'scatter': 0.0, 'source': 'li-march'}, clobber=True) 
+    #bloodline.assign_sfr_ancestor(sfr_prop = {'fq': {'name': 'wetzelsmooth'}, 'sfr': {'name': 'average'}})
+    #bloodline.writeout()
+    #print 'lineage construction and write out takes ', (time.time() - start_time)/60.0
+
+    for id in [1]:
         qaplot_sf_inherit(
             nsnap_ancestor = 20, nsnap_descendant = id, 
             subhalo_prop = {'scatter': 0.0, 'source': 'li-march'}, 
@@ -566,7 +574,7 @@ if __name__=="__main__":
                 'sfr':  {'name': 'newamp_squarewave', 'freq_range': [2.*np.pi, 20.*np.pi], 'phase_range': [0,1], 'sigma': 0.3},
                 'mass': {'name': 'sham'}
                 },
-            ssfr=False, fq=False, tau=False, mass_scatter=False, sfms=True, smf=False
+            ssfr=True, fq=True, tau=False, mass_scatter=False, sfms=False, smf=False
             )
     #'name': 'squarewave', 'freq_range': [2.*np.pi, 20.*np.pi], 'phase_range': [0,1]
     #qaplot_sf_inherit_average_scatter(
