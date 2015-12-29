@@ -167,8 +167,8 @@ def sfr_cut(mstar, zin):
     factor = np.repeat(0.8, len(mstar))
     #factor[lowmass] = 1.0 
     #return -0.75 + 0.76*(zin-0.05) + 0.5*(mstar-10.5)
-    #return -0.75 + 0.76*(zin-0.04) + 0.5*(mstar-10.5)
-    return -0.75 + 0.76*(zin-0.04) + factor*(mstar-9.5) - 0.8
+    return -0.75 + 0.76*(zin-0.04) + 0.5*(mstar-10.5)
+    #return -0.75 + 0.76*(zin-0.04) + factor*(mstar-9.5) - 0.8
 
 """
 def cq_fq(cenque): 

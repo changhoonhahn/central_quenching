@@ -23,10 +23,12 @@ def get_param_sfr_mstar_z():
         #else: 
         #    z_in = 0.9
         lowmass = np.where(mstar < 9.5)
-        factor = np.repeat(0.8, len(mstar))
+        #factor = np.repeat(0.8, len(mstar))
+        factor = np.repeat(0.5, len(mstar))
         #factor[lowmass] = 1.0 
 
-        mu_SFR = factor*(mstar - 9.5) - 0.8 + 0.76 * z_in
+        #mu_SFR = factor*(mstar - 9.5) - 0.8 + 0.76 * z_in
+        mu_SFR = factor*(mstar - 10.5) + 0.76 * z_in
         #mu_SFR = 0.5*(mstar - 10.5) + 0.76 * z_in
         #mu_SFR = 0.65*(mstar - 10.5) + 0.76 * (z_in - 0.01)
         return mu_SFR

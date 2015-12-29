@@ -467,13 +467,13 @@ class CenQue:
         else: 
             return fq_plot
 
-    def plotTau(self, **pltkwargs): 
+    def plotTau(self, tau_prop, **pltkwargs): 
         '''
         Plot quenching timescale 
         '''
         plt.close() 
-
-        tau_plot = plots.PlotTau(self.tau_prop)
+        tau_dict = tau_prop.copy()
+        tau_plot = plots.PlotTau(tau_dict)
 
         if 'savefig' in pltkwargs.keys():
             if isinstance(pltkwargs['savefig'], str): 

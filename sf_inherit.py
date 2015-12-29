@@ -115,8 +115,8 @@ def sf_inherit(nsnap_descendant, nsnap_ancestor = 20,
     # --------------------------------------------------------------------------------
     descendant.gal_type[succession[q_ancestors]] = 'quiescent'
     descendant.ssfr[succession[q_ancestors]] = ancestor.ssfr[will[q_ancestors]]
-    if massevol_prop['name'] != 'sham': 
-        descendant.mass[succession[q_ancestors]] = ancestor.mass_genesis[will[q_ancestors]]
+    #if massevol_prop['name'] != 'sham': 
+    #    descendant.mass[succession[q_ancestors]] = ancestor.mass_genesis[will[q_ancestors]]
     descendant.sfr[succession[q_ancestors]] = descendant.ssfr[succession[q_ancestors]] + \
             descendant.mass[succession[q_ancestors]]
 
@@ -206,12 +206,14 @@ def sf_inherit(nsnap_descendant, nsnap_ancestor = 20,
                 t_input, 
                 tau=tau_q)
         logsfr_tot = avglogsfr + logsfr_sfms + logsfr_sfduty + logsfr_quench
-
-        masses.append(logmass[:100])
-        sfres.append(logsfr_tot[:100])
+        masses.append(logmass[:20])
+        sfres.append(logsfr_tot[:20])
         return logsfr_tot 
          
     if massevol_prop['name'] == 'integrated': 
+
+        sham_mass =  descendant.mass[succession[sf_ancestors]].copy()
+
         mass_time = time.time()
         descendant.mass[succession[sf_ancestors]], descendant.sfr[succession[sf_ancestors]] = \
                 mass_evol.integrated(
@@ -226,20 +228,27 @@ def sf_inherit(nsnap_descendant, nsnap_ancestor = 20,
         if np.min(descendant.mass[succession[sf_ancestors]] - ancestor.mass[will[sf_ancestors]]) < 0.0: 
             raise ValueError("Integrated mass can't reduce the mass")
         print 'Integrated Masses takes ', time.time() - mass_time
-        fig = plt.figure(1)
-        sub = fig.add_subplot(111)
-        pretty_colors = prettycolors()
-        masses = np.vstack(masses)
-        sfres = np.vstack(sfres)
-        print np.shape(masses)
-        for i in xrange(np.shape(masses)[0]): #sf_masses.shape[1]):
-            sub.scatter(
-                    masses[i,100], 
-                    sfres[i,100],
-                    color=pretty_colors[i % 20],
-                    lw=2
-                    )
-        plt.show()
+        
+        if nsnap_descendant == 1:  
+            fig = plt.figure(1)
+            sub = fig.add_subplot(111)
+            prettyplot()
+            pretty_colors = prettycolors()
+
+            masses = np.vstack(masses)
+            sfres = np.vstack(sfres)
+            colors = [] 
+            for i in xrange(np.shape(masses)[1]): #sf_masses.shape[1]):
+                sub.plot(
+                        masses[:,i], 
+                        sfres[:,i],
+                        color=pretty_colors[i % 20],
+                        lw=2
+                        )
+                colors.append(pretty_colors[i % 20])
+            sub.scatter(sham_mass[:np.shape(masses)[1]], sfres[-1,:], c=colors, marker='^', s=20, lw=0)
+            fig.savefig('sf_inherit_galaxytracking.png', bbox_inches='tight')
+            plt.close()
     elif massevol_prop['name'] == 'sham': 
         descendant.sfr[succession[sf_ancestors]] = logsfr_m_t(descendant.mass[succession[sf_ancestors]], t_descendant)
 

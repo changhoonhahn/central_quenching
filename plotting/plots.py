@@ -521,7 +521,6 @@ class PlotTau(Plots):
     
         tau_str = ''
         for i_tau, tau_param in enumerate(tau_params): 
-
             tau_mass = get_quenching_efold(mass_bin, tau_param = tau_param) 
             
             if tau_param['name'] == 'line': 
