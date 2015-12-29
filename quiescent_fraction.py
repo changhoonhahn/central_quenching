@@ -72,7 +72,6 @@ def get_fq(Mstar, z_in, lit='cosmosinterp'):
         return output 
     
     elif lit == 'wetzelsmooth': 
-
         #qf_z0 = -6.04 + 0.63*Mstar
         qf_z0 = -6.04 + 0.64*Mstar
         alpha = -1.75

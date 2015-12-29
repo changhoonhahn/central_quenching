@@ -258,5 +258,3 @@ if __name__=="__main__":
             massevol_prop = {'name': 'integrated', 'type': 'euler', 'f_retain': 0.6, 't_step': 0.01},
             fig_file = 'test_euler_massevol_midfreq_newamp_periodic_dutycycle_twoslopeSFMS.png'
             )
-
-

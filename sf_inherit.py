@@ -21,6 +21,9 @@ from sfms.fitting import get_quiescent_mean_ssfr
 from util.cenque_utility import intersection_index
 from util.tau_quenching import get_quenching_efold
 
+import matplotlib.pyplot as plt
+from defutility.plotting import prettyplot
+from defutility.plotting import prettycolors
 
 def sf_inherit(nsnap_descendant, nsnap_ancestor = 20, 
         subhalo_prop = {'scatter': 0.0, 'source': 'li-march'}, 
@@ -122,18 +125,27 @@ def sf_inherit(nsnap_descendant, nsnap_ancestor = 20,
     # Mf and M0 are SHAM masses. Using SHAM probably underestimates the 
     # quenching probabilities but there is a fudge component
     P_q_offset = pq_prop['slope'] * (descendant.mass[succession[sf_ancestors]] - 9.5) + pq_prop['yint']
+    lowmass = np.where(ancestor.mass_genesis[will[sf_ancestors]] < 9.5)
     fqf = get_fq(descendant.mass[succession[sf_ancestors]], descendant.zsnap, lit = sfr_prop['fq']['name'])
-    fq0 = get_fq(
-            ancestor.mass_genesis[will[sf_ancestors]], 
+    fq0 = get_fq(ancestor.mass_genesis[will[sf_ancestors]], 
             ancestor.zsnap_genesis[will[sf_ancestors]], 
             lit=sfr_prop['fq']['name'])
     notallquench = np.where(fq0 < 1.0)
-    noquench = np.where(fqf == 0.0)
     #P_q = np.repeat(0.0, len(sf_ancestors))
     P_q = np.repeat(1.0, len(sf_ancestors))
     P_q[notallquench] = (fqf[notallquench] - fq0[notallquench] ) / (1.0 - fq0[notallquench]) 
     P_q += P_q_offset
-    P_q[noquench] = 0.0
+    #P_q[noquench] = 0.0
+    print np.min(P_q[lowmass]), np.max(P_q[lowmass]), P_q[lowmass][:10]
+    print 'fqf', (fqf[lowmass])[np.argmax(fqf[lowmass])]
+    print 'mass_f', descendant.mass[succession[sf_ancestors[lowmass]]][np.argmax(fqf[lowmass])]
+    print 'mass_0', ancestor.mass_genesis[will[sf_ancestors[lowmass]]][np.argmax(fqf[lowmass])]
+    print 'zsnap_f', descendant.zsnap 
+    print 'zsnap_0', ancestor.zsnap_genesis[will[sf_ancestors[lowmass]]][np.argmax(fqf[lowmass])]
+    print 'fq0', (fq0[lowmass])[np.argmax(fq0[lowmass])]
+    print 'mass_0', ancestor.mass_genesis[will[sf_ancestors[lowmass]]][np.argmax(fq0[lowmass])]
+    print 'mass_f', descendant.mass[succession[sf_ancestors[lowmass]]][np.argmax(fq0[lowmass])]
+    print 'zsnap', ancestor.zsnap_genesis[will[sf_ancestors[lowmass]]][np.argmax(fq0[lowmass])]
 
     # determine which SF galaxies are quenching or not 
     # based on quenching probability 
@@ -147,7 +159,7 @@ def sf_inherit(nsnap_descendant, nsnap_ancestor = 20,
     # initialize SFR evolution parameters
     sfrevol_time = time.time()
     sfrevol_param = sfr_evol.get_sfrevol_param(len(descendant.mass), sf_ancestors, **sfrevol_prop)
-    print 'sfr evolution param : ', time.time() - sfrevol_time     
+    print 'sfr evolution param took ', time.time() - sfrevol_time     
 
     # cosmic time/redshift at which the SF galaxy is quenched 
     # is sampled uniformly between t_ancestor and t_nsnap=1
@@ -160,21 +172,18 @@ def sf_inherit(nsnap_descendant, nsnap_ancestor = 20,
     # quenching e-fold timescale
     tau_q = get_quenching_efold(descendant.mass[succession[sf_ancestors]], tau_param=tau_prop)
     descendant.tau[succession[sf_ancestors[is_qing]]] = tau_q[is_qing]
-
-    #q_started = np.where(t_q <= t_descendant)   # SF galaxies that have started quenching
-    #q_notstarted = np.where(t_q > t_descendant) # SF galaxies taht have NOT started quenching
     descendant.gal_type[succession[sf_ancestors[is_qing]]] = 'quiescent'
     descendant.gal_type[succession[sf_ancestors[is_notqing]]] = 'star-forming'
-
     print 'quiescent evolution profiling : ', time.time() - q_time     
-    # ---------------------------------------------------------------------------------------------------
+    # -----------------------------------------------------------------------------------------
     # star forming evolution 
-    # ---------------------------------------------------------------------------------------------------
+    # -----------------------------------------------------------------------------------------
     # SFR evolution parameters
     sfrevol_param_sf = []
     for i_p in xrange(len(sfrevol_param)):
         sfrevol_param_sf.append(sfrevol_param[i_p][sf_ancestors])
-
+    
+    masses, sfres = [], [] 
     def logsfr_m_t(logmass, t_input): 
         # SFR evolution based on solving an ODE of SFR
         logsfr_time = time.time()
@@ -196,7 +205,11 @@ def sf_inherit(nsnap_descendant, nsnap_ancestor = 20,
                 t_q, 
                 t_input, 
                 tau=tau_q)
-        return avglogsfr + logsfr_sfms + logsfr_sfduty + logsfr_quench
+        logsfr_tot = avglogsfr + logsfr_sfms + logsfr_sfduty + logsfr_quench
+
+        masses.append(logmass[:100])
+        sfres.append(logsfr_tot[:100])
+        return logsfr_tot 
          
     if massevol_prop['name'] == 'integrated': 
         mass_time = time.time()
@@ -213,6 +226,20 @@ def sf_inherit(nsnap_descendant, nsnap_ancestor = 20,
         if np.min(descendant.mass[succession[sf_ancestors]] - ancestor.mass[will[sf_ancestors]]) < 0.0: 
             raise ValueError("Integrated mass can't reduce the mass")
         print 'Integrated Masses takes ', time.time() - mass_time
+        fig = plt.figure(1)
+        sub = fig.add_subplot(111)
+        pretty_colors = prettycolors()
+        masses = np.vstack(masses)
+        sfres = np.vstack(sfres)
+        print np.shape(masses)
+        for i in xrange(np.shape(masses)[0]): #sf_masses.shape[1]):
+            sub.scatter(
+                    masses[i,100], 
+                    sfres[i,100],
+                    color=pretty_colors[i % 20],
+                    lw=2
+                    )
+        plt.show()
     elif massevol_prop['name'] == 'sham': 
         descendant.sfr[succession[sf_ancestors]] = logsfr_m_t(descendant.mass[succession[sf_ancestors]], t_descendant)
 
