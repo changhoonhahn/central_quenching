@@ -10,11 +10,11 @@ import numpy as np
 import pyfits as fits
 import matplotlib.pyplot as plt
 import os 
-import mpfit
 import h5py
 from scipy import signal
 
 # --- Local ---
+from util import mpfit
 from util.mass_bins import simple_mass_bin
 from group_catalog import group_catalog as cq_group
 from group_catalog.group_catalog import sf_centrals 

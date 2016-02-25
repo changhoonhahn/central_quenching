@@ -9,7 +9,7 @@ import h5py
 import numpy as np
 import scipy as sp 
 # --- Local ---
-import mpfit
+from util import mpfit
 
 from sf_mainseq import get_sfr_mstar_z_groupcat
 from sf_mainseq import get_sfr_mstar_z_envcount

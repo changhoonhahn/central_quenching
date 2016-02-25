@@ -50,7 +50,7 @@ class CentralSubhalos(object):
             ])
         return spec_str 
 
-    def read(self, snapshot, scatter = 0.0, source='li-drory-march' ): 
+    def read(self, snapshot, scatter=0.0, source='li-drory-march' ): 
         '''
         '''
         spec_kwargs = {

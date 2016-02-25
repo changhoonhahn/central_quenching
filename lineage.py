@@ -31,8 +31,8 @@ class Lineage(object):
         self.subhalo_prop = None        # properties used for subhalo SHAM
 
     def assign_sfr_ancestor(self, sfr_prop = None):
-        ''' 
-        Assign SFR properties to the 'ancestor_cq' object using mass_genesis, tsnap_genesis
+        ''' Assign SFR properties to the 'ancestor_cq' object using 
+        mass_genesis, tsnap_genesis
 
         Notes
         -----
@@ -203,8 +203,7 @@ class Lineage(object):
         return None 
 
     def descend(self, subhalo_prop=None, quiet=True, clobber=False):
-        '''
-        Find descendants by tracking parents and children through TreePM's halos. 
+        ''' Find descendants by tracking parents and children through TreePM's halos. 
         (Really only has to run once)
         '''
         if self.subhalo_prop is None:
@@ -214,7 +213,7 @@ class Lineage(object):
                 raise ValueError
 
         # Import subhalos for nsnap <= nsnap_ancestor 
-        self.ancestor_cq = CenQue(n_snap = self.nsnap_ancestor, subhalo_prop = self.subhalo_prop)
+        self.ancestor_cq = CenQue(n_snap=self.nsnap_ancestor, subhalo_prop=self.subhalo_prop)
         self.ancestor_cq.cenque_type = 'treepm_import' 
         if np.array([os.path.isfile(self.ancestor_cq.file()), not clobber]).all(): 
             print 'Reading ', self.ancestor_cq.file()

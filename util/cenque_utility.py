@@ -10,7 +10,7 @@ import numpy as np
 import pyfits as fits
 import matplotlib.pyplot as plt
 import os 
-import mpfit
+#import mpfit
 import h5py
 from scipy import signal
 from scipy import interpolate
@@ -151,60 +151,60 @@ def get_q_ssfr_mean(masses, Mrcut=18):
     #q_ssfr = np.array([ (-0.7 * mass) - 4.625 for mass in masses ])  
     return q_ssfr 
 
-def get_bestfit_qgroupcat_ssfr(Mrcut=18, fid_mass=10.5, clobber=False):
-    ''' Returns parameters for the best-fit line of the mass vs sSFR relation of the 
-    quiescent SDSS Group Catalog
-
-    Parameters 
-    ----------
-    Mrcut : absolute magntiude cut that specifies the group catalog
-    clobber : Rewrite if True
-
-    Notes
-    -----
-    * Uses the Q SDSS Group Catalog 
-    * Bestfit values are accessed from file,  unless it doesn't exist or clobber == True 
-
-    '''
-
-    save_file = ''.join([
-        'dat/central_quenching/sf_ms/'
-        'ssfr_mass_fit_quiescent_groupcat.hdf5'
-        ]) 
-    
-    if not os.path.isfile(save_file) or clobber: 
-        # if file doesn't exist save to hdf5 file 
-        f = h5py.File(save_file, 'w') 
-        grp = f.create_group('slope_yint')      # slope-yint group
-    
-        grp.attrs['fid_mass'] = fid_mass    # fid mass meta data 
-
-        med_ssfrs, var_ssfrs, masses = [], [], [] 
-        for mass in np.arange(9.5, 11.5, 0.25): 
-            med_ssfr, var_ssfr, ngal = get_ssfr_mstar_qgroupcat(mass, Mrcut=Mrcut)
-            
-            if ngal < 10: 
-                continue 
-
-            masses.append(mass)
-            med_ssfrs.append(med_ssfr)
-            var_ssfrs.append(var_ssfr)
-
-        p0 = [-0.5, -12.0]
-        fa = {'x': np.array(masses)-10.5, 'y': np.array(med_ssfrs)}
-        bestfit = mpfit.mpfit(util.mpfit_line, p0, functkw=fa, nprint=0) 
-        
-        # save to file 
-        grp.create_dataset('zmid', data=[0.1]) 
-        grp.create_dataset('slope', data=[bestfit.params[0].item()]) 
-        grp.create_dataset('yint', data=[bestfit.params[1].item()]) 
-        
-        return [bestfit.params[0], bestfit.params[1]]
-    else: 
-
-        f = h5py.File(save_file, 'r') 
-
-        return [f['slope_yint/slope'][:], f['slope_yint/yint'][:]] 
+#def get_bestfit_qgroupcat_ssfr(Mrcut=18, fid_mass=10.5, clobber=False):
+#    ''' Returns parameters for the best-fit line of the mass vs sSFR relation of the 
+#    quiescent SDSS Group Catalog
+#
+#    Parameters 
+#    ----------
+#    Mrcut : absolute magntiude cut that specifies the group catalog
+#    clobber : Rewrite if True
+#
+#    Notes
+#    -----
+#    * Uses the Q SDSS Group Catalog 
+#    * Bestfit values are accessed from file,  unless it doesn't exist or clobber == True 
+#
+#    '''
+#
+#    save_file = ''.join([
+#        'dat/central_quenching/sf_ms/'
+#        'ssfr_mass_fit_quiescent_groupcat.hdf5'
+#        ]) 
+#    
+#    if not os.path.isfile(save_file) or clobber: 
+#        # if file doesn't exist save to hdf5 file 
+#        f = h5py.File(save_file, 'w') 
+#        grp = f.create_group('slope_yint')      # slope-yint group
+#    
+#        grp.attrs['fid_mass'] = fid_mass    # fid mass meta data 
+#
+#        med_ssfrs, var_ssfrs, masses = [], [], [] 
+#        for mass in np.arange(9.5, 11.5, 0.25): 
+#            med_ssfr, var_ssfr, ngal = get_ssfr_mstar_qgroupcat(mass, Mrcut=Mrcut)
+#            
+#            if ngal < 10: 
+#                continue 
+#
+#            masses.append(mass)
+#            med_ssfrs.append(med_ssfr)
+#            var_ssfrs.append(var_ssfr)
+#
+#        p0 = [-0.5, -12.0]
+#        fa = {'x': np.array(masses)-10.5, 'y': np.array(med_ssfrs)}
+#        bestfit = mpfit.mpfit(util.mpfit_line, p0, functkw=fa, nprint=0) 
+#        
+#        # save to file 
+#        grp.create_dataset('zmid', data=[0.1]) 
+#        grp.create_dataset('slope', data=[bestfit.params[0].item()]) 
+#        grp.create_dataset('yint', data=[bestfit.params[1].item()]) 
+#        
+#        return [bestfit.params[0], bestfit.params[1]]
+#    else: 
+#
+#        f = h5py.File(save_file, 'r') 
+#
+#        return [f['slope_yint/slope'][:], f['slope_yint/yint'][:]] 
 
 # integrated mass ---------------------------------------------
 def sfr_avg_residual(mass, z_cosmic, **sfr_param): 

@@ -1,9 +1,10 @@
 '''
 
-Central_Quenchign project
 
+Module for galaxy populations 
 
 Author(s): ChangHoon Hahn
+
 
 '''
 
@@ -36,10 +37,11 @@ from sfms.fitting import get_quiescent_mean_ssfr
 # -- plotting --
 from plotting import plots 
 
-class CenQue: 
+class CGPop(object): 
     def __init__(self, **kwargs): 
-        ''' Class that descirbes the central quenching (CenQue) galaxy 
-        catalog
+        ''' Class object that descirbes the central galaxy population derived 
+        from CentralSubhalos class, which is a wrapper for Andrew Wetzel's TreePM 
+        Subhalo Catalog. 
         '''
         self.kwargs = kwargs
     
@@ -79,28 +81,27 @@ class CenQue:
         self.t_step = None      # t_cosmic step 
 
         self.mass_bins = self.set_mass_bins()
-        self.data_columns = None 
-
-        if 'cenque_type' in self.kwargs.keys(): 
-            self.cenque_type = self.kwargs['cenque_type']
-        else: 
-            self.cenque_type = None
+        self.data_columns = None    # default has no data
 
         self.ssfr_dist = None
 
-    def import_treepm(self, nsnap, subhalo_prop=None): 
-        ''' 
-        Import Subhalo Snapshots with SHAM M* by interfacing with CentralSubhalos class 
-        object. kwargs specify the parameters of the calculated SHAM subhalos. 
+    def ImportCsubhalo(self, nsnap, subhalo_prop=None): 
+        ''' Import Central Subhalo Snapshots with SHAM M* through the CentralSubhalos class 
+        object. The CentralSubhalos class is a wrapper for Andrew Wetzel's TreePM code.
         
         Parameters
         ----------
-        nsnap : (int)
-            Snapshot number
-        scatter : (float)
-            Scatter between SMF and HMF in SHAM 
-        source : (str)
-            Specifies which analytic SMF to use for SHAM
+        nsnap : int
+            Subhalo Snapshot number. Each snapshot represents a different redshift. 
+            Higher number are at higher redshifts. 
+        
+        subhalo_prop : dict (optional) 
+            Optional dictionary that specifies the subhalo snapshot properties. 
+            The properties include, 
+            - scatter : float
+                Scatter between SMF and HMF in SHAM 
+            - source : str
+                Specifies which analytic SMF to use for SHAM
 
         Notes 
         -----
@@ -110,19 +111,22 @@ class CenQue:
         * child index 
         * halo mass 
         '''
-        #start_time = time.time()
         if self.subhalo_prop is None: 
             self.subhalo_prop = subhalo_prop
         else: 
-            if subhalo_prop:
-                if self.subhalo_prop != subhalo_prop: 
-                    raise ValueError
+            if subhalo_prop and self.subhalo_prop != subhalo_prop: 
+                # subhalo_prop values do not match 
+                raise ValueError
         
         centsub = CentralSubhalos()
-        #centsub = Subhalos()
-        centsub.read(nsnap, scatter=self.subhalo_prop['scatter'], source=self.subhalo_prop['source'])
+        centsub.read(
+                nsnap,  # snapshot 
+                scatter=self.subhalo_prop['scatter'],   # scatter
+                source=self.subhalo_prop['source']      # SMF source
+                )
         print centsub.file_name
-
+    
+        # pass CentralSubhalos class attributes to 
         self.data_columns = [] 
         for col in centsub.data_columns: 
             if col == 'halo.m.max': 
@@ -137,7 +141,7 @@ class CenQue:
             self.data_columns.append(newcol)
         
         # Meta data 
-        self.metadata = [ 'nsnap', 'zsnap', 't_cosmic', 't_step', 'cenque_type', 'subhalo_prop']
+        self.metadata = [ 'nsnap', 'zsnap', 't_cosmic', 't_step', 'subhalo_prop']
         # get snapshot redshift/cosmic time data using Andrew's table
         n_snaps, z_snap, t_snap, t_wid = np.loadtxt(
                 'snapshot_table.dat', 
@@ -148,14 +152,6 @@ class CenQue:
         self.zsnap = z_snap[(n_snaps.tolist()).index(nsnap)]        # redshift of snapshot
         self.t_cosmic = t_snap[(n_snaps.tolist()).index(nsnap)] # t_cosmic of snapshot 
         self.t_step = t_wid[(n_snaps.tolist()).index(nsnap)]    # Gyrs until next snapshot
-        self.cenque_type = 'treepm_import'
-        if self.subhalo_prop is None: 
-            self.subhalo_prop = subhalo_prop
-        else: 
-            if subhalo_prop: 
-                if self.subhalo_prop != subhalo_prop: 
-                    raise ValueError
-
         #print "import_treepm takes ", time.time() - start_time
         return None
 
@@ -165,8 +161,8 @@ class CenQue:
         massbins = simple_mass_bin() 
         return massbins
 
-    def readin(self): 
-        ''' Read in cenque data written by CenQue
+    def Read(self): 
+        ''' Read in data written specifically by the class.  
 
         Get snapshot and column info from header then import column 
         into CenQue data 
@@ -174,19 +170,14 @@ class CenQue:
         overly convoluted way to read in data -.-
         **UPDATED TO hdf5 FILE FORMAT**
         '''
-
-        cq_file = self.file() 
-        if os.path.isfile(cq_file): 
-            pass
-        else: 
-            raise ValueError(cq_file+' does not exist') 
+        cgpop_file = self.file()       # file name of CGPop object
+        if not os.path.isfile(cgpop_file): 
+            raise ValueError(cgpop_file+' does not exist') 
 
         f = h5py.File(cq_file, 'r') 
-        #print 'Reading ', cq_file 
-
         grp = f['cenque_data']
 
-        # read in meta data first
+        # first read in meta data, which are saved as attrs 
         for i_meta, metadatum in enumerate(grp.attrs.keys()): 
             if isinstance((grp.attrs.values())[i_meta], str):
                 try: 
@@ -214,16 +205,13 @@ class CenQue:
         else: 
             raise NotImplementedError
         
-        #if 'sham_mass' not in grp.keys(): 
-        #    setattr(self, 'sham_mass', grp['mass'][:])
-
         f.close() 
 
         return None 
 
     def writeout(self): 
-        """ Write out self.data_columns to h5py file
-        """
+        ''' Write out self.data_columns to h5py file
+        '''
         
         output_file = self.file()  
         print 'Writing ', output_file 
@@ -250,10 +238,9 @@ class CenQue:
         f.close()  
         return None 
     
-    def file(self): 
-        ''' 
-        File name of CenQue object. Assigned based on the properties of the 
-        CenQue object
+    def File(self): 
+        ''' File name of CGPop object. The file name acts as a tool to 
+        label the properties of the object.  
         ''' 
         if self.nsnap is None: 
             raise ValueError()
@@ -263,41 +250,40 @@ class CenQue:
             raise ValueError()
      
         # Cenque Object with assigned starformation properties
-        if self.cenque_type == 'treepm_import':
-            file_spec_str = self._file_spec(subhalo_prop = self.subhalo_prop)
-        elif self.cenque_type == 'sf_assigned':
-            file_spec_str = self._file_spec(
-                    subhalo_prop = self.subhalo_prop, 
-                    sfr_prop = self.sfr_prop
-                    )
-        else: 
-            raise NameError() 
-
-        cenque_filename = ''.join([
+        file_spec_str = self._file_spec(
+                subhalo_prop=self.subhalo_prop, 
+                sfr_prop=self.sfr_prop
+                )
+        cgpop_file = ''.join([
             'dat/CenQue/', 
-            'cenque_centrals.snapshot', 
-            str(self.nsnap), file_spec_str, '.hdf5'
+            'cgpop'
+            '.snapshot', str(self.nsnap), 
+            file_spec_str, 
+            '.hdf5'
             ]) 
 
-        return cenque_filename
+        return cgpop_filename
 
-    def _file_spec(self, subhalo_prop = None, sfr_prop  = None): 
-        
+    def _file_spec(self, subhalo_prop=None, sfr_prop=None): 
+        ''' file specifier depending on whether subhlao properties or sfr properties 
+        have been specified 
+        '''
         if subhalo_prop is None: 
             raise ValueError
     
         subhalo_str = ''.join([
-            '_subhalo.scatter', str(subhalo_prop['scatter']), 
-            '.source-', subhalo_prop['source']
+            '.subhalo_', 
+            'scatter', str(subhalo_prop['scatter']), '_', 
+            subhalo_prop['source']
             ])
 
+        sfr_str = ''
         if sfr_prop is not None: 
             sfr_str = ''.join([
-                '_sfrassign.fq-', sfr_prop['fq']['name'], 
-                '.sfr-', sfr_prop['sfr']['name']
+                '.sfr_', 
+                'fq_', sfr_prop['fq']['name'], '_', 
+                'sfr_', sfr_prop['sfr']['name']
                 ])
-        else: 
-            sfr_str = ''
 
         return ''.join([subhalo_str, sfr_str])
 
