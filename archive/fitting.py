@@ -14,37 +14,6 @@ from util import mpfit
 from sf_mainseq import get_sfr_mstar_z_groupcat
 from sf_mainseq import get_sfr_mstar_z_envcount
 
-def get_param_sfr_mstar_z(): 
-    """ Parameterized SFR(M*,z)
-    """
-    def avgsfr_sfms(mstar, z_in): 
-        #if z_in < 0.9: 
-        #    pass
-        #else: 
-        #    z_in = 0.9
-        lowmass = np.where(mstar < 9.5)
-        #factor = np.repeat(0.8, len(mstar))
-        factor = np.repeat(0.5, len(mstar))
-        #factor[lowmass] = 1.0 
-
-        #mu_SFR = factor*(mstar - 9.5) - 0.8 + 0.76 * z_in
-        mu_SFR = factor*(mstar - 10.5) + 0.76 * z_in
-        #mu_SFR = 0.5*(mstar - 10.5) + 0.76 * z_in
-        #mu_SFR = 0.65*(mstar - 10.5) + 0.76 * (z_in - 0.01)
-        return mu_SFR
-
-    def sigsfr_sfms(mstar, z_in): 
-        return 0.3 
-        #return 0.28 + 0.05*(mstar - 10.5)
-        
-    return [avgsfr_sfms, sigsfr_sfms] 
-
-def get_quiescent_mean_ssfr(mass):
-    '''
-    Calcluate the mean SSFR of the quiescent peak. Hardcoded
-    '''
-    return -0.4 * (mass - 11.1) - 12.61
-
 
 def get_bestfit_sfr_mstar_z(Mrcut=18, fid_mass=10.5, clobber=False):
     ''' Calculate average SFR and standard deviation of the SF main sequence as a 
@@ -302,23 +271,39 @@ def get_bestfit_sfms_envcount(fid_mass = 10.5, clobber = False):
         return [zmids, slopes, yints]
 
 # ---- MPfit stuff ----
-def line(x, p): 
-    # just line function 
-    return p[0]*x + p[1]
-
-def line_fixedslope(x, p, slope=0.56): 
-    # Line with specified fixed slope 
-    return slope * x + p[0]
-
-def mpfit_line(p, fjac=None, x=None, y=None, err=None): 
-    model = line(x, p) 
-    status = 0 
-    return([status, (y-model)/err]) 
-
-def mpfit_line_fixedslope(p, slope=0.56, fjac=None, x=None, y=None, err=None): 
-    model = line_fixedslope(x, p, slope=slope) 
-    status = 0 
-    return([status, (y-model)/err]) 
 
 if __name__=="__main__":
     print get_bestfit_sfr_mstar_z(10.5, 0.7, clobber=True)
+
+
+"""
+    def get_param_sfr_mstar_z(): 
+        ''' Parameterized SFR(M*,z)
+        '''
+        def avgsfr_sfms(mstar, z_in): 
+            #if z_in < 0.9: 
+            #    pass
+            #else: 
+            #    z_in = 0.9
+            lowmass = np.where(mstar < 9.5)
+            #factor = np.repeat(0.8, len(mstar))
+            factor = np.repeat(0.5, len(mstar))
+            #factor[lowmass] = 1.0 
+
+            #mu_SFR = factor*(mstar - 9.5) - 0.8 + 0.76 * z_in
+            mu_SFR = factor*(mstar - 10.5) + 0.76 * z_in
+            #mu_SFR = 0.5*(mstar - 10.5) + 0.76 * z_in
+            #mu_SFR = 0.65*(mstar - 10.5) + 0.76 * (z_in - 0.01)
+            return mu_SFR
+
+        def sigsfr_sfms(mstar, z_in): 
+            return 0.3 
+            #return 0.28 + 0.05*(mstar - 10.5)
+            
+        return [avgsfr_sfms, sigsfr_sfms] 
+    def get_quiescent_mean_ssfr(mass):
+        '''
+        Calcluate the mean SSFR of the quiescent peak. Hardcoded
+        '''
+        return -0.4 * (mass - 11.1) - 12.61
+"""
