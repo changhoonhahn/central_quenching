@@ -23,8 +23,8 @@ from defutility.plotting import prettycolors
 
 
 # spline between z and t_cosmic
-z, t = np.loadtxt('snapshot_table.dat', unpack=True, usecols=[2, 3]) 
-z_of_t = interpolate.interp1d(list(reversed(t)), list(reversed(z)), kind='cubic') 
+z_snap, t_snap = np.loadtxt('snapshot_table.dat', unpack=True, usecols=[2, 3]) 
+z_of_t = interpolate.interp1d(list(reversed(t_snap)), list(reversed(z_snap)), kind='cubic') 
 
 def InheritSF(nsnap_descendant, nsnap_ancestor=20, 
         subhalo_prop = {'scatter': 0.0, 'source': 'li-march'}, 
@@ -525,6 +525,7 @@ def _StarformingEvol_Predict(ancestor, descendant, succession=None, will=None,
     
     # star forming ancestors
     sf_ancestors = np.where(ancestor.sfr_class[will] == 'star-forming')[0]  # SF ancestors
+    q_ancestors = np.where(ancestor.sfr_class[will] == 'quiescent')[0]  # Q ancestor 
 
     # star-formation duty cycle parameters
     dutycycle_time = time.time()
@@ -542,6 +543,7 @@ def _StarformingEvol_Predict(ancestor, descendant, succession=None, will=None,
             }
 
     sham_mass =  descendant.mass[succession[sf_ancestors]].copy()   # descendant SHAM masses
+    MshamEvol = ancestor.Msham_evol[0]
 
     mass_time = time.time()
     M_evolved, SFR_evolved, tQ = \
@@ -549,6 +551,7 @@ def _StarformingEvol_Predict(ancestor, descendant, succession=None, will=None,
                     ancestor.mass_genesis[will[sf_ancestors]], 
                     ancestor.tsnap_genesis[will[sf_ancestors]], 
                     descendant.t_cosmic,
+                    ancestor_Mq=MshamEvol[will[q_ancestors],:], 
                     **kwargs_sfr               
                     )
     descendant.mass[succession[sf_ancestors]] = M_evolved
@@ -567,7 +570,7 @@ def _StarformingEvol_Predict(ancestor, descendant, succession=None, will=None,
             descendant.sfr[succession[sf_ancestors]] - descendant.mass[succession[sf_ancestors]]
     return     
 
-def MstarSFR_predict_evol(M0, t0, tf, t_step=0.1, **kwargs): 
+def MstarSFR_predict_evol(M0, t0, tf, t_step=0.1, ancestor_Mq=None, **kwargs): 
     ''' Evolve stellar mass, SFR, and quench galaxies predictively. 
     In other words, determine how many galaxies need to be quenched 
     in order to match the quiescent fraction at t_step timesteps.  
@@ -608,17 +611,13 @@ def MstarSFR_predict_evol(M0, t0, tf, t_step=0.1, **kwargs):
         sf_within = np.where((t0 <= tt) & (tQ == 999.))[0]
         Nsf_0 = len(sf_within)          # Number of SF galaxies that have not started SFing 
         
-        # SF galaxies that begin quenching between tt and tt + t_step 
-        P_sf = np.random.uniform(low=0., high=1., size=Nsf_0)
-        
-        #t_offset = -2.7 * (Mstar[sf_within] - 11.5)
-        #toolittle = np.where(t_offset < 0.)
-        #t_offset[toolittle] = 0.
-        t_offset = np.zeros(len(sf_within))
+        qf = Fq()
+        Fq_anal = qf.model      # analytic quiescent fraction 
+        closest_t_snap = t_snap.index(t_snap - tt)-1
 
-        fudge = 1.
+        Fq_anal(Mstar[within], Util.get_zsnap(tt + t_step), lit=fq_prop['name']) 
 
-        P_q = fudge * dFqdt(Mstar[sf_within], tt + t_offset + 0.5 * t_step, lit=fq_prop['name']) * t_step    
+        P_q = dFqdt(Mstar[sf_within], tt + t_offset + 0.5 * t_step, lit=fq_prop['name']) * t_step    
         q_ing = np.where(P_q > P_sf)
         print P_q.min(), P_q.max()
         print len(q_ing[0]), ' SF galaxies out of ', Nsf_0, ' galaxies  start quenching'
@@ -642,8 +641,6 @@ def MstarSFR_predict_evol(M0, t0, tf, t_step=0.1, **kwargs):
         raise ValueError
 
     return Mstar, SFR, tQ
-
-
 
 def logSFR_M_t(logmass, t_input, t_init=None, t_q=None, z_q=None, M_q=None, 
         dutycycle_prop=None, tau_prop=None, sfms_prop=None, 

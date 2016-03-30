@@ -1187,7 +1187,7 @@ if __name__=="__main__":
             shgrow = False
         for esemeffes in ['kinked']: #['linear']: # , 'kinked']:
             kwargs = kwargs_InheritSF(
-                    nsnap_ancestor=20,
+                    nsnap_ancestor=10,
                     sfms_evol=esemeffes,
                     dutycycle_evol=duty, 
                     mass_evol=mevo, 

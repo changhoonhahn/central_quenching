@@ -254,6 +254,8 @@ class Lineage(object):
         anc_zsnap_genesis = np.repeat(-999., len(self.ancestor.snap_index))
         anc_mass_genesis = np.repeat(-999., len(self.ancestor.snap_index))
         anc_halomass_genesis = np.repeat(-999., len(self.ancestor.snap_index))
+
+        anc_Msham = np.repeat(-999., len(self.ancestor.snap_index)*len(child_list)).reshape(len(self.ancestor.snap_index), len(child_list))
     
         # go down the snapshots from nsnap_ancestor and track subhalos
         for i_snap in range(1, self.nsnap_ancestor)[::-1]:    
@@ -262,9 +264,14 @@ class Lineage(object):
             ancestor_index = getattr(child, 'ancestor'+str(self.nsnap_ancestor))
 
             # has ancestors at nsnap_ancestor
-            has_ancestor, has_descendant = util.intersection_index(ancestor_index, self.ancestor.snap_index)
+            has_ancestor, has_descendant = util.intersection_index(
+                    ancestor_index, self.ancestor.snap_index)
             print 'Snanpshot ', i_snap
-            print 'Children with ancestors ', len(has_ancestor), ' All children ', len(child.snap_index)
+            print 'Children with ancestors ', len(has_ancestor), \
+                    ' All children ', len(child.snap_index)
+
+            # save SHAM masses
+            anc_Msham[has_descendant, i_snap-1] = child.mass[has_ancestor]
     
             # snapshot, t_cosmic, and redshift where the subhalo starts 
             # hosting a galaxy. Aslo the mass of the new galaxy
@@ -272,6 +279,7 @@ class Lineage(object):
             mass_genesis = np.repeat(-999., len(child.snap_index)) 
             halomass_genesis = np.repeat(-999., len(child.snap_index)) 
             ancs = ancestor_index[has_ancestor] # ancestor indices
+
     
             # go through higher redshift snapshots in order to determine when the
             # subhalo was first "started"
@@ -320,7 +328,7 @@ class Lineage(object):
 
         positive = np.where(anc_nsnap_genesis > 0)
         self.ancestor.sample_trim(positive[0])
-        self.ancestor.data_columns += ['nsnap_genesis', 'tsnap_genesis', 'zsnap_genesis', 'mass_genesis', 'halomass_genesis']
+        self.ancestor.data_columns += ['nsnap_genesis', 'tsnap_genesis', 'zsnap_genesis', 'mass_genesis', 'halomass_genesis', 'Msham_evol']
 
         anc_tsnap_genesis[positive] = util.get_t_nsnap(anc_nsnap_genesis[positive])
         anc_zsnap_genesis[positive] = util.get_z_nsnap(anc_nsnap_genesis[positive])
@@ -330,6 +338,7 @@ class Lineage(object):
         setattr(self.ancestor, 'zsnap_genesis', anc_zsnap_genesis[positive])
         setattr(self.ancestor, 'mass_genesis', anc_mass_genesis[positive])
         setattr(self.ancestor, 'halomass_genesis', anc_halomass_genesis[positive])
+        setattr(self.ancestor, 'Msham_evol', anc_Msham[positive, :])
 
         return None
 
@@ -424,7 +433,7 @@ class Lineage(object):
 
 
 if __name__=="__main__": 
-    for nsnap in [10, 15, 20]: 
+    for nsnap in [10]:#, 15, 20]: 
         for scat in [0.0, 0.2]:
             start_time = time.time()
             bloodline = Lineage(nsnap_ancestor=nsnap, 
