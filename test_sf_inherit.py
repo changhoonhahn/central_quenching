@@ -425,7 +425,7 @@ def DescendantSFMS_composition(nsnap_descendant, abc_step=29, bovyplot=False,
     fig_file = ''.join([
         'figure/test/', 
         'SFMS_composition.', 
-        ''.join((sfinherit_file.rsplit('/')[-1]).rsplit('.')[:-1]), 
+        '.'.join((sfinherit_file.rsplit('/')[-1]).rsplit('.')[:-1]), 
         bovyplot_str, 
         '.png'])
     sfms_plot.save_fig(fig_file)
@@ -496,7 +496,7 @@ def DescendantFQ(nsnap_descendant, abc_step=29, **sfinh_kwargs):
         'Fq.', 
         '.'.join((sfinherit_file.rsplit('/')[-1]).rsplit('.')[:-1]), 
         '.png'])
-    descendant.plotFq(model=True, savefig=fig_file)
+    descendant.plotFq(model=sfinh_kwargs['sfr_prop']['fq']['name'], savefig=fig_file)
     return None
 
 def Read_InheritSF(nsnap_descendant, nsnap_ancestor=20, n_step=29, 
@@ -620,7 +620,7 @@ def kwargs_InheritSF(nsnap_ancestor=10, subhalo_prop=None, fq_prop=None,
         subhalo_prop = {'scatter': 0.2, 'source': 'li-march'}
     # quiescent fraction
     if fq_prop is None: 
-        fq_prop = {'name': 'wetzelsmooth'}
+        fq_prop = {'name': 'wetzel'}
     # SFMS  
     if sfms_evol is None: 
         sfms_prop = {'name': 'linear', 'mslope': 0.55, 'zslope': 1.1}
@@ -1180,7 +1180,7 @@ def kwargs_InheritSF(nsnap_ancestor=10, subhalo_prop=None, fq_prop=None,
 if __name__=="__main__":
     #print abc_posterior_median(29)
     mevo = 'euler'
-    for duty in ['notperiodic']:#, 'newamp_squarewave']: 
+    for duty in ['notperiodic', 'newamp_squarewave']: 
         if duty == 'notperiodic':  
             shgrow = True
         else: 
@@ -1193,10 +1193,10 @@ if __name__=="__main__":
                     mass_evol=mevo, 
                     evol_type='simult',
                     subhalogrowth=shgrow)
-            for nsnap in [1]: #range(1,20)[::-1]: 
+            for nsnap in range(1,10)[::-1]: 
                 Save_InheritSF(nsnap, **kwargs)
-                #DescendantSMHM_composition(nsnap, **kwargs)
+                DescendantSMHM_composition(nsnap, **kwargs)
                 DescendantSFMS_composition(nsnap, **kwargs)
                 DescendantFQ(nsnap, **kwargs)
-                #DescendantSMF_composition(nsnap, **kwargs)
+                DescendantSMF_composition(nsnap, **kwargs)
             AnecstorPlots(n_descendant=9, **kwargs)

@@ -181,25 +181,43 @@ class Fq(object):
 
         elif lit == 'wetzel':       # Wetzel et al. 2013
             qf_z0 = -6.04 + 0.63*Mstar
+            
+            try: 
+                alpha = np.repeat(-2.3, len(Mstar))
 
-            if Mstar < 9.5: 
-                alpha = -2.3
-            elif (Mstar >= 9.5) & (Mstar < 10.0): 
-                alpha = -2.1
-            elif (Mstar >= 10.0) & (Mstar < 10.5): 
-                alpha = -2.2
-            elif (Mstar >= 10.5) & (Mstar < 11.0): 
-                alpha = -2.0
-            elif (Mstar >= 11.0): # & (Mstar <= 11.5): 
-                alpha = -1.3
+                w1 = np.where((Mstar >= 9.5) & (Mstar < 10.0))
+                alpha[w1] = -2.1
+                w2 = np.where((Mstar >= 10.) & (Mstar < 10.5))
+                alpha[w2] = -2.2
+                w3 = np.where((Mstar >= 10.5) & (Mstar < 11.))
+                alpha[w3] = -2.0
+                w4 = np.where(Mstar >= 11.)
+                alpha[w4] = -1.3
+            except TypeError: 
+                if Mstar < 9.5: 
+                    alpha = -2.3
+                elif (Mstar >= 9.5) & (Mstar < 10.0): 
+                    alpha = -2.1
+                elif (Mstar >= 10.0) & (Mstar < 10.5): 
+                    alpha = -2.2
+                elif (Mstar >= 10.5) & (Mstar < 11.0): 
+                    alpha = -2.0
+                elif (Mstar >= 11.0): # & (Mstar <= 11.5): 
+                    alpha = -1.3
             #else: 
             #    raise NameError('Mstar is out of range')
 
             output = qf_z0 * ( 1.0 + z_in )**alpha 
-            if output < 0.0: 
-                output = 0.0
-            elif output > 1.0: 
-                output = 1.0 
+            try: 
+                if output.min() < 0.0: 
+                    output[np.where(output < 0.0)] = 0.0
+                if output.max() > 1.0: 
+                    output[np.where(output > 1.0)] = 1.0
+            except TypeError:  
+                if output < 0.0: 
+                    output = 0.0
+                elif output > 1.0: 
+                    output = 1.0 
 
             return output 
         
@@ -209,10 +227,16 @@ class Fq(object):
             alpha = -1.75
 
             output = qf_z0 * ( 1.0 + z_in )**alpha 
-            if output.min() < 0.0: 
-                output[np.where(output < 0.0)] = 0.0
-            if output.max() > 1.0: 
-                output[np.where(output > 1.0)] = 1.0
+            try: 
+                if output.min() < 0.0: 
+                    output[np.where(output < 0.0)] = 0.0
+                if output.max() > 1.0: 
+                    output[np.where(output > 1.0)] = 1.0
+            except TypeError: 
+                if output < 0.0: 
+                    output = 0.0
+                if output > 1.0: 
+                    output = 1.0
 
             return output 
         else: 
@@ -231,12 +255,14 @@ def dFqdt(mstar, t_cosmic, lit='wetzelsmooth', dt=0.01):
 
     qf = Fq() 
     fq_model = qf.model 
-    
-    outofbound = np.where(t_cosmic > 13.1)
-    t_cosmic[outofbound] = 13.1
+    try:  
+        outofbound = np.where(t_cosmic > 13.1)
+        t_cosmic[outofbound] = 13.1
+    except TypeError: 
+        if t_cosmic > 13.1: 
+            t_cosmic = 13.1
 
     dfdt = (fq_model(mstar, Util.get_zsnap(t_cosmic+dt), lit=lit) - fq_model(mstar, Util.get_zsnap(t_cosmic), lit=lit))/dt
-    #dfdt = 0.3 * (mstar - 9.0) 
 
     neg = np.where(dfdt < 0.)
     dfdt[neg] = 0.

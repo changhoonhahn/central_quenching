@@ -255,7 +255,10 @@ class Lineage(object):
         anc_mass_genesis = np.repeat(-999., len(self.ancestor.snap_index))
         anc_halomass_genesis = np.repeat(-999., len(self.ancestor.snap_index))
 
-        anc_Msham = np.repeat(-999., len(self.ancestor.snap_index)*len(child_list)).reshape(len(self.ancestor.snap_index), len(child_list))
+        anc_Msham = np.repeat(
+                -999., len(self.ancestor.snap_index)*(len(child_list)+1)
+                ).reshape(len(self.ancestor.snap_index), len(child_list)+1)
+        anc_Msham[:, self.nsnap_ancestor-1] = self.ancestor.mass
     
         # go down the snapshots from nsnap_ancestor and track subhalos
         for i_snap in range(1, self.nsnap_ancestor)[::-1]:    
@@ -433,7 +436,7 @@ class Lineage(object):
 
 
 if __name__=="__main__": 
-    for nsnap in [10]:#, 15, 20]: 
+    for nsnap in [15, 20]: 
         for scat in [0.0, 0.2]:
             start_time = time.time()
             bloodline = Lineage(nsnap_ancestor=nsnap, 

@@ -355,6 +355,7 @@ def _StarformingEvol_SimulEvo(ancestor, descendant, succession=None, will=None,
     
     # star forming ancestors
     sf_ancestors = np.where(ancestor.sfr_class[will] == 'star-forming')[0]  # SF ancestors
+    q_ancestors = np.where(ancestor.sfr_class[will] == 'quiescent')[0]  # SF ancestors
 
     # star-formation duty cycle parameters
     dutycycle_time = time.time()
@@ -372,6 +373,7 @@ def _StarformingEvol_SimulEvo(ancestor, descendant, succession=None, will=None,
             }
 
     sham_mass =  descendant.mass[succession[sf_ancestors]].copy()   # descendant SHAM masses
+    MshamEvol = ancestor.Msham_evol[0]
 
     mass_time = time.time()
     M_evolved, SFR_evolved, tQ = \
@@ -379,6 +381,7 @@ def _StarformingEvol_SimulEvo(ancestor, descendant, succession=None, will=None,
                     ancestor.mass_genesis[will[sf_ancestors]], 
                     ancestor.tsnap_genesis[will[sf_ancestors]], 
                     descendant.t_cosmic,
+                    ancestor_Mq=MshamEvol[will[q_ancestors],:], 
                     **kwargs_sfr               
                     )
     descendant.mass[succession[sf_ancestors]] = M_evolved
@@ -397,7 +400,7 @@ def _StarformingEvol_SimulEvo(ancestor, descendant, succession=None, will=None,
             descendant.sfr[succession[sf_ancestors]] - descendant.mass[succession[sf_ancestors]]
     return     
 
-def MstarSFR_simul_evol(M0, t0, tf, t_step=0.1, **kwargs): 
+def MstarSFR_simul_evol(M0, t0, tf, t_step=0.2, ancestor_Mq=None, **kwargs): 
     ''' Evolve stellar mass, SFR, and quench galaxies simultaneously. 
 
     Notes
@@ -406,7 +409,7 @@ def MstarSFR_simul_evol(M0, t0, tf, t_step=0.1, **kwargs):
         The number of galaxies that start quenching between t0 and t0+tstep 
         is determined by, 
 
-        N_quenching = N_sf(t0) * dFq/dt(t0 + 0.5 tstep) * tstep
+        N_quenching = N_sf(t0) * (1/( 1 - fQ(t0) )) * dFq/dt(t0 + 0.5 tstep) * tstep
 
     '''
     dutycycle_prop = kwargs['dutycycle_prop']
@@ -424,22 +427,83 @@ def MstarSFR_simul_evol(M0, t0, tf, t_step=0.1, **kwargs):
     t_evol = np.arange(t00, tf+t_step, t_step) 
     t_evol[-1] = tf 
 
+    qf = Fq()
+    Fq_anal = qf.model
+
     for tt in t_evol: 
+        print 't_cosmic = ', tt
         within = np.where(t0 <= tt)    # tsnap_genesis <= t
         sf_within = np.where((t0 <= tt) & (tQ == 999.))[0] # Not quenching SF galaxies 
         Nsf_0 = len(sf_within)          
         
-        # SF galaxies that begin quenching between tt and tt + t_step 
-        P_sf = np.random.uniform(low=0., high=1., size=Nsf_0)
-
-        t_offset = np.zeros(len(sf_within))
-
-        fudge = 1.
-
-        P_q = fudge * dFqdt(Mstar[sf_within], tt + t_offset + 0.5 * t_step, lit=fq_prop['name']) * t_step    
+        P_sf = np.random.uniform(0., 1., Nsf_0)
+    
+        # Initial estimate of P_q = (1/( 1 - fQ(t0) )) * dFq/dt(t0 + 0.5 tstep) * tstep
+        #t_offset = np.zeros(len(sf_within))
+        t_offset = -2.7 * (Mstar[sf_within] - 11.5)
+        t_offset[np.where(t_offset < 0.)] = 0.
+        fudge = 2.  # fudge factor
+        f_Ng = (1./(1.- Fq_anal(Mstar[sf_within], z_of_t(tt), lit=fq_prop['name'])))
+        whereinf = np.where(f_Ng == np.inf) 
+        P_q = fudge * f_Ng * dFqdt(Mstar[sf_within], tt + t_offset + 0.5 * t_step, lit=fq_prop['name']) * t_step    
+        P_q[whereinf] = 1.0
+        print 'P_q', P_q.min(), P_q.max(), P_q.mean()
         q_ing = np.where(P_q > P_sf)
-        print P_q.min(), P_q.max()
-        print len(q_ing[0]), ' SF galaxies out of ', Nsf_0, ' galaxies  start quenching'
+        print 'Initial guess ', len(q_ing[0]), ' SF galaxies out of ', Nsf_0, ' galaxies  start quenching'
+
+        # assign them quenching times
+        tQ_tmp = tQ
+        tQ_tmp[sf_within[q_ing]] = np.random.uniform(low=tt, high=tt+t_step, size=len(q_ing[0]))
+
+        # M_sham of the quiescent galaxies at the closest snapshot. 
+        closest_t0_snap = list(np.abs(t_snap-tt)).index(np.abs(t_snap - tt).min()) - 1
+        Msham_q0 = ancestor_Mq[:, closest_t0_snap]
+        M_t0_sample = np.concatenate([Mstar[within], Msham_q0[np.where(Msham_q0 > 0.)]])
+
+        kwargs_sfr = {
+                't_init': t0[within], 
+                't_q': tQ_tmp[within], 
+                'M_q': Mq[within], 
+                'dutycycle_prop': dutycycle_prop, 
+                'tau_prop': tau_prop, 
+                'sfms_prop': sfms_prop, 
+                'indices': within
+                }
+        M_evol, sfr_evol, Mq_evol = M_integrate(Mstar[within], tt, tt+t_step, massevol_prop=massevol_prop, kwargs_sfr=kwargs_sfr)
+
+        # M_sham of the quiescent galaxies at the closest snapshot. 
+        closest_t_snap = list(np.abs(t_snap-tt-t_step)).index(np.abs(t_snap - tt-t_step).min()) - 1
+        Msham_qf = ancestor_Mq[:, closest_t_snap]
+        M_tf_sample = np.concatenate([M_evol, Msham_qf[np.where(Msham_qf > 0.)]])
+        
+        # dPQ correction to the quenching to account for change in Ng(M*,t)
+        M_bins = np.arange(
+                np.min([M_t0_sample.min(), M_tf_sample.min()])-0.5, 
+                np.max([M_t0_sample.max(), M_tf_sample.max()])+1.0, 0.5) 
+        M_low = M_bins[:-1]
+        M_high = M_bins[1:]
+        dPq = np.zeros(len(M_low))
+        for i_m in range(len(M_low)): 
+            gal_0 = np.where((M_t0_sample >= M_low[i_m]) & (M_t0_sample < M_high[i_m]))
+            gal_p = np.where((M_tf_sample >= M_low[i_m]) & (M_tf_sample < M_high[i_m]))
+            gal_sf_0 = np.where((t0 <= tt) & (tQ == 999.) & (Mstar >= M_low[i_m]) & (Mstar < M_high[i_m])) 
+
+            Ng0 = np.float(len(gal_0[0]))
+            Ngp = np.float(len(gal_p[0]))
+            Nsf0 = np.float(len(gal_sf_0[0]))
+            if Nsf0 == 0: 
+                continue
+
+            fq_tf = Fq_anal(0.5*(M_high[i_m]+M_low[i_m]), z_of_t(tt+t_step), lit=fq_prop['name'])
+            dPq[i_m] = (Ngp - Ng0) * (1. - fq_tf)/Nsf0
+
+        dPq[np.where(dPq < 0.)] = 0.
+        dPq_M = interpolate.interp1d(0.5*(M_low + M_high), dPq, kind='linear') 
+        print 'dPq', dPq_M(Mstar[sf_within]).min(), dPq_M(Mstar[sf_within]).max(), np.mean(dPq_M(Mstar[sf_within]))
+        P_q += dPq_M(Mstar[sf_within])
+        
+        q_ing = np.where(P_q > P_sf)
+        print 'After correction: ', len(q_ing[0]), ' SF galaxies out of ', Nsf_0, ' galaxies  start quenching'
         # assign them quenching times
         tQ[sf_within[q_ing]] = np.random.uniform(low=tt, high=tt+t_step, size=len(q_ing[0]))
 
@@ -453,6 +517,7 @@ def MstarSFR_simul_evol(M0, t0, tf, t_step=0.1, **kwargs):
                 'indices': within
                 }
         M_evol, sfr_evol, Mq_evol = M_integrate(Mstar[within], tt, tt+t_step, massevol_prop=massevol_prop, kwargs_sfr=kwargs_sfr)
+
         Mstar[within] = M_evol
         SFR[within] = sfr_evol
         Mq[within] = Mq_evol
@@ -461,56 +526,6 @@ def MstarSFR_simul_evol(M0, t0, tf, t_step=0.1, **kwargs):
         raise ValueError
 
     return Mstar, SFR, tQ
-
-def _SHAM_Mquenching(tq, lineage=None, descendant=None, descendant_index=None): 
-    ''' Based on the quenching time, calculate the SHAM stellar mass at the time 
-    the galaxy starts to quench. Code cycles through all the descendants and 
-    then obtains the SHAM mass at the snapshots closest to t_q.
-
-    Note
-    ----
-    * SHAM masses sometimes decrease as a function of cosmic time...
-
-    '''
-    # get closest snapshots of galaxies that will quench
-    willquench = np.where(tq < 999)[0]
-    snap_q = np.repeat(-999, len(tq))
-    snap_q[willquench] = get_nsnap_t(tq[willquench])
-    #print tq[willquench][:10]
-    #print snap_q[willquench][:10]
-
-    M_q = np.repeat(-999., len(tq))
-
-    nsnap_ancestor = lineage.nsnap_ancestor
-
-    ancestor_index = getattr(descendant, 'ancestor'+str(nsnap_ancestor))[descendant_index]
-
-    for snap in np.unique(snap_q[willquench]): 
-        # galaxies that quench at this snapshot 
-        quenches_here = np.where(snap_q == snap)[0]
-
-        if snap < descendant.nsnap: 
-            continue
-        elif snap < nsnap_ancestor: 
-            descend_snap = getattr(lineage, 'descendant_snapshot'+str(snap))
-        
-            f_match, snap_match = intersection_index(
-                    ancestor_index[quenches_here], 
-                    getattr(descend_snap, 'ancestor'+str(nsnap_ancestor))
-                    )
-            M_q[quenches_here[f_match]] = descend_snap.mass[snap_match] 
-
-        elif snap == nsnap_ancestor: 
-            f_match, snap_match = intersection_index(
-                    ancestor_index[quenches_here], 
-                    lineage.ancestor.snap_index
-                    )
-            M_q[quenches_here[f_match]] = lineage.ancestor.mass[snap_match]
-        else: 
-            raise ValueError
-        #delM = (descendant.mass[descendant_index])[quenches_here[f_match]] - M_q[quenches_here[f_match]]
-    #print M_q[:100]
-    return M_q
 
 # SF Evolution (Predictive) 
 def _StarformingEvol_Predict(ancestor, descendant, succession=None, will=None, 
@@ -551,6 +566,7 @@ def _StarformingEvol_Predict(ancestor, descendant, succession=None, will=None,
                     ancestor.mass_genesis[will[sf_ancestors]], 
                     ancestor.tsnap_genesis[will[sf_ancestors]], 
                     descendant.t_cosmic,
+                    SFR0=ancestor.sfr[will[sf_ancestors]],
                     ancestor_Mq=MshamEvol[will[q_ancestors],:], 
                     **kwargs_sfr               
                     )
@@ -570,10 +586,25 @@ def _StarformingEvol_Predict(ancestor, descendant, succession=None, will=None,
             descendant.sfr[succession[sf_ancestors]] - descendant.mass[succession[sf_ancestors]]
     return     
 
-def MstarSFR_predict_evol(M0, t0, tf, t_step=0.1, ancestor_Mq=None, **kwargs): 
+def MstarSFR_predict_evol(M0, t0, tf, t_step=0.2, SFR0=None, ancestor_Mq=None, **kwargs): 
     ''' Evolve stellar mass, SFR, and quench galaxies predictively. 
     In other words, determine how many galaxies need to be quenched 
     in order to match the quiescent fraction at t_step timesteps.  
+
+    Parameters
+    ----------
+    M0 : (np.ndarray)
+        Numpy nd array that specifies the M* at "genesis"
+    t0 : (np.ndarray)
+        Numpy nd array that specifies the cosmic time at "genesis"
+    tf : (float)
+        Float that specifies the cosmic time of the descendant. 
+        Final t_cosmic. 
+    t_step : (float) 
+        time step of the evolution  
+    ancestor_Mq : (np.ndarray)
+        Numpy nd array with dimensions q_ancestors x ancestor_snapshot-1 that 
+        specifies the M_sham for all snapshots (used to measure fQ_obvs). 
 
     Notes
     -----
@@ -581,7 +612,7 @@ def MstarSFR_predict_evol(M0, t0, tf, t_step=0.1, ancestor_Mq=None, **kwargs):
         The number of galaxies that start quenching between t0 and t0+tstep 
         is determined by, 
 
-        N_quenching = N_sf(t0) * ( Fq(t0 + 0.5 tstep) - Fq_obv(t0) )/tstep
+        N_quenching = N_sf(t0) * ( Fq(t0 + 0.5 tstep) - Fq_obv(t0) )/ 0.5 tstep * tstep 
     
     The main problem with this scheme is that if the quenching timescale 
     is significantly longer than the timesteps, the change in Fq_obv
@@ -598,7 +629,7 @@ def MstarSFR_predict_evol(M0, t0, tf, t_step=0.1, ancestor_Mq=None, **kwargs):
     massevol_prop = kwargs['massevol_prop']
 
     Mstar = M0 
-    SFR = np.repeat(-999., len(M0))
+    SFR = SFR0
     tQ = np.repeat(999., len(M0))
     Mq = np.repeat(-999., len(M0))
     
@@ -606,21 +637,116 @@ def MstarSFR_predict_evol(M0, t0, tf, t_step=0.1, ancestor_Mq=None, **kwargs):
     t_evol = np.arange(t00, tf+t_step, t_step) 
     t_evol[-1] = tf 
 
+    qf = Fq()
+    Fq_anal = qf.model
+    Fq_cut = qf.SFRcut
+
     for tt in t_evol: 
-        within = np.where(t0 <= tt)    # tsnap_genesis <= t
-        sf_within = np.where((t0 <= tt) & (tQ == 999.))[0]
-        Nsf_0 = len(sf_within)          # Number of SF galaxies that have not started SFing 
+        print 't_cosmic = ', tt
+        within = np.where(t0 <= tt)[0]    # tsnap_genesis <= t
+        sf_within = np.where((t0 <= tt) & (tQ == 999.))[0] # Not quenching SF galaxies 
+        Nsf_0 = len(sf_within)          
         
-        qf = Fq()
-        Fq_anal = qf.model      # analytic quiescent fraction 
-        closest_t_snap = t_snap.index(t_snap - tt)-1
+        P_sf = np.random.uniform(0., 1., Nsf_0)
 
-        Fq_anal(Mstar[within], Util.get_zsnap(tt + t_step), lit=fq_prop['name']) 
+        # M_sham of the quiescent galaxies at the closest snapshot. 
+        closest_t0_snap = list(np.abs(t_snap-tt)).index(np.abs(t_snap - tt).min()) - 1
+        Msham_q0 = ancestor_Mq[:, closest_t0_snap]
+        M_t0_sample = np.concatenate([Mstar[within], Msham_q0[np.where(Msham_q0 > 0.)]])
 
-        P_q = dFqdt(Mstar[sf_within], tt + t_offset + 0.5 * t_step, lit=fq_prop['name']) * t_step    
+        # calculate the observed quiescent fraction fQ_obvs
+        M_bins = np.arange(M_t0_sample.min()-0.5, M_t0_sample.max()+1.0, 0.5) 
+        M_low = M_bins[:-1]
+        M_high = M_bins[1:]
+
+        fq_obvs = np.zeros(len(M_low)) 
+        for i_m in range(len(M_low)):  
+            mbin = np.where((Mstar[within] >= M_low[i_m]) & (Mstar[within] < M_high[i_m]))
+            q_mbin = np.where((Msham_q0 >= M_low[i_m]) & (Msham_q0 < M_high[i_m]))
+            sf_mbin = np.where((Mstar[sf_within] >= M_low[i_m]) & (Mstar[sf_within] < M_high[i_m]))
+
+            gal_sf = np.where(SFR[within[mbin]] > Fq_cut(Mstar[within[mbin]], z_of_t(tt), sfms_prop=sfms_prop))
+            Nsf = np.float(len(gal_sf[0])) 
+
+            if np.float(len(mbin[0])+len(q_mbin[0])) == 0: 
+                continue 
+            #fq_tmp = 1 - np.float(len(sf_mbin[0]))/np.float(len(mbin[0])+len(q_mbin[0]))
+            fq_tmp = 1 - (0.5 * (Nsf+np.float(len(sf_mbin[0]))))/np.float(len(mbin[0])+len(q_mbin[0]))
+            fq_obvs[i_m] = fq_tmp #np.float(len(q_mbin[0]))/np.float(len(sf_mbin[0])+len(q_mbin[0])))
+        print 0.5 * (M_low + M_high) 
+        print fq_obvs
+
+        # Fq_obvs function  
+        fq_obvs_M = interpolate.interp1d(0.5 * (M_low + M_high), fq_obvs, kind='linear') 
+
+        f_Ng = (1./(1.- Fq_anal(Mstar[sf_within], z_of_t(tt), lit=fq_prop['name'])))
+        whereinf = np.where(f_Ng == np.inf) 
+
+        dfqdt_obvs = (Fq_anal(Mstar[sf_within], z_of_t(tt+t_step), lit=fq_prop['name']) - fq_obvs_M(Mstar[sf_within]))/t_step
+        dfqdt_theo = dFqdt(Mstar[sf_within], tt + t_step, lit=fq_prop['name'])
+        dfqdt_obvs[np.where(dfqdt_obvs < dfqdt_theo)] = dfqdt_theo[np.where(dfqdt_obvs < dfqdt_theo)]
+        #print 'M*', Mstar[sf_within][:5]
+        #print 'dFq/dt observed: ', dfqdt_obvs[:5]
+        #print 'dFq/dt theoreti: ', dFqdt(Mstar[sf_within][:5], tt + t_step, lit=fq_prop['name'])
+        P_q = f_Ng * dfqdt_obvs * t_step    
+
+        P_q[whereinf] = 1.0
+        print 'P_q', P_q.min(), P_q.max(), P_q.mean()
         q_ing = np.where(P_q > P_sf)
-        print P_q.min(), P_q.max()
-        print len(q_ing[0]), ' SF galaxies out of ', Nsf_0, ' galaxies  start quenching'
+        print 'Initial guess ', len(q_ing[0]), ' SF galaxies out of ', Nsf_0, ' galaxies  start quenching'
+
+        # assign them quenching times
+        tQ_tmp = tQ
+        tQ_tmp[sf_within[q_ing]] = np.random.uniform(low=tt, high=tt+t_step, size=len(q_ing[0]))
+
+        kwargs_sfr = {
+                't_init': t0[within], 
+                't_q': tQ_tmp[within], 
+                'M_q': Mq[within], 
+                'dutycycle_prop': dutycycle_prop, 
+                'tau_prop': tau_prop, 
+                'sfms_prop': sfms_prop, 
+                'indices': within
+                }
+        M_evol, sfr_evol, Mq_evol = M_integrate(Mstar[within], tt, tt+t_step, massevol_prop=massevol_prop, kwargs_sfr=kwargs_sfr)
+
+        # M_sham of the quiescent galaxies at the closest snapshot. 
+        closest_t_snap = list(np.abs(t_snap-tt-t_step)).index(np.abs(t_snap - tt-t_step).min()) - 1
+        Msham_qf = ancestor_Mq[:, closest_t_snap]
+        M_tf_sample = np.concatenate([M_evol, Msham_qf[np.where(Msham_qf > 0.)]])
+
+        # dPQ correction to the quenching to account for change in Ng(M*,t)
+        M_bins = np.arange(
+                np.min([M_t0_sample.min(), M_tf_sample.min()])-0.5, 
+                np.max([M_t0_sample.max(), M_tf_sample.max()])+1.0, 0.5) 
+        M_low = M_bins[:-1]
+        M_high = M_bins[1:]
+        dPq = np.zeros(len(M_low))
+        for i_m in range(len(M_low)): 
+            gal_0 = np.where((M_t0_sample >= M_low[i_m]) & (M_t0_sample < M_high[i_m]))
+            gal_p = np.where((M_tf_sample >= M_low[i_m]) & (M_tf_sample < M_high[i_m]))
+            gal_sf_0 = np.where((t0 <= tt) & (tQ == 999.) & (Mstar >= M_low[i_m]) & (Mstar < M_high[i_m])) 
+
+            Ng0 = np.float(len(gal_0[0]))
+            Ngp = np.float(len(gal_p[0]))
+            Nsf0 = np.float(len(gal_sf_0[0]))
+            if Nsf0 == 0: 
+                continue
+
+            t_offset = -2.7 * (0.5*(M_high[i_m]+M_low[i_m]) - 11.5)
+            if t_offset < 0.: 
+                t_offset = 0.
+
+            fq_tf = Fq_anal(0.5*(M_high[i_m]+M_low[i_m]), z_of_t(tt+t_step), lit=fq_prop['name'])
+            dPq[i_m] = (Ngp - Ng0) * (1. - fq_tf)/Nsf0
+
+        dPq[np.where(dPq < 0.)] = 0.
+        dPq_M = interpolate.interp1d(0.5*(M_low + M_high), dPq, kind='linear') 
+        print 'dPq', dPq_M(Mstar[sf_within]).min(), dPq_M(Mstar[sf_within]).max(), np.mean(dPq_M(Mstar[sf_within]))
+        P_q += dPq_M(Mstar[sf_within])
+        
+        q_ing = np.where(P_q > P_sf)
+        print 'After correction: ', len(q_ing[0]), ' SF galaxies out of ', Nsf_0, ' galaxies  start quenching'
         # assign them quenching times
         tQ[sf_within[q_ing]] = np.random.uniform(low=tt, high=tt+t_step, size=len(q_ing[0]))
 
@@ -634,9 +760,11 @@ def MstarSFR_predict_evol(M0, t0, tf, t_step=0.1, ancestor_Mq=None, **kwargs):
                 'indices': within
                 }
         M_evol, sfr_evol, Mq_evol = M_integrate(Mstar[within], tt, tt+t_step, massevol_prop=massevol_prop, kwargs_sfr=kwargs_sfr)
+
         Mstar[within] = M_evol
         SFR[within] = sfr_evol
         Mq[within] = Mq_evol
+
     if SFR.min() == -999.: 
         raise ValueError
 
@@ -780,6 +908,58 @@ def M_integrate(logmass0, t0, tf, massevol_prop=None, kwargs_sfr=None):
             raise ValueError("integrated mass cannot decrease over cosmic time")
 
     return logM_n_1, logSFR_n_1, M_q_new
+
+def _SHAM_Mquenching(tq, lineage=None, descendant=None, descendant_index=None): 
+    ''' Based on the quenching time, calculate the SHAM stellar mass at the time 
+    the galaxy starts to quench. Code cycles through all the descendants and 
+    then obtains the SHAM mass at the snapshots closest to t_q.
+
+    Note
+    ----
+    * SHAM masses sometimes decrease as a function of cosmic time...
+
+    '''
+    # get closest snapshots of galaxies that will quench
+    willquench = np.where(tq < 999)[0]
+    snap_q = np.repeat(-999, len(tq))
+    snap_q[willquench] = get_nsnap_t(tq[willquench])
+    #print tq[willquench][:10]
+    #print snap_q[willquench][:10]
+
+    M_q = np.repeat(-999., len(tq))
+
+    nsnap_ancestor = lineage.nsnap_ancestor
+
+    ancestor_index = getattr(descendant, 'ancestor'+str(nsnap_ancestor))[descendant_index]
+
+    for snap in np.unique(snap_q[willquench]): 
+        # galaxies that quench at this snapshot 
+        quenches_here = np.where(snap_q == snap)[0]
+
+        if snap < descendant.nsnap: 
+            continue
+        elif snap < nsnap_ancestor: 
+            descend_snap = getattr(lineage, 'descendant_snapshot'+str(snap))
+        
+            f_match, snap_match = intersection_index(
+                    ancestor_index[quenches_here], 
+                    getattr(descend_snap, 'ancestor'+str(nsnap_ancestor))
+                    )
+            M_q[quenches_here[f_match]] = descend_snap.mass[snap_match] 
+
+        elif snap == nsnap_ancestor: 
+            f_match, snap_match = intersection_index(
+                    ancestor_index[quenches_here], 
+                    lineage.ancestor.snap_index
+                    )
+            M_q[quenches_here[f_match]] = lineage.ancestor.mass[snap_match]
+        else: 
+            raise ValueError
+        #delM = (descendant.mass[descendant_index])[quenches_here[f_match]] - M_q[quenches_here[f_match]]
+    #print M_q[:100]
+    return M_q
+
+
 
 """
     if __name__=='__main__': 

@@ -427,8 +427,15 @@ class CGPop(object):
 
         if 'model' in pltkwargs.keys():
             # hardcoded for convenience 
-            if pltkwargs['model']: 
-                fq_plot.model(line_color='k', label=None)
+            if isinstance(pltkwargs['model'], bool): 
+                if pltkwargs['model']: 
+                    fq_plot.model(line_color='k', label=None)
+            else: 
+                fq_plot.model(
+                        fq_prop={
+                            'name': pltkwargs['model']
+                            }, 
+                        line_color='k', label=None) 
 
         fq_plot.set_axes()
         if 'show' in pltkwargs.keys(): 
