@@ -21,18 +21,17 @@ def AverageLogSFR_sfms(mstar, z_in, sfms_prop=None):
 
     if sfms_prop['name'] == 'linear': 
         # mass slope
-        A_highmass = sfms_prop['mslope']        # 0.55
-        A_lowmass = sfms_prop['mslope'] 
+        A_highmass = 0.53
+        A_lowmass = 0.53
         mslope = np.repeat(A_highmass, len(mstar))
         # z slope
         zslope = sfms_prop['zslope']            # 0.76, 1.1
         # offset 
-        offset = np.zeros(len(mstar))
+        offset = np.repeat(-0.11, len(mstar))
 
-    # SFMS with low mass kink
-    elif sfms_prop['name'] == 'kinked': 
+    elif sfms_prop['name'] == 'kinked': # Kinked SFMS 
         # mass slope
-        A_highmass = sfms_prop['mslope_highmass'] 
+        A_highmass = 0.53 
         A_lowmass = sfms_prop['mslope_lowmass'] 
         mslope = np.repeat(A_highmass, len(mstar))
         lowmass = np.where(mstar < 9.5)
@@ -40,12 +39,10 @@ def AverageLogSFR_sfms(mstar, z_in, sfms_prop=None):
         # z slope
         zslope = sfms_prop['zslope']            # 0.76, 1.1
         # offset
-        offset = np.zeros(len(mstar))
+        offset = np.repeat(-0.11, len(mstar))
         offset[lowmass] += A_lowmass - A_highmass 
-    #mu_SFR = factor*(mstar - 9.5) - 0.8 + 0.76 * z_in
-    #mu_SFR = factor*(mstar - 10.5) + 0.76 * z_in
-    #mu_SFR = factor*(mstar - 10.5) + 0.76 * (z_in + 0.4) + offset
-    mu_SFR = mslope * (mstar - 10.5) + zslope * z_in + offset
+
+    mu_SFR = mslope * (mstar - 10.5) + zslope * (z_in-0.0502) + offset
     return mu_SFR
 
 def ScatterLogSFR_sfms(mstar, z_in, sfms_prop=None): 
@@ -59,7 +56,8 @@ def ScatterLogSFR_sfms(mstar, z_in, sfms_prop=None):
 def AverageLogSSFR_q_peak(mstar):  
     ''' Average log(SSFR) of the quiescent peak of the SSFR distribution 
     '''
-    return -0.4 * (mstar - 11.1) - 12.61
+    #return -0.4 * (mstar - 11.1) - 12.61
+    return 0.4 * (mstar - 10.5) - 1.73 - mstar 
 
 def ScatterLogSSFR_q_peak(mstar):  
     ''' Scatter of the log(SSFR) quiescent peak of the SSFR distribution 
@@ -188,19 +186,25 @@ def logsfr_sfms_evol_t(t0, tf):
     '''
     return 0.76 * (get_zsnap(tf) - get_zsnap(t0))
 
-def DeltaLogSFR_sfms(zi, zf, z_q=None): 
+def DeltaLogSFR_sfms(zi, zf, z_q=None, sfms_prop=None): 
     ''' The evolution of log(SFR) in the SFMS
 
-    Del log(SFR)_SFMS = -0.76 * (z0 - zf)
+    Del log(SFR)_SFMS = -z_slope* (z0 - zf)
+
+    The star formation history of SF galaxies in order to match the 
+    overall SFMS evolution. Quenching galaxies still have the SFMS 
+    evolution. 
     '''
     z0 = zi #np.min([zi, zf])
 
-    if z_q is None: 
-        sfms = 0.76 * (zf - z0)
-    else:
-        sfms = 0.76 * (np.maximum(z_q, zf) - z0)
-        notevol = np.where(zf >= z0)
-        sfms[notevol] = 0.0
+    zslope = sfms_prop['zslope']
+    sfms = zslope * (zf - z0) 
+    #if z_q is None: 
+    #    sfms = zslope * (zf - z0)
+    #else:
+    #    sfms = zslope * (np.maximum(z_q, zf) - z0)
+    #    notevol = np.where(zf >= z0)
+    #    sfms[notevol] = 0.0
     return sfms 
 
 def DeltaLogSFR_quenching(tq, tf, M_q=None, tau_prop=None): 

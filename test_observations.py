@@ -11,6 +11,8 @@ from observations import PrimusSDSS
 from observations import ObservedSFMS
 from observations import FitObservedSFMS
 from observations import ObservedSSFR
+from observations import ObservedSSFR_Peaks
+from observations import FitObservedSSFR_Peaks
 
 from sfr_evol import AverageLogSFR_sfms
 from sfr_evol import ScatterLogSFR_sfms
@@ -111,21 +113,26 @@ def PlotObservedSFMS(Mfid=10.5, isedfit=False, sfms_prop=None):
 
     fig.savefig(fig_file, bbox_inches='tight', dpi=150)
 
-def PlotObservedSSFR(isedfit=False): 
+def PlotObservedSSFR(observable, isedfit=False, Peak=False): 
     '''
     '''
     prettyplot()
+    if Peak and observable != 'groupcat': 
+        raise ValeuError
 
     mass_bins = [[9.7, 10.1], [10.1, 10.5], [10.5, 10.9], [10.9, 11.3]]
-    zbins = [0.03, 0.1, 0.3, 0.5, 0.7, 0.9]
+    if observable == 'groupcat': 
+        zbins = [0.03]    
+    elif observable == 'sdssprimus': 
+        zbins = [0.1, 0.3, 0.5, 0.7, 0.9]
+
     for i_z, z in enumerate(zbins): 
         fig = plt.figure(figsize=(16,16))
         fig.subplots_adjust(hspace=0., wspace=0.)
         subs = [fig.add_subplot(2, 2, i_mass+1) for i_mass in xrange(4)]  
 
         # preset kwargs for group and SDSS+PRIMUS catalogs
-        if z == 0.03: 
-            observable = 'groupcat'
+        if observable == 'groupcat':
             obs_str = 'Group Catalog'
             file_flag = observable
             if not isedfit: 
@@ -136,16 +143,27 @@ def PlotObservedSSFR(isedfit=False):
                 obs_str += ' iSEDfit'
                 file_flag += 'isedfit'
         else: 
-            observable = 'sdssprimus'
             obs_str = 'iSEDfit z='+str(round(z, 2))
             kwargs = {'redshift': z, 'environment': 'no'} 
+        # SSFR SF peak fit
+        if Peak: 
+            sfpeakfit = FitObservedSSFR_Peaks(observable=observable, sfq='star-forming', **kwargs)
+            qpeakfit = FitObservedSSFR_Peaks(observable=observable, sfq='quiescent', **kwargs)
+
+            print 'SF Slope ', sfpeakfit[0], ', Offset ', sfpeakfit[1]
+            print 'Q Slope ', qpeakfit[0], ', Offset ', qpeakfit[1]
 
         ssfr_bin_mid, ssfr_dist = ObservedSSFR(observable, **kwargs) 
 
         for i_mass, mbin in enumerate(mass_bins): 
             subs[i_mass].plot(ssfr_bin_mid[i_mass], ssfr_dist[i_mass], color='k', lw=4, ls='-', label=None)
-            
-                    
+            if Peak: 
+                ssfr_sfpeak = sfpeakfit[0]*(np.mean(mbin)-10.5) + sfpeakfit[1] - np.mean(mbin)
+                subs[i_mass].vlines(ssfr_sfpeak, 0.0, 100., lw=3, linestyle='--', color='blue')
+                
+                ssfr_qpeak = qpeakfit[0]*(np.mean(mbin)-10.5) + qpeakfit[1] - np.mean(mbin)
+                subs[i_mass].vlines(ssfr_qpeak, 0.0, 100., lw=3, linestyle='--', color='red')
+
             subs[i_mass].set_xlim([-13.0, -7.0])
             subs[i_mass].set_ylim([0.0, 1.6])
             
@@ -186,11 +204,12 @@ def PlotObservedSSFR(isedfit=False):
     return None
 
 
-
 if __name__=="__main__": 
+    PlotObservedSSFR('groupcat', isedfit=False, Peak=True)
+
     #GroupCat_iSEDfitMatch(Mrcut=18, position='central')
     #[BuildGroupCat(Mrcut=Mr, position='central') for Mr in [18, 19, 20]]
-    PlotObservedSSFR(isedfit=False)
+    #PlotObservedSSFR(isedfit=False)
     #print PlotObservedSFMS(isedfit=True,
     #        sfms_prop={'name': 'linear', 'mslope': 0.55, 'zslope': 1.1}
     #        )

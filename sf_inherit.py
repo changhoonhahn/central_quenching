@@ -439,10 +439,10 @@ def MstarSFR_simul_evol(M0, t0, tf, t_step=0.2, ancestor_Mq=None, **kwargs):
         P_sf = np.random.uniform(0., 1., Nsf_0)
     
         # Initial estimate of P_q = (1/( 1 - fQ(t0) )) * dFq/dt(t0 + 0.5 tstep) * tstep
-        #t_offset = np.zeros(len(sf_within))
-        t_offset = -2.7 * (Mstar[sf_within] - 11.5)
-        t_offset[np.where(t_offset < 0.)] = 0.
-        fudge = 2.  # fudge factor
+        t_offset = np.zeros(len(sf_within))
+        #t_offset = -2.7 * (Mstar[sf_within] - 11.5)
+        #t_offset[np.where(t_offset < 0.)] = 0.
+        fudge = 1.  # fudge factor
         f_Ng = (1./(1.- Fq_anal(Mstar[sf_within], z_of_t(tt), lit=fq_prop['name'])))
         whereinf = np.where(f_Ng == np.inf) 
         P_q = fudge * f_Ng * dFqdt(Mstar[sf_within], tt + t_offset + 0.5 * t_step, lit=fq_prop['name']) * t_step    
@@ -775,8 +775,7 @@ def MstarSFR_predict_evol(M0, t0, tf, t_step=0.2, SFR0=None, ancestor_Mq=None, *
     return Mstar, SFR, tQ
 
 def logSFR_M_t(logmass, t_input, t_init=None, t_q=None, z_q=None, M_q=None, 
-        dutycycle_prop=None, tau_prop=None, sfms_prop=None, 
-        indices=None): 
+        dutycycle_prop=None, tau_prop=None, sfms_prop=None, indices=None): 
     ''' log(SFR) as a function of M* and t_cosmic.
 
     Notes
@@ -808,7 +807,7 @@ def logSFR_M_t(logmass, t_input, t_init=None, t_q=None, z_q=None, M_q=None,
     logsfr_sfms = sfr_evol.DeltaLogSFR_sfms(
             z_init, 
             z_of_t(t_input),
-            z_q=z_q)
+            sfms_prop=sfms_prop)
 
     # log(SFR)_duty cycle evolution from t0 to tQ
     logsfr_sfduty = sfr_evol.DeltaLogSFR_dutycycle(

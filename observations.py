@@ -240,9 +240,7 @@ class PrimusSDSS(object):
                     (galdata.edgecut == 1) 
                     ) 
             for key in galdata.__dict__.keys(): 
-                print key 
                 try: 
-                    print getattr(self,key)
                     setattr(self, key, 
                             np.concatenate([getattr(self,key), getattr(galdata, key)[all_cuts]]))
                 except AttributeError: 
@@ -322,7 +320,6 @@ def ObservedSFMS(observable, **kwargs):
 
     return [np.array(m_mid), np.array(muSFR), np.array(sigSFR), np.array(ngal)]
 
-
 def FitObservedSFMS(observable, Mfid=10.5, slope=None, mass_range=None, **kwargs): 
     ''' Fit the observed SFMS relation with a linear function.   
 
@@ -364,8 +361,7 @@ def FitObservedSFMS(observable, Mfid=10.5, slope=None, mass_range=None, **kwargs
 
 def ObservedSSFR(observable, **kwargs): 
     ''' Calculate the observed SSFR function relation for either
-    Jeremy's group catalog or the SDSS+PRIMUS sample. The SF-MS 
-    relation is calculated by the median SFR in mass bins. 
+    Jeremy's group catalog or the SDSS+PRIMUS sample. 
     '''
     if observable == 'groupcat': 
         if 'Mrcut' not in kwargs.keys(): 
@@ -423,3 +419,65 @@ def ObservedSSFR(observable, **kwargs):
         ssfr_bin_edges.append(bin_edges)
     
     return [ssfr_bin_mid, ssfr_dist]
+
+def ObservedSSFR_Peaks(observable, sfq='star-forming', **kwargs): 
+    ''' Estimate the positions of the SF and Q peaks of the SSFR distribution. 
+    '''
+    # calculate the SSFR distribution 
+    ssfr_bin_mid, ssfr_dist = ObservedSSFR(observable, **kwargs) 
+    # mass bins of the SSFR distribution 
+    mass_bins = [[9.7, 10.1], [10.1, 10.5], [10.5, 10.9], [10.9, 11.3]]
+
+    Mass = np.zeros(len(mass_bins))
+    SSFR = np.zeros(len(mass_bins))
+    SFR = np.zeros(len(mass_bins))
+    for i_mass, mbin in enumerate(mass_bins): 
+        if sfq == 'star-forming': 
+            # estimate of the SF peak 
+            SFQpeak = np.where(ssfr_bin_mid[i_mass] > -11.5) 
+        elif sfq == 'quiescent': 
+            SFQpeak = np.where(ssfr_bin_mid[i_mass] < -11.5) 
+        SFQdist = ssfr_dist[i_mass][SFQpeak]
+        Mass[i_mass] = np.mean(mbin)
+        SSFR[i_mass] = (ssfr_bin_mid[i_mass][SFQpeak])[SFQdist.argmax()]  
+        SFR[i_mass] = (ssfr_bin_mid[i_mass][SFQpeak])[SFQdist.argmax()] + np.mean(mbin)
+
+    output_dict = {
+            'sfr_class': sfq,
+            'mass': Mass, 
+            'ssfr': SSFR, 
+            'sfr': SFR
+            }
+    return output_dict 
+
+def FitObservedSSFR_Peaks(observable='groupcat', sfq='star-forming', Mrcut=18, position='central', Mfid=10.5): 
+    ''' Fit the (M*, SFR) positions of the SSFR distribution SF peak to a
+    SFR(M*) linear parameterization. This is only for the SDSS group catalog.  
+    '''
+    if observable != 'groupcat': 
+        raise ValueError
+
+    SSFRpeak = ObservedSSFR_Peaks(observable, sfq=sfq, Mrcut=Mrcut, position=position)
+
+    SFRs = SSFRpeak['sfr']
+    Mass = SSFRpeak['mass']
+    
+    # remove outliers
+    if sfq  == 'star-forming': 
+        # for the SDSS group catalog, the last mass bin has nearly no SF galaxies 
+        # so the estimate is inaccurate 
+        SFRs = SFRs[:-1]
+        Mass = Mass[:-1]
+        SFRs[0] = -0.4
+        SFRs[1] = -0.275
+        p0 = [0.6, 0.]  # guess
+    elif sfq == 'quiescent': 
+        SFRs[0] = -1.925
+        SFRs[-1] = -1.475
+        p0 = [-0.4, 0.] 
+    print SFRs
+
+    fa = {'x': Mass - Mfid, 'y': SFRs}
+    bestfit = mpfit.mpfit(util.mpfit_line, p0, functkw=fa, quiet=True) 
+
+    return bestfit.params
