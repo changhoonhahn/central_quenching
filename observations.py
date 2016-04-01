@@ -200,47 +200,63 @@ class PrimusSDSS(object):
         galaxy environment paper. 
         '''
         self.kwargs = kwargs
-        self.redshift = redshift
+        self.redshift_bin = redshift
         self.environment = environment 
 
     def Read(self): 
         '''
         '''
-        file_dir = 'dat/wetzel_tree/envcount/'
-        sdss_file = ''.join([file_dir, 
-                'envcount_cylr2.5h35_thresh75_sdss_active_z0.05_0.12_primuszerr.fits']) 
-        primus_file = ''.join([file_dir, 
-                'envcount_cylr2.5h35_thresh75_active_z0.2_1.0_lit.fits']) 
-        # redshift determines SDSS or PRIMUS sample
-        if self.redshift < 0.2: 
-            galdata = mrdfits(sdss_file) 
-        else: 
-            galdata = mrdfits(primus_file)
-        # environment cuts 
-        if self.environment == 'no': 
-            envcuts = (galdata.envcount == 0.)
-        else: 
-            raise NotImplementedError
-        # redshift cuts  
-        zlow = [0., 0.2, 0.4, 0.6, 0.8]
-        zhigh = [0.2, 0.4, 0.6, 0.8, 1.0]
-        i_z = int(np.floor(self.redshift/0.2))
-        zcuts = (galdata.redshift >= zlow[i_z]) & (galdata.redshift < zhigh[i_z])
+        sfr_class = [] 
+        for sfq in ['star-forming', 'quiescent']:
+            file_dir = 'dat/wetzel_tree/envcount/'
+            if sfq == 'star-forming': 
+                sfq_str = 'active'
+            else: 
+                sfq_str = sfq 
 
-        all_cuts = np.where(
-                envcuts & zcuts & 
-                (galdata.mass > galdata.masslimit) & 
-                (galdata.edgecut == 1) 
-                ) 
-        for key in galdata.__dict__.keys(): 
-            setattr(self, key, getattr(galdata, key)[all_cuts])
-        
-        sfr_class = np.chararray(len(all_cuts[0]), itemsize=16)
-        sfr_class[:] = 'star-forming'
-        setattr(self, 'sfr_class', sfr_class)
+            sdss_file = ''.join([file_dir, 
+                    'envcount_cylr2.5h35_thresh75_sdss_', sfq_str, '_z0.05_0.12_primuszerr.fits']) 
+            primus_file = ''.join([file_dir, 
+                    'envcount_cylr2.5h35_thresh75_', sfq_str, '_z0.2_1.0_lit.fits']) 
+            # redshift determines SDSS or PRIMUS sample
+            if self.redshift_bin < 0.2: 
+                galdata = mrdfits(sdss_file) 
+            else: 
+                galdata = mrdfits(primus_file)
+            # environment cuts 
+            if self.environment == 'no': 
+                envcuts = (galdata.envcount == 0.)
+            else: 
+                raise NotImplementedError
+            # redshift cuts  
+            zlow = [0., 0.2, 0.4, 0.6, 0.8]
+            zhigh = [0.2, 0.4, 0.6, 0.8, 1.0]
+            i_z = int(np.floor(self.redshift_bin/0.2))
+            zcuts = (galdata.redshift >= zlow[i_z]) & (galdata.redshift < zhigh[i_z])
+
+            all_cuts = np.where(
+                    envcuts & zcuts & 
+                    (galdata.mass > galdata.masslimit) & 
+                    (galdata.edgecut == 1) 
+                    ) 
+            for key in galdata.__dict__.keys(): 
+                print key 
+                try: 
+                    print getattr(self,key)
+                    setattr(self, key, 
+                            np.concatenate([getattr(self,key), getattr(galdata, key)[all_cuts]]))
+                except AttributeError: 
+                    setattr(self, key, getattr(galdata, key)[all_cuts])
+            
+            sfr_class_tmp = np.chararray(len(all_cuts[0]), itemsize=16)
+            sfr_class_tmp[:] = sfq
+
+            sfr_class.append(sfr_class_tmp)
+
+        setattr(self, 'sfr_class', np.concatenate(sfr_class))
+
         return None
         
-
 def ObservedSFMS(observable, **kwargs): 
     ''' Calculate the observed SF-MS function relation for either
     Jeremy's group catalog or the SDSS+PRIMUS sample. The SF-MS 
@@ -344,3 +360,66 @@ def FitObservedSFMS(observable, Mfid=10.5, slope=None, mass_range=None, **kwargs
         fa = {'x': mass - Mfid, 'y': muSFR, 'err': sigSFR, 'slope': slope}
         bestfit = mpfit.mpfit(util.mpfit_line_fixedslope, p0, functkw=fa, quiet=True) 
     return bestfit.params
+
+
+def ObservedSSFR(observable, **kwargs): 
+    ''' Calculate the observed SSFR function relation for either
+    Jeremy's group catalog or the SDSS+PRIMUS sample. The SF-MS 
+    relation is calculated by the median SFR in mass bins. 
+    '''
+    if observable == 'groupcat': 
+        if 'Mrcut' not in kwargs.keys(): 
+            raise ValueError('Mrcut kwarg needs to be specified') 
+        if 'position' not in kwargs.keys(): 
+            raise ValueError('position kwarg needs to be specified') 
+        # import Group Catalog
+        galdata = GroupCat(**kwargs)
+        galdata.Read()
+        # classify galaxies into Starforming or quiescent based on  
+        # SFRcut in gal_prop module 
+        if 'isedfit' in kwargs.keys() and kwargs['isedfit']: 
+            # use iSEDfit M*, SFR and SSFR instead 
+            galdata._iSEDfitMatch()
+            galdata.mass = galdata.iSEDfit_mass
+            galdata.sfr = galdata.iSEDfit_sfr
+
+    elif observable == 'sdssprimus': 
+        if 'redshift' not in kwargs.keys():
+            raise ValueError('Specify redshift bin') 
+        if 'environment' not in kwargs.keys(): 
+            raise ValueError('envrionment kwarg needs to be specifieid') 
+        # import PRIMUS/SDSS galaxy catalog 
+        galdata = PrimusSDSS(**kwargs)
+        galdata.Read()
+
+    else: 
+        raise ValueError
+
+    mass_bins = [[9.7, 10.1], [10.1, 10.5], [10.5, 10.9], [10.9, 11.3]]
+
+    ssfr_range = [-13.0, -7.0]
+    ssfr_nbin = 40
+
+    ssfr = galdata.sfr - galdata.mass
+
+    ssfr_dist, ssfr_bin_mid, ssfr_bin_edges = [], [], [] 
+    # loop through the mass bins
+    for i_m, mass_bin in enumerate(mass_bins): 
+        mass_lim = np.where(
+                (galdata.mass >= mass_bin[0]) & 
+                (galdata.mass < mass_bin[1])
+                )
+        n_bin = len(mass_lim[0])
+
+        # calculate SSFR distribution  
+        dist, bin_edges = np.histogram(
+                ssfr[mass_lim], 
+                range=ssfr_range, 
+                bins=ssfr_nbin, 
+                normed=True)
+
+        ssfr_dist.append(dist)
+        ssfr_bin_mid.append(0.5 * (bin_edges[:-1] + bin_edges[1:]))
+        ssfr_bin_edges.append(bin_edges)
+    
+    return [ssfr_bin_mid, ssfr_dist]

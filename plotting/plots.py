@@ -6,7 +6,7 @@ Plotting class objects
 import numpy as np 
 import matplotlib.pyplot as plt
 
-from groupcat import GroupCat
+from observations import GroupCat
 from central_subhalo import CentralSubhalos
 
 from gal_prop import Fq 

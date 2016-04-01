@@ -27,7 +27,7 @@ from gal_prop import Fq
 from gal_prop import SMF
 from gal_prop import Ssfr
 #from assign_sfr import assign_sfr 
-from util import cenque_utility as util
+from util import util as Util
 
 from sfr_evol import AverageLogSFR_sfms
 from sfr_evol import ScatterLogSFR_sfms
@@ -629,7 +629,7 @@ def AssignSFR(mass, redshift, sfr_prop=None, ancestor=None, descendant=None):
                     (mass[massive] <= m_high[im]) & 
                     (sfr_class[massive] == 'star-forming')
                     )[0]
-            succession, will = util.intersection_index(
+            succession, will = Util.intersection_index(
                     ancestor_index, 
                     ancestor.snap_index[massive[sf_mass_bin]])
             deltaM = descendant.mass[succession] - mass[massive[sf_mass_bin[will]]]

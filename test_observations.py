@@ -10,6 +10,7 @@ from observations import GroupCat
 from observations import PrimusSDSS
 from observations import ObservedSFMS
 from observations import FitObservedSFMS
+from observations import ObservedSSFR
 
 from sfr_evol import AverageLogSFR_sfms
 from sfr_evol import ScatterLogSFR_sfms
@@ -110,11 +111,86 @@ def PlotObservedSFMS(Mfid=10.5, isedfit=False, sfms_prop=None):
 
     fig.savefig(fig_file, bbox_inches='tight', dpi=150)
 
+def PlotObservedSSFR(isedfit=False): 
+    '''
+    '''
+    prettyplot()
+
+    mass_bins = [[9.7, 10.1], [10.1, 10.5], [10.5, 10.9], [10.9, 11.3]]
+    zbins = [0.03, 0.1, 0.3, 0.5, 0.7, 0.9]
+    for i_z, z in enumerate(zbins): 
+        fig = plt.figure(figsize=(16,16))
+        fig.subplots_adjust(hspace=0., wspace=0.)
+        subs = [fig.add_subplot(2, 2, i_mass+1) for i_mass in xrange(4)]  
+
+        # preset kwargs for group and SDSS+PRIMUS catalogs
+        if z == 0.03: 
+            observable = 'groupcat'
+            obs_str = 'Group Catalog'
+            file_flag = observable
+            if not isedfit: 
+                kwargs = {'Mrcut': 18, 'position': 'central'}
+                file_flag += ''
+            else: 
+                kwargs = {'Mrcut': 18, 'position': 'central', 'isedfit': True}
+                obs_str += ' iSEDfit'
+                file_flag += 'isedfit'
+        else: 
+            observable = 'sdssprimus'
+            obs_str = 'iSEDfit z='+str(round(z, 2))
+            kwargs = {'redshift': z, 'environment': 'no'} 
+
+        ssfr_bin_mid, ssfr_dist = ObservedSSFR(observable, **kwargs) 
+
+        for i_mass, mbin in enumerate(mass_bins): 
+            subs[i_mass].plot(ssfr_bin_mid[i_mass], ssfr_dist[i_mass], color='k', lw=4, ls='-', label=None)
+            
+                    
+            subs[i_mass].set_xlim([-13.0, -7.0])
+            subs[i_mass].set_ylim([0.0, 1.6])
+            
+            massbin_str = ''.join([ 
+                r'$\mathtt{log \; M_{*} = [', 
+                str(mass_bins[i_mass][0]), ',\;', 
+                str(mass_bins[i_mass][1]), ']}$'
+                ])
+            subs[i_mass].text(-10.5, 1.4, massbin_str,
+                    fontsize=24
+                    )
+
+            if i_mass == 0: 
+                subs[i_mass].set_ylabel(r'$\mathtt{P(log \; SSFR)}$', fontsize=20) 
+                subs[i_mass].set_xticklabels([])
+            elif i_mass == 1: 
+                subs[i_mass].set_xticklabels([])
+                subs[i_mass].set_yticklabels([])
+            elif i_mass == 2:
+                #sub.set_yticklabels([])
+                subs[i_mass].set_ylabel(r'$\mathtt{P(log \; SSFR)}$', fontsize=20) 
+                subs[i_mass].set_xlabel(r'$\mathtt{log \; SSFR \;[yr^{-1}]}$', fontsize=20) 
+            else: 
+                subs[i_mass].set_yticklabels([])
+                subs[i_mass].set_xlabel(r'$\mathtt{log \; SSFR \;[yr^{-1}]}$', fontsize=20) 
+
+                #subs[i_mass].legend(loc='lower right', frameon=False)
+
+        fig_file = ''.join([
+            'figure/test/'
+            'observedSSFR', 
+            observable, 
+            '.z', str(round(z,2)),
+            '.png'
+            ])
+
+        fig.savefig(fig_file, bbox_inches='tight', dpi=150)
+    return None
+
 
 
 if __name__=="__main__": 
     #GroupCat_iSEDfitMatch(Mrcut=18, position='central')
     #[BuildGroupCat(Mrcut=Mr, position='central') for Mr in [18, 19, 20]]
-    print PlotObservedSFMS(isedfit=True,
-            sfms_prop={'name': 'linear', 'mslope': 0.55, 'zslope': 1.1}
-            )
+    PlotObservedSSFR(isedfit=False)
+    #print PlotObservedSFMS(isedfit=True,
+    #        sfms_prop={'name': 'linear', 'mslope': 0.55, 'zslope': 1.1}
+    #        )

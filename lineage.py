@@ -14,7 +14,7 @@ import warnings
 from galpop import CGPop 
 from galpop import AssignSFR 
 #from assign_sfr import assign_sfr
-import util.cenque_utility as util
+import util.util as Util
 
 class Lineage(object): 
     def __init__(self, nsnap_ancestor=20, subhalo_prop=None, clobber=False, **kwargs):
@@ -267,7 +267,7 @@ class Lineage(object):
             ancestor_index = getattr(child, 'ancestor'+str(self.nsnap_ancestor))
 
             # has ancestors at nsnap_ancestor
-            has_ancestor, has_descendant = util.intersection_index(
+            has_ancestor, has_descendant = Util.intersection_index(
                     ancestor_index, self.ancestor.snap_index)
             print 'Snanpshot ', i_snap
             print 'Children with ancestors ', len(has_ancestor), \
@@ -289,7 +289,7 @@ class Lineage(object):
             for ii_snap in range(i_snap, self.nsnap_ancestor): 
                 
                 child_ii = child_list[ii_snap-1]
-                ii_anc, anc_ii = util.intersection_index(getattr(child_ii, 'ancestor'+str(self.nsnap_ancestor)), ancs)
+                ii_anc, anc_ii = Util.intersection_index(getattr(child_ii, 'ancestor'+str(self.nsnap_ancestor)), ancs)
                 
                 massive = np.where(child_ii.mass[ii_anc] > 0.0)
 
@@ -311,8 +311,8 @@ class Lineage(object):
             nonneg = np.where(nsnap_genesis[has_ancestor] > 0)
             tsnap_genesis = np.repeat(-999., len(nsnap_genesis))
             zsnap_genesis = np.repeat(-999., len(nsnap_genesis))
-            tsnap_genesis[has_ancestor[nonneg]] = util.get_t_nsnap(nsnap_genesis[has_ancestor[nonneg]])
-            zsnap_genesis[has_ancestor[nonneg]] = util.get_z_nsnap(nsnap_genesis[has_ancestor[nonneg]])
+            tsnap_genesis[has_ancestor[nonneg]] = Util.get_t_nsnap(nsnap_genesis[has_ancestor[nonneg]])
+            zsnap_genesis[has_ancestor[nonneg]] = Util.get_z_nsnap(nsnap_genesis[has_ancestor[nonneg]])
 
             #neg = np.where(nsnap_massive[has_ancestor] < 0)
             #print child.mass[has_ancestor[neg]]
@@ -333,8 +333,8 @@ class Lineage(object):
         self.ancestor.sample_trim(positive[0])
         self.ancestor.data_columns += ['nsnap_genesis', 'tsnap_genesis', 'zsnap_genesis', 'mass_genesis', 'halomass_genesis', 'Msham_evol']
 
-        anc_tsnap_genesis[positive] = util.get_t_nsnap(anc_nsnap_genesis[positive])
-        anc_zsnap_genesis[positive] = util.get_z_nsnap(anc_nsnap_genesis[positive])
+        anc_tsnap_genesis[positive] = Util.get_t_nsnap(anc_nsnap_genesis[positive])
+        anc_zsnap_genesis[positive] = Util.get_z_nsnap(anc_nsnap_genesis[positive])
 
         setattr(self.ancestor, 'nsnap_genesis', anc_nsnap_genesis[positive])
         setattr(self.ancestor, 'tsnap_genesis', anc_tsnap_genesis[positive])

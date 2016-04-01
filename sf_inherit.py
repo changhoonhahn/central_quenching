@@ -14,8 +14,8 @@ import sfr_evol
 
 from gal_prop import Fq
 from gal_prop import dFqdt
-from util.cenque_utility import get_nsnap_t
-from util.cenque_utility import intersection_index
+from util.util import get_nsnap_t
+from util.util import intersection_index
 
 import matplotlib.pyplot as plt
 from defutility.plotting import prettyplot
@@ -494,6 +494,10 @@ def MstarSFR_simul_evol(M0, t0, tf, t_step=0.2, ancestor_Mq=None, **kwargs):
             if Nsf0 == 0: 
                 continue
 
+            #t_offset = -2.7 * (0.5*(M_high[i_m]+M_low[i_m]) - 11.5)
+            #if t_offset < 0.: 
+            #    t_offset = 0.
+            #print t_offset, z_of_t(tt+t_step+t_offset)
             fq_tf = Fq_anal(0.5*(M_high[i_m]+M_low[i_m]), z_of_t(tt+t_step), lit=fq_prop['name'])
             dPq[i_m] = (Ngp - Ng0) * (1. - fq_tf)/Nsf0
 
