@@ -77,38 +77,6 @@ def ModelSFMS(observable='sdssprimus'):
         sfms_plot.save_fig(fig_file)
         plt.close()
 
-def Plot_Fq_timedelay(lit='wetzelsmooth'): 
-    '''
-    '''
-    prettyplot()
-    pretty_colors = prettycolors()
-    M_arr = np.arange(9.0, 12.5, 0.5)
-    t_arr = np.arange(8.0, 13.8, 0.2)
-    
-    fig = plt.figure()
-    sub = fig.add_subplot(111)
-    for Mstar in M_arr:  
-        time_delay = [] 
-        print Mstar, getTauQ(np.array([Mstar]), tau_prop={'name': 'line', 'fid_mass': 10.75, 'slope': -0.6, 'yint': 0.6})
-        print DeltaLogSFR_SF_Q_peak(np.array([Mstar]), Util.get_zsnap(np.mean(t_arr)), sfms_prop={'name': 'linear', 'mslope': 0.55, 'zslope': 1.1})
-        for tt in t_arr: 
-            z_in = Util.get_zsnap(tt)            
-            #time_delay.append(
-            #        DeltaLogSFR_SF_Q_peak(np.array([Mstar]), z_in, sfms_prop={'name': 'linear', 'mslope': 0.55, 'zslope': 1.1})
-            #        )
-            time_delay.append(
-                    (DeltaLogSFR_SF_Q_peak(np.array([Mstar]), z_in, sfms_prop={'name': 'linear', 'mslope': 0.55, 'zslope': 1.1})*\
-                            getTauQ(np.array([Mstar]), tau_prop={'name': 'line', 'fid_mass': 10.75, 'slope': -0.6, 'yint': 0.6}))/0.434
-                    )
-        sub.plot(t_arr, time_delay, label=r"$\mathtt{M}_* = "+str(round(Mstar,2))+"$") 
-    sub.set_xlim([t_arr.min(), t_arr.max()])
-    sub.legend(loc='upper left')
-    #sub.set_ylim([0., 1.])
-    fig_file = ''.join(['figure/test/','fq_timedelay.png']) 
-    fig.savefig(fig_file, bbox_inches='tight') 
-    return None
-
-
 if __name__=='__main__': 
     Plot_Fq_timedelay(lit='wetzelsmooth')
     #ModelSFMS(observable='sdssprimus')

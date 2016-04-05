@@ -17,6 +17,8 @@ from observations import FitObservedSSFR_Peaks
 from sfr_evol import AverageLogSFR_sfms
 from sfr_evol import ScatterLogSFR_sfms
 
+from gal_prop import Fq
+
 from util import util
 
 # plotting
@@ -126,6 +128,8 @@ def PlotObservedSSFR(observable, isedfit=False, Peak=False):
     elif observable == 'sdssprimus': 
         zbins = [0.1, 0.3, 0.5, 0.7, 0.9]
 
+    qf = Fq() 
+
     for i_z, z in enumerate(zbins): 
         fig = plt.figure(figsize=(16,16))
         fig.subplots_adjust(hspace=0., wspace=0.)
@@ -163,6 +167,13 @@ def PlotObservedSSFR(observable, isedfit=False, Peak=False):
                 
                 ssfr_qpeak = qpeakfit[0]*(np.mean(mbin)-10.5) + qpeakfit[1] - np.mean(mbin)
                 subs[i_mass].vlines(ssfr_qpeak, 0.0, 100., lw=3, linestyle='--', color='red')
+
+            subs[i_mass].vlines(
+                    qf.SFRcut(np.array([np.mean(mbin)]), z, 
+                        sfms_prop={'name': 'kinked', 'mslope_lowmass': 0.7, 'zslope': 1.5}
+                        )-np.mean(mbin), 
+                    0., 100., 
+                    lw=3, linestyle='--', color='k')
 
             subs[i_mass].set_xlim([-13.0, -7.0])
             subs[i_mass].set_ylim([0.0, 1.6])

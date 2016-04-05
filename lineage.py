@@ -76,15 +76,14 @@ class Lineage(object):
         if 'subhalogrowth' not in sfr_prop.keys(): 
             # Star-Formation properties based on mass_genesis at redshift, 
             # zsnap_genesis
-            sfr_class, sfr, ssfr, delta_sfr, avg_sfr = AssignSFR(
+            sfr_class, sfr, ssfr, delta_sfr, avg_sfr, tQ, MQ = AssignSFR(
                     self.ancestor.mass_genesis, 
                     self.ancestor.zsnap_genesis, 
-                    sfr_prop=self.sfr_prop
-                    )
+                    sfr_prop=self.sfr_prop)
         else: 
             desc_obj = getattr(self, 
                         'descendant_snapshot'+str(sfr_prop['subhalogrowth']['nsnap_descendant']))
-            sfr_class, sfr, ssfr, delta_sfr, avg_sfr = AssignSFR(
+            sfr_class, sfr, ssfr, delta_sfr, avg_sfr, tQ, MQ = AssignSFR(
                     self.ancestor.mass_genesis, 
                     self.ancestor.zsnap_genesis, 
                     sfr_prop=self.sfr_prop, 
@@ -92,7 +91,7 @@ class Lineage(object):
                     descendant=desc_obj
                     )
 
-        for prop in ['sfr', 'ssfr', 'sfr_class', 'avg_sfr', 'delta_sfr']: 
+        for prop in ['sfr', 'ssfr', 'sfr_class', 'avg_sfr', 'delta_sfr', 'tQ', 'MQ']: 
             if prop not in self.ancestor.data_columns: 
                 if isinstance(self.ancestor.data_columns, list): 
                     self.ancestor.data_columns.append(prop) 
@@ -106,6 +105,8 @@ class Lineage(object):
         self.ancestor.sfr_class = sfr_class 
         self.ancestor.avg_sfr = avg_sfr
         self.ancestor.delta_sfr = delta_sfr
+        self.ancestor.tQ = tQ
+        self.ancestor.MQ = MQ
         self.ancestor.sfr_prop = self.sfr_prop.copy()
 
         return None

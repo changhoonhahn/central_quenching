@@ -131,7 +131,8 @@ class Fq(object):
         #return -0.75 + 0.76*(zin-0.05) + 0.5*(mstar-10.5)
         #return -0.75 + 0.76*(zin-0.04) + factor*(mstar-9.5) - 0.8
         mu_sfr = AverageLogSFR_sfms(mstar, zin, sfms_prop=sfms_prop)
-        offset = -0.75
+        #offset = -0.75
+        offset = -0.9
         return mu_sfr + offset
 
     def model(self, Mstar, z_in, lit='cosmosinterp'):
@@ -267,7 +268,6 @@ def dFqdt(mstar, t_cosmic, lit='wetzelsmooth', dt=0.01):
     neg = np.where(dfdt < 0.)
     dfdt[neg] = 0.
     return dfdt
-
 
 class SMF(object): 
     def __init__(self, **kwargs): 

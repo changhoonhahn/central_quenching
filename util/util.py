@@ -309,6 +309,8 @@ def line_fixedslope(x, p, slope=0.56):
 def mpfit_line(p, fjac=None, x=None, y=None, err=None): 
     model = line(x, p) 
     status = 0 
+    if err is None: 
+        err = np.repeat(1., len(model))
     return([status, (y-model)/err]) 
 
 def mpfit_line_fixedslope(p, slope=0.56, fjac=None, x=None, y=None, err=None): 

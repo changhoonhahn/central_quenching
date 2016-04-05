@@ -266,9 +266,12 @@ def getTauQ(mstar, tau_prop={'name': 'instant'}):
         # param will give slope and yint of pivoted tau line 
         
         tau = tau_prop['slope'] * (mstar - tau_prop['fid_mass']) + tau_prop['yint']
-
-        if np.min(tau) < 0.001: 
-            tau[np.where( tau < 0.001 )] = 0.001
+        
+        try: 
+            if np.min(tau) < 0.001: 
+                tau[np.where( tau < 0.001 )] = 0.001
+        except ValueError: 
+            pass 
 
     elif type == 'satellite':   # quenching e-fold of satellite
 

@@ -80,7 +80,7 @@ class PlotSSFR(Plots):
                 for i_mass in xrange(self.n_mass_bins)
                 ]  
 
-    def plot(self, mass=None, ssfr=None, SSFRdist=None, **pltkwargs): 
+    def plot(self, mass=None, ssfr=None, SSFRdist=None, sfms_prop=None, z=None, **pltkwargs): 
         ''' Plot the sSFR distriubiton 
         '''
         if self.kwargs == {}: 
@@ -125,27 +125,31 @@ class PlotSSFR(Plots):
             else:
                 line_width = 4
 
+            self.subs[i_mass].plot(
+                    ssfr_bin_mid[i_mass], 
+                    ssfr_dist[i_mass], 
+                    color=line_color, 
+                    lw=line_width, 
+                    ls=line_style, 
+                    label=hist_label
+                    ) 
+            
+            if sfms_prop is not None: 
+                if z is None: 
+                    raise ValueError
+                qf = Fq()
+                self.subs[i_mass].vlines(
+                        qf.SFRcut(np.array([np.mean(panel_mass)]), z, 
+                            sfms_prop=sfms_prop 
+                            )-np.mean(panel_mass), 
+                        0., 100., 
+                        lw=3, linestyle='--', color='k')
+
             if i_mass == 2: 
-                self.subs[i_mass].plot(
-                        ssfr_bin_mid[i_mass], 
-                        ssfr_dist[i_mass], 
-                        color=line_color, 
-                        lw=line_width, 
-                        ls=line_style, 
-                        label=hist_label
-                        ) 
                 plt.sca(self.subs[i_mass])
                 plt.xticks([-13, -12, -11, -10, -9, -8])
                 plt.yticks([0.0, 0.2, 0.4, 0.6, 0.8, 1.0, 1.2, 1.4])
-            else: 
-                self.subs[i_mass].plot(
-                        ssfr_bin_mid[i_mass], 
-                        ssfr_dist[i_mass], 
-                        color=line_color, 
-                        lw=line_width, 
-                        ls=line_style, 
-                        label=hist_label
-                        ) 
+
         return None   
 
     def GroupCat(self, Mrcut=18, **kwargs): 
