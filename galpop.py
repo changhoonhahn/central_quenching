@@ -594,7 +594,7 @@ def AssignSFR(mass, redshift, sfr_prop=None, ancestor=None, descendant=None):
     np.random.seed()
     rand = np.random.uniform(0., 1., ngal)
     # f_GV(M*)  Green valley fraction 
-    gvfrac = gv_dict['slope'] * (mass[massive] - 10.5) + gv_dict['offset']
+    gvfrac = gv_dict['slope'] * (mass[massive] - gv_dict['fidmass']) + gv_dict['offset']
     greenvalley = np.where(rand < gvfrac)[0]
     ngal_green = len(greenvalley) 
     ngal_green_M, dum = np.histogram(mass[massive[greenvalley]], bins=M_bins)

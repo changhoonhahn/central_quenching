@@ -12,6 +12,7 @@ from gal_prop import SMF
 from lineage import Lineage
 from sf_inherit import InheritSF 
 from util.util import get_t_nsnap
+from observations import GroupCat
 from central_subhalo import CentralSubhalos
 
 from plotting.plots import PlotSMF
@@ -128,15 +129,14 @@ def AncestorPlots(**sfinh_kwargs):
     plt.close()
     # FQ
     ancestor.plotFq(model=True, savefig=fig_file('fq'))      
-    #ancestor.plotSFMS(sfqcut=True, gal_class='all', bovyplot=False, sigSFR=False, model=False, savefig=fig_file('sfms'))
+    ancestor.plotSFMS(sfqcut=True, gal_class='all', bovyplot=False, sigSFR=False, model=False, savefig=fig_file('sfms'))
     plt.close()
     return None
 
-def DescendantQAplot(nsnap_descendant, abc_step=29, flag=None, **sfinh_kwargs): 
+def DescendantQAplot(nsnap_descendant, **sfinh_kwargs): 
     ''' The ultimate QAplot t rule them all. 4 panels showing all the properties.
     '''
-    sfinherit_file = InheritSF_file(nsnap_descendant, abc_step=abc_step, 
-            flag=flag, **sfinh_kwargs)
+    sfinherit_file = InheritSF_file(nsnap_descendant, **sfinh_kwargs)
     bloodline = Lineage(
             nsnap_ancestor=sfinh_kwargs['nsnap_ancestor'], 
             subhalo_prop=sfinh_kwargs['subhalo_prop']
@@ -172,7 +172,7 @@ def DescendantQAplot(nsnap_descendant, abc_step=29, flag=None, **sfinh_kwargs):
                     nsnap_ancestor=sfinh_kwargs['nsnap_ancestor'])
 
             mass, phi = mf._smf(censub.mass)
-            sub_i.plot(mass, phi, c='k', lw=4, label='Central Subhalos') 
+            sub_i.plot(mass, phi, c='k', lw=4, ls='--', label='Central Subhalos') 
 
             sub_i.set_ylim([10**-5, 10**-1])
             sub_i.set_xlim([7.5, 12.0])
@@ -241,13 +241,40 @@ def DescendantQAplot(nsnap_descendant, abc_step=29, flag=None, **sfinh_kwargs):
 
             #sub_i.legend(loc='upper left', frameon=False, scatterpoints=1)
         elif i_sub == 4: # Fq
-            mass, fq = descendant.Fq()
-            sub_i.plot(mass, fq, color=pretty_colors[descendant.nsnap], lw=4, 
-                    label=r'$\mathtt{z =} '+str(descendant.zsnap)+'$')
+            #mass, fq = descendant.Fq()
+            sfq = qfrac.Classify(descendant.mass, descendant.sfr, descendant.zsnap, 
+                    sfms_prop=descendant.sfr_prop['sfms'])
+            gc = GroupCat(Mrcut=18, position='central')
+            gc.Read()
+            gc_sfq = qfrac.Classify(gc.mass, gc.sfr, np.mean(gc.z), 
+                    sfms_prop=descendant.sfr_prop['sfms'])
+            #sub_i.plot(mass, fq, color=pretty_colors[descendant.nsnap], lw=3, ls='--', 
+            #        label=r'$\mathtt{z =} '+str(descendant.zsnap)+'$')
+            M_bin = np.array([9.7, 10.1, 10.5, 10.9, 11.3])
+            M_low = M_bin[:-1]
+            M_high = M_bin[1:]
+            M_mid = 0.5 * (M_low + M_high)
+
+            fq = np.zeros(len(M_low))
+            gc_fq = np.zeros(len(M_low))
+            for i_m in xrange(len(M_low)):
+                mlim = np.where((descendant.mass > M_low[i_m]) & (descendant.mass <= M_high[i_m]))
+                gc_mlim = np.where((gc.mass > M_low[i_m]) & (gc.mass <= M_high[i_m]))
+                ngal = np.float(len(mlim[0]))
+                gc_ngal = np.float(len(gc_mlim[0]))
+
+                if ngal != 0:  # no galaxy in mass bin 
+                    ngal_q = np.float(len(np.where(sfq[mlim] == 'quiescent')[0]))
+                    fq[i_m] = ngal_q/ngal
+                if gc_ngal != 0:
+                    gc_ngal_q = np.float(len(np.where(gc_sfq[gc_mlim] == 'quiescent')[0]))
+                    gc_fq[i_m] = gc_ngal_q/gc_ngal
+
+            sub_i.plot(M_mid, fq, color=pretty_colors[descendant.nsnap], lw=3, label=r'$\mathtt{z =} '+str(descendant.zsnap)+'$')
             
-            fq_model = qfrac.model(mass, descendant.zsnap, lit=sfinh_kwargs['sfr_prop']['fq']['name'])
-            sub_i.plot(mass, fq_model, color='k', lw=4, ls='--', 
-                    label=sfinh_kwargs['sfr_prop']['fq']['name'])
+            fq_model = qfrac.model(M_bin, descendant.zsnap, lit=sfinh_kwargs['sfr_prop']['fq']['name'])
+            sub_i.plot(M_bin, fq_model, color='k', lw=4, ls='--', label=sfinh_kwargs['sfr_prop']['fq']['name'])
+            sub_i.scatter(M_mid, gc_fq, color='k', s=100, lw=0, label='Group Catalog')
 
             sub_i.set_xlim([9.0, 12.0])
             sub_i.set_ylim([0.0, 1.0])
@@ -255,7 +282,7 @@ def DescendantQAplot(nsnap_descendant, abc_step=29, flag=None, **sfinh_kwargs):
             sub_i.set_xlabel(r'Mass $\mathtt{M_*}$') 
             sub_i.set_ylabel(r'Quiescent Fraction $\mathtt{f_Q}$', fontsize=20) 
 
-            sub_i.legend(loc='upper left', frameon=False)
+            sub_i.legend(loc='upper left', frameon=False, scatterpoints=1, markerscale=0.75)
 
     plt.tight_layout(pad=0.4, w_pad=0.5, h_pad=1.0) 
     fig_name = ''.join([
@@ -267,32 +294,16 @@ def DescendantQAplot(nsnap_descendant, abc_step=29, flag=None, **sfinh_kwargs):
     plt.close()
     return None 
 
-def DescendantSSFR(nsnap_descendant, nsnap_ancestor=20, n_step=29, 
-    subhalo_prop = {'scatter': 0.2, 'source': 'li-march'}, 
-    sfr_prop = {'fq': {'name': 'wetzelsmooth'}, 'sfms': {'name': 'linear'}},
-    evol_prop = {'sfr': {'dutycycle': {'name': 'notperiodic'}}, 'mass': {'name': 'sham'}}, 
-    flag=None): 
+def DescendantSSFR(nsnap_descendant, **kwargs):
     ''' Halo Mass Function composition at z = z_final by initial halo mass at 
     nsnap_ancestor. 
     '''
     # import SF inherited Lineage
-    sf_inherit_file = InheritSF_file(
-            nsnap_descendant, 
-            nsnap_ancestor=nsnap_ancestor, 
-            abc_step=n_step, 
-            subhalo_prop=subhalo_prop, 
-            sfr_prop=sfr_prop, 
-            evol_prop=evol_prop, 
-            flag=flag
-            )
-    bloodline = Lineage(
-            nsnap_ancestor=nsnap_ancestor, 
-            subhalo_prop=subhalo_prop
-            )
+    sf_inherit_file = InheritSF_file(nsnap_descendant, **kwargs)
+    bloodline = Lineage(nsnap_ancestor=kwargs['nsnap_ancestor'], subhalo_prop=kwargs['subhalo_prop'])
     bloodline.Read([nsnap_descendant], filename=sf_inherit_file)
     # descendant
     descendant = getattr(bloodline, 'descendant_snapshot'+str(nsnap_descendant)) 
-
     fig_name = ''.join([
         'figure/test/', 
         'SSFR.',
@@ -300,7 +311,7 @@ def DescendantSSFR(nsnap_descendant, nsnap_ancestor=20, n_step=29,
         '.png'])
 
     descendant.plotSsfr(line_color='red', line_width=4, 
-            sfms_prop=sfr_prop['sfms'], z=descendant.zsnap, 
+            sfms_prop=kwargs['sfr_prop']['sfms'], z=descendant.zsnap, 
             groupcat=True, savefig=fig_name)
     plt.close()
     return None
@@ -654,39 +665,35 @@ def Read_InheritSF(nsnap_descendant, nsnap_ancestor=20, n_step=29,
 
     return bloodline
 
-def Save_InheritSF(nsnap_descendant, nsnap_ancestor=20, n_step=29, 
-    subhalo_prop = {'scatter': 0.2, 'source': 'li-march'}, sfr_prop=None, 
-    evol_prop=None, flag=None): 
+def Save_InheritSF(nsnap_descendant, **kwargs): 
     '''
     '''
     bloodline = InheritSF(
             nsnap_descendant, 
-            nsnap_ancestor=nsnap_ancestor, subhalo_prop=subhalo_prop, 
-            sfr_prop=sfr_prop, evol_prop=evol_prop)
+            nsnap_ancestor=kwargs['nsnap_ancestor'], 
+            subhalo_prop=kwargs['subhalo_prop'], 
+            sfr_prop=kwargs['sfr_prop'], 
+            evol_prop=kwargs['evol_prop'])
     
-    sfinherit_file = InheritSF_file(
-                nsnap_descendant, 
-                nsnap_ancestor=nsnap_ancestor, 
-                abc_step=n_step, 
-                subhalo_prop=subhalo_prop, 
-                sfr_prop=sfr_prop, 
-                evol_prop=evol_prop, 
-                flag=flag)
+    sfinherit_file = InheritSF_file(nsnap_descendant, **kwargs)
     print 'Writing ', sfinherit_file 
     bloodline.Write(sfinherit_file)
     
     return None
 
-def InheritSF_file(nsnap_descendant, nsnap_ancestor=20, abc_step=None, 
+def InheritSF_file(nsnap_descendant, nsnap_ancestor=20, tau='abc', abc_step=None, 
     subhalo_prop={'scatter': 0.2, 'source': 'li-march'}, 
     sfr_prop={'fq': {'name': 'wetzelsmooth'}, 'sfr': {'name': 'average'}},
     evol_prop={'sfr': {'dutycycle': {'name': 'notperiodic'}}, 'mass': {'name': 'sham'}}, 
     flag=None):
     '''
     '''
-    abc_str = ''
+    tau_str = ''
     if abc_step is not None:
-        abc_str = '.ABC'+str(abc_step)
+        tau_str = '.tau_ABC'+str(abc_step)
+    else: 
+        tau_str = evol_prop['tau']['name']
+
     # SFMS string
     sfms_str = '.SFMS'+sfr_prop['sfms']['name'].lower()
     if sfr_prop['sfms']['name'] == 'linear': 
@@ -721,7 +728,7 @@ def InheritSF_file(nsnap_descendant, nsnap_ancestor=20, abc_step=None,
         '.', evol_prop['type'], '_evol',
         '.SF_Duty_', evol_prop['sfr']['dutycycle']['name'],  
         mass_str, 
-        abc_str, 
+        tau_str, 
         flag_str, '.hdf5'])
     return hdf5_file 
 
@@ -761,7 +768,7 @@ def kwargs_InheritSF(nsnap_ancestor=10, tau='abc', subhalo_prop=None, fq_prop=No
     if fq_prop is None: 
         fq_prop = {'name': 'wetzel'}
     if gv_prop is None: 
-        gv_prop = {'slope': 0.0, 'offset': 0.0} 
+        gv_prop = {'slope': 0.0, 'fidmass':10.5, 'offset': 0.0} 
     # SFMS  
     if sfms_evol is None: 
         sfms_prop = {'name': 'linear', 'zslope': 1.5}
@@ -808,6 +815,8 @@ def kwargs_InheritSF(nsnap_ancestor=10, tau='abc', subhalo_prop=None, fq_prop=No
     if tau == 'abc': 
         med_theta = abc_posterior_median(29)
         tau_dict = {'name': 'line', 'fid_mass': 11.1, 'slope': med_theta[2], 'yint': med_theta[3]}
+    elif tau == 'satellite':
+        tau_dict={'name': 'satellite'} 
     elif isinstance(tau, list): 
         tau_dict = {'name': 'line', 'fid_mass': 11.1, 'slope': tau[0], 'yint': tau[1]}
     evol_dict['tau'] = tau_dict 
@@ -827,6 +836,8 @@ def kwargs_InheritSF(nsnap_ancestor=10, tau='abc', subhalo_prop=None, fq_prop=No
                 },
             'evol_prop': evol_dict
             }
+    if tau == 'abc': 
+        kwargs['abc_step'] = 29
     # Assign SFR based on subhalo growth 
     if subhalogrowth is not None: 
         if subhalogrowth:  
@@ -837,7 +848,7 @@ def kwargs_InheritSF(nsnap_ancestor=10, tau='abc', subhalo_prop=None, fq_prop=No
 
 if __name__=="__main__":
     print abc_posterior_median(29)
-    mevo = 'euler'
+    mevo = 'sham'
     for nsnap_a in [15]: 
         for duty in ['newamp_squarewave']: 
             if duty == 'notperiodic':  
@@ -845,17 +856,22 @@ if __name__=="__main__":
             else: 
                 shgrow = False
             for esemeffes in ['kinked']: #'linear', 'kinked']:
+                #        tau='satellite', 
+                #        fudge={'slope': -1.5, 'fidmass': 10.5, 'offset': 1.} ,
+                #        tau='abc', 
+                #        fudge={'slope': -1.25, 'fidmass': 10.5, 'offset': 1.75} ,
                 kwargs = kwargs_InheritSF(
                         nsnap_ancestor=nsnap_a,
                         sfms_evol=esemeffes,
-                        gv_prop={'slope': 0.3, 'offset': 0.3},
-                        fudge={'slope': -1., 'fidmass': 10.5, 'offset': 1.5} ,
+                        tau='abc', 
+                        fudge={'slope': -1.25, 'fidmass': 10.5, 'offset': 1.75} ,
+                        gv_prop={'slope': 0.3, 'fidmass': 10.5, 'offset': 0.3},
                         dutycycle_evol=duty, 
                         mass_evol=mevo, 
                         evol_type='simult',
                         subhalogrowth=shgrow)
                 flag = 'initialGVfudgeMdep'
-                AncestorPlots(**kwargs)
+                #AncestorPlots(**kwargs)
                 for nsnap in [1]: #range(1,nsnap_a)[::-1]: 
                     Save_InheritSF(nsnap, flag=flag, **kwargs)
                     DescendantQAplot(nsnap, flag=flag, **kwargs)
