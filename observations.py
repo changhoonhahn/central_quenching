@@ -56,7 +56,7 @@ class GroupCat(object):
         ''' GroupCat File 
         '''
         output_file = ''.join([
-            'dat/group_catalog/', 
+            'dat/observations/', 
             'GroupCat.', 
             'Mr', str(self.Mrcut), 
             '.Mass', str(self.masscut), 
@@ -125,7 +125,7 @@ class GroupCat(object):
         h = 0.7
         
         galdata_file = ''.join([
-            'dat/group_catalog/', 
+            'dat/observations/', 
             'clf_groups_M', str(self.Mrcut), '_', str(self.masscut), '_D360.', 
             'galdata_corr.fits']) 
         gal_data = mrdfits(galdata_file) 
@@ -156,7 +156,7 @@ class GroupCat(object):
         ''' wrapper for reading in probability galaxy data 
         '''
         file = ''.join([
-            'dat/group_catalog/', 
+            'dat/observations/', 
             'clf_groups_M', str(self.Mrcut), '_', str(self.masscut), '_D360.', 
             'prob.fits']) 
 
@@ -169,7 +169,7 @@ class GroupCat(object):
         spherematch
         '''
         # import SDSS MFdata catalog
-        mfdata = mrdfits('dat/group_catalog/mfdata_all_supergrid01_sdss.fits.gz') 
+        mfdata = mrdfits('dat/observations/mfdata_all_supergrid01_sdss.fits.gz') 
         spherematch_time = time.time()
         match1, match2, d_match = spherematch(
                 self.ra, self.dec, mfdata.ra, mfdata.dec, 0.001)
@@ -193,7 +193,6 @@ class GroupCat(object):
         setattr(self, 'iSEDfit_ssfr', iSEDfit_SSFR) 
         return None
 
-
 class PrimusSDSS(object): 
     def __init__(self, redshift, environment='no', **kwargs):
         ''' Class that describes SDSS and PRIMUS galaxy data used in the 
@@ -208,7 +207,7 @@ class PrimusSDSS(object):
         '''
         sfr_class = [] 
         for sfq in ['star-forming', 'quiescent']:
-            file_dir = 'dat/wetzel_tree/envcount/'
+            file_dir = 'dat/observations/envcount/'
             if sfq == 'star-forming': 
                 sfq_str = 'active'
             else: 

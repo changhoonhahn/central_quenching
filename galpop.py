@@ -36,7 +36,6 @@ from sfr_evol import ScatterLogSFR_sfms
 from sfr_evol import AverageLogSSFR_q_peak
 from sfr_evol import ScatterLogSSFR_q_peak
 
-from central_subhalo import Subhalos
 from central_subhalo import CentralSubhalos
 #from sfms.fitting import get_quiescent_mean_ssfr 
 
@@ -239,7 +238,7 @@ class CGPop(object):
                 sfr_prop=self.sfr_prop
                 )
         cgpop_file = ''.join([
-            'dat/CenQue/', 
+            'dat/galpop/', 
             'cgpop'
             '.snapshot', str(self.nsnap), 
             file_spec_str, 

@@ -36,7 +36,7 @@ def SimSummary(**sim_kwargs):
             subhalo_prop=sim_kwargs['subhalo_prop'], 
             sfr_prop=sim_kwargs['sfr_prop'], 
             evol_prop=sim_kwargs['evol_prop'])
-    descendant = getattr(bloodline, 'descendant_snapshot'+str(nsnap_descendant)) 
+    descendant = getattr(bloodline, 'descendant_snapshot1') 
     
     bins, dist = descendant.Ssfr()
     return [np.array(bins), np.array(dist)]
@@ -54,8 +54,7 @@ def PriorRange(name):
 
     return [prior_min, prior_max] 
 
-
-def RhoSSFR(datum, model):
+def RhoSSFR(simum, datum):
     ''' L2 Norm between the data SSFR distribution and the simulation SSFR distribution. 
     
     Parameters
@@ -69,10 +68,10 @@ def RhoSSFR(datum, model):
 
     '''
     datum_dist = datum[1]
-    model_dist = model[1]
-    return np.sum((datum_dist - model_dist)**2)
-
-
+    simum_dist = simum[1]
+    drho = np.sum((datum_dist - simum_dist)**2)
+    print drho
+    return drho
 
 def MakeABCrun(file_name=None, nsnap_start=15, subhalo=None, fq=None, sfms=None, dutycycle=None, mass_evol=None): 
     '''Pickle file that specifies all the choices of parameters and ABC settings 
@@ -165,6 +164,10 @@ def ABC(T, eps_val, N_part=1000, prior_name='first_try', abcrun=None):
     - observables : list of observables. Options are 'nbar', 'gmf', 'xi'
     - data_dict : dictionary that specifies the observation keywords 
     '''
+    MakeABCrun(file_name=abcrun) 
+
+    # Data 
+    data_sum = DataSummary()
     # Priors
     prior_min, prior_max = PriorRange(prior_name)
     prior = abcpmc.TophatPrior(prior_min, prior_max)    # ABCPMC prior object
@@ -184,8 +187,10 @@ def ABC(T, eps_val, N_part=1000, prior_name='first_try', abcrun=None):
         sim_kwargs['sfr_prop']['gv'] = {'slope': gv_slope, 'fidmass': 10.5, 'offset': gv_offset}
         sim_kwargs['evol_prop']['fudge'] = {'slope': fudge_slope, 'fidmass': 10.5, 'offset': fudge_offset}
         sim_kwargs['evol_prop']['tau'] = {'name': 'line', 'slope': tau_slope, 'fid_mass': 11.1, 'yint': tau_offset}
+
+        bins, dists = SimSummary(**sim_kwargs)
         
-        return SimSummary(**sim_kwargs)
+        return [bins, dists]
 
     theta_file = lambda pewl: ''.join(['dat/pmc_abc/', 'CenQue_theta_t', str(pewl), '.dat']) 
     w_file = lambda pewl: ''.join(['dat/pmc_abc/', 'CenQue_theta_t', str(pewl), '.dat']) 
@@ -193,7 +198,7 @@ def ABC(T, eps_val, N_part=1000, prior_name='first_try', abcrun=None):
     #mpi_pool = mpi_util.MpiPool()
     abcpmc_sampler = abcpmc.Sampler(
             N=N_part,               # N_particles
-            Y=DataSummary,          # data
+            Y=data_sum,          # data
             postfn=Simz,            # simulator 
             dist=RhoSSFR            # distance function  
             )
@@ -203,26 +208,28 @@ def ABC(T, eps_val, N_part=1000, prior_name='first_try', abcrun=None):
     #eps = abcpmc.ConstEps(T, [1.e13,1.e13])
     eps = abcpmc.ConstEps(T, eps_val)
     pools = []
-    f = open("dat/pmc_abc/abc_tolerance.dat" , "w")
+    f = open("dat/pmc_abc/abc_tolerance.dat", "w")
     f.close()
     eps_str = ''
     for pool in abcpmc_sampler.sample(prior, eps):
-        #while pool.ratio > 0.01:
-        new_eps_str = '\t'.join(eps(pool.t).astype('str'))+'\n'
+        print 'eps ', pool.eps
+        new_eps_str = '\t'+str(pool.eps)+'\n'
         if eps_str != new_eps_str:  # if eps is different, open fiel and append 
-            f = open("abc_tolerance.dat" , "a")
+            f = open("dat/pmc_abc/abc_tolerance.dat", "a")
             eps_str = new_eps_str
             f.write(eps_str)
             f.close()
 
         print("T:{0},ratio: {1:>.4f}".format(pool.t, pool.ratio))
         print eps(pool.t)
+        print pool.__dict__.keys()
         # plot theta
         #plot_thetas(pool.thetas, pool.ws , pool.t, 
         #        Mr=data_dict["Mr"], truths=data_hod, plot_range=prior_range, observables=observables)
         # write theta and w to file 
         np.savetxt(theta_file(pool.t), pool.thetas)
         np.savetxt(w_file(pool.t), pool.ws)
+        print pool.dists
         eps.eps = np.median(np.atleast_2d(pool.dists), axis = 0)
 
 
@@ -234,5 +241,4 @@ def ABC(T, eps_val, N_part=1000, prior_name='first_try', abcrun=None):
 
 
 if __name__=="__main__": 
-    MakeABCrun(file_name='test.txt')
-    ABC(1, 10., N_part=10, prior_name='try0', abcrun='test.txt')
+    ABC(1, 10., N_part=2, prior_name='try0', abcrun='test.txt')
