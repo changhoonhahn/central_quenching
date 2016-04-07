@@ -642,7 +642,9 @@ def Evol_shamMstarSFR(M0, t0, tf, t_step=0.5, tQ0=None, MQ0=None, SFR0=None, q_M
     # ultimately doesn't make a difference in the outcome, but to be meticulous 
     gv0 = np.where(tQ0 == 0.)   # galaxies that were initiall quenching 
     SFR[gv0] -= sfr_evol.AverageLogSFR_sfms(Mq[gv0], z_of_t(t0[gv0]), sfms_prop=sfms_prop)
+    SFR[gv0] -= sfr_evol.DeltaLogSFR_quenching(tQ[gv0], t0[gv0], M_q=Mq[gv0], tau_prop=tau_prop)
     SFR[gv0] += SFR0[gv0]
+
 
     return Msham_f, SFR, tQ
 

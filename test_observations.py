@@ -13,6 +13,7 @@ from observations import FitObservedSFMS
 from observations import ObservedSSFR
 from observations import ObservedSSFR_Peaks
 from observations import FitObservedSSFR_Peaks
+from observations import Lee2015_SFMS_zslope
 
 from sfr_evol import AverageLogSFR_sfms
 from sfr_evol import ScatterLogSFR_sfms
@@ -214,9 +215,42 @@ def PlotObservedSSFR(observable, isedfit=False, Peak=False):
         fig.savefig(fig_file, bbox_inches='tight', dpi=150)
     return None
 
+def PlotLee2015_SFMS_zdep(): 
+    ''' Plot the S0 term (redshift dependence term of the SFMS parmaterization) 
+    of the Lee et al. (2015) SFMS fits. 
+    '''
+    z_mid = np.array([0.36, 0.55, 0.70, 0.85, 0.99, 1.19])
+    S0 = np.array([0.80, 0.99, 1.23, 1.35, 1.53, 1.72])
+    S0_err = np.array([0.019, 0.015, 0.016, 0.014, 0.017, 0.024])
 
+    zslope, const = Lee2015_SFMS_zslope()
+
+    prettyplot()
+    pretty_colors = prettycolors() 
+
+    fig = plt.figure()
+    sub = fig.add_subplot(111)
+    sub.errorbar(z_mid, S0, yerr=S0_err, c='k', elinewidth=3, capsize=10, label='Lee et al. (2015)') 
+    sub.plot(z_mid, zslope * (z_mid - 0.05) + const, c=pretty_colors[1], lw=2, ls='--', label='Best fit')
+    
+    ztext = '\n'.join(['Redshift slope', r'$\mathtt{A_z='+str(round(zslope,2))+'}$'])
+
+    sub.text(0.1, 1.5, ztext, fontsize=20)
+
+    sub.legend(loc='lower right') 
+    sub.set_ylabel('Lee et al. (2015) $S_0$ term', fontsize=25) 
+    sub.set_xlim([0.0, 1.5]) 
+    sub.set_xlabel('Redshift $(\mathtt{z})$', fontsize=25)
+
+    fig_file = ''.join(['figure/', 'Lee2015_SFMS_zdep.png']) 
+    fig.savefig(fig_file, bbox_inches='tight') 
+    return None
+
+    
 if __name__=="__main__": 
-    PlotObservedSSFR('groupcat', isedfit=False, Peak=True)
+    PlotLee2015_SFMS_zdep()
+
+    #PlotObservedSSFR('groupcat', isedfit=False, Peak=True)
 
     #GroupCat_iSEDfitMatch(Mrcut=18, position='central')
     #[BuildGroupCat(Mrcut=Mr, position='central') for Mr in [18, 19, 20]]

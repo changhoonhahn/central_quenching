@@ -6,6 +6,7 @@ Test the SFR evolution functions
 '''
 import numpy as np
 
+from util import mpfit
 import util.util as Util
 from observations import GroupCat
 from observations import PrimusSDSS
@@ -76,6 +77,7 @@ def ModelSFMS(observable='sdssprimus'):
             '.png'])
         sfms_plot.save_fig(fig_file)
         plt.close()
+
 
 if __name__=='__main__': 
     Plot_Fq_timedelay(lit='wetzelsmooth')

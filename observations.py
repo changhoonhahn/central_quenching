@@ -481,3 +481,28 @@ def FitObservedSSFR_Peaks(observable='groupcat', sfq='star-forming', Mrcut=18, p
     bestfit = mpfit.mpfit(util.mpfit_line, p0, functkw=fa, quiet=True) 
 
     return bestfit.params
+
+
+def Lee2015_SFMS_zslope(): 
+    ''' Calculate the sloep of the redshift dependence of the Lee et al. (2015) SFMS parameterizations 
+
+    Lee et al. (2015) parameterized SFMS: 
+
+    log SFR(M*, z) = S0(z) - log( 1 + (M*/M0)^-gamma)
+    
+    S0(z) quantifies the redshift dependence of the SFMS. Lee et al. (2015) fits S0 for each redshift bin. 
+    I fit:
+
+    S0(z) = A_z * ( z - 0.0502) + C
+
+    returns [A_z, C]
+    '''
+    z_mid = np.array([0.36, 0.55, 0.70, 0.85, 0.99, 1.19])
+    S0 = np.array([0.80, 0.99, 1.23, 1.35, 1.53, 1.72])
+    S0_err = np.array([0.019, 0.015, 0.016, 0.014, 0.017, 0.024])
+
+    p0 = [1.5, 0.0]
+    fa = {'x': z_mid-0.05, 'y': S0, 'err': S0_err}
+    bestfit = mpfit.mpfit(util.mpfit_line, p0, functkw=fa, quiet=True) 
+
+    return bestfit.params

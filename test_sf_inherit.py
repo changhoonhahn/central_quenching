@@ -821,7 +821,7 @@ def kwargs_InheritSF(nsnap_ancestor=10, tau='abc', subhalo_prop=None, fq_prop=No
         tau_dict = {'name': 'line', 'fid_mass': 11.1, 'slope': tau[0], 'yint': tau[1]}
     evol_dict['tau'] = tau_dict 
     if fudge is None:
-        evol_dict['fudge'] = {'slope': 0.0, 'fidmass': 105, 'offset': 1.0}
+        evol_dict['fudge'] = {'slope': 0.0, 'fidmass': 10.5, 'offset': 1.0}
     else: 
         evol_dict['fudge'] = fudge 
 
@@ -872,7 +872,7 @@ if __name__=="__main__":
                         subhalogrowth=shgrow)
                 flag = 'initialGVfudgeMdep'
                 #AncestorPlots(**kwargs)
-                for nsnap in [1]: #range(1,nsnap_a)[::-1]: 
+                for nsnap in range(1,nsnap_a)[::-1]: 
                     Save_InheritSF(nsnap, flag=flag, **kwargs)
                     DescendantQAplot(nsnap, flag=flag, **kwargs)
                     DescendantSSFR(nsnap, flag=flag, **kwargs)
