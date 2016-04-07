@@ -18,8 +18,8 @@ from util.util import get_nsnap_t
 from util.util import intersection_index
 
 import matplotlib.pyplot as plt
-from defutility.plotting import prettyplot
-from defutility.plotting import prettycolors
+from ChangTools.utility.plotting import prettyplot
+from ChangTools.utility.plotting import prettycolors
 
 
 # spline between z and t_cosmic

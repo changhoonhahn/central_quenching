@@ -24,8 +24,8 @@ from util import util
 
 # plotting
 import matplotlib.pyplot as plt
-from defutility.plotting import prettyplot
-from defutility.plotting import prettycolors
+from ChangTools.utility.plotting import prettyplot
+from ChangTools.utility.plotting import prettycolors
 
 
 def BuildGroupCat(Mrcut=18, position='central'): 

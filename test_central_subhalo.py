@@ -17,8 +17,8 @@ from util.cenque_utility import intersection_index
 
 # Plotting
 import matplotlib.pyplot as plt
-from defutility.plotting import prettyplot
-from defutility.plotting import prettycolors 
+from ChangTools.utility.plotting import prettyplot
+from ChangTools.utility.plotting import prettycolors 
 
 def SubhaloSMF(type, scatter=0.0, source='li-drory-march', 
         nsnap_ancestor=20 ): 

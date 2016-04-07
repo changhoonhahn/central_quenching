@@ -9,8 +9,8 @@ from scipy import interpolate
 import sfr_evol
 import mass_evol
 
-from defutility.plotting import prettyplot
-from defutility.plotting import prettycolors 
+from ChangTools.utility.plotting import prettyplot
+from ChangTools.utility.plotting import prettycolors 
 from sfms.fitting import get_param_sfr_mstar_z
 
 def test_analytical(): 
