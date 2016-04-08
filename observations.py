@@ -19,7 +19,7 @@ from util import util
 from gal_prop import Fq
 from gal_prop import Ssfr
 
-from ChangTools.utility.fitstables import mrdfits 
+from ChangTools.fitstables import mrdfits 
 
 
 class GroupCat(object): 

@@ -29,8 +29,8 @@ import bovy_plot as bovy
 ## Tau 
 #from util.tau_quenching import get_quenching_efold
 
-from defutility.plotting import prettyplot
-from defutility.plotting import prettycolors 
+from ChangTools.plotting import prettyplot
+from ChangTools.plotting import prettycolors 
 
 class Plots(object): 
     def __init__(self, **kwargs): 

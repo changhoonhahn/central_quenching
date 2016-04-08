@@ -11,8 +11,8 @@ import util.util as Util
 from plotting.plots import PlotSMF
 # --- Plotting --- 
 import matplotlib.pyplot as plt 
-from ChangTools.utility.plotting import prettyplot
-from ChangTools.utility.plotting import prettycolors 
+from ChangTools.plotting import prettyplot
+from ChangTools.plotting import prettycolors 
 
 def PlotModelSMF(source='li-march'):
     ''' Plot the different model SMFs for redshift range 0.0 - 1.0

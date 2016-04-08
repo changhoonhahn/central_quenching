@@ -13,9 +13,9 @@ from lineage import Lineage
 from central_subhalo import Subhalos
 from central_subhalo import CentralSubhalos
 
-from ChangTools.utility.plotting import quick_hist
-from ChangTools.utility.plotting import prettyplot
-from ChangTools.utility.plotting import prettycolors 
+from ChangTools.plotting import quick_hist
+from ChangTools.plotting import prettyplot
+from ChangTools.plotting import prettycolors 
 
 
 def LineageSMF(nsnap_ancestor, descendants=None, 

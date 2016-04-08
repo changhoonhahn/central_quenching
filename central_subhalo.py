@@ -8,8 +8,8 @@ import os.path
 
 # --- Local --- 
 import sham_hack as sham
-from treepm import subhalo_io 
-from utilities import utility as wetzel_util
+#from treepm import subhalo_io 
+#from utilities import utility as wetzel_util
 
 class CentralSubhalos(object): 
     def __init__(self, **kwargs): 

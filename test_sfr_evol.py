@@ -19,8 +19,8 @@ from sfr_evol import DeltaLogSFR_SF_Q_peak
 from plotting.plots import PlotSFMS
 
 import matplotlib.pyplot as plt
-from ChangTools.utility.plotting import prettyplot
-from ChangTools.utility.plotting import prettycolors 
+from ChangTools.plotting import prettyplot
+from ChangTools.plotting import prettycolors 
 
 def ModelSFMS(observable='sdssprimus'): 
     '''

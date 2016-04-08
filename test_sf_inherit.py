@@ -19,8 +19,8 @@ from plotting.plots import PlotSMF
 
 # --- plotting --- 
 import matplotlib.pyplot as plt
-from ChangTools.utility.plotting import prettyplot
-from ChangTools.utility.plotting import prettycolors
+from ChangTools.plotting import prettyplot
+from ChangTools.plotting import prettycolors
 
 pretty_colors = prettycolors()
 
