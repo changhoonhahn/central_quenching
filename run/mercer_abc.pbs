@@ -1,8 +1,8 @@
 #!/bin/bash
 
-#PBS -l nodes=3:ppn=20,mem=550GB
+#PBS -l nodes=1:ppn=20,mem=50GB
 #PBS -l walltime=48:00:00
-#PBS -N openmpi_CenQue_abc
+#PBS -N openmpiCenQueABC
 #PBS -M chh327@nyu.edu
 #PBS -m abe
 #PBS -j oe
