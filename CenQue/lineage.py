@@ -17,7 +17,7 @@ from galpop import AssignSFR
 import util.util as Util
 
 class Lineage(object): 
-    def __init__(self, nsnap_ancestor=20, subhalo_prop=None, clobber=False, **kwargs):
+    def __init__(self, nsnap_ancestor=20, subhalo_prop=None, clobber=False, quiet=True, **kwargs):
         ''' Class that describes the Lineage object which contains CGPop class objects
         for each snapshots from the ancestor to snapshot 1 (z = 0). 
 
@@ -44,13 +44,14 @@ class Lineage(object):
         # Read/Import central galaxy population at snapshot = nsnap_ancestor
         self.ancestor = CGPop(n_snap=self.nsnap_ancestor, subhalo_prop=self.subhalo_prop)
         if os.path.isfile(self.ancestor.File()): 
-            print 'Reading ', self.ancestor.File()
+            if not quiet: 
+                print 'Reading ', self.ancestor.File()
             self.ancestor.Read()
         else: 
             self.ancestor.ImportSubhalo(self.nsnap_ancestor)
             self.ancestor.Write()
 
-    def AssignSFR_ancestor(self, sfr_prop=None):
+    def AssignSFR_ancestor(self, sfr_prop=None, quiet=True):
         ''' Assign SFR properties to the 'ancestor_cq' object using 
         mass_genesis, tsnap_genesis
 
@@ -79,7 +80,8 @@ class Lineage(object):
             sfr_class, sfr, ssfr, delta_sfr, avg_sfr, tQ, MQ = AssignSFR(
                     self.ancestor.mass_genesis, 
                     self.ancestor.zsnap_genesis, 
-                    sfr_prop=self.sfr_prop)
+                    sfr_prop=self.sfr_prop, 
+                    quiet=quiet)
         else: 
             desc_obj = getattr(self, 
                         'descendant_snapshot'+str(sfr_prop['subhalogrowth']['nsnap_descendant']))
@@ -88,7 +90,8 @@ class Lineage(object):
                     self.ancestor.zsnap_genesis, 
                     sfr_prop=self.sfr_prop, 
                     ancestor=self.ancestor,
-                    descendant=desc_obj
+                    descendant=desc_obj, 
+                    quiet=quiet
                     )
 
         for prop in ['sfr', 'ssfr', 'sfr_class', 'avg_sfr', 'delta_sfr', 'tQ', 'MQ']: 
@@ -179,7 +182,7 @@ class Lineage(object):
         f.close()  
         return None 
 
-    def Read(self, nsnap_descendants, filename=None, clobber=False): 
+    def Read(self, nsnap_descendants, filename=None, clobber=False, quiet=True): 
         ''' Read in lineage object from stored hdf5 file. More specifically, 
         read in specified snapshots of descendants. 
         
@@ -196,10 +199,12 @@ class Lineage(object):
         '''
         if filename is not None: 
             f = h5py.File(filename, 'r')
-            print 'Reading ', filename 
+            if not quiet: 
+                print 'Reading ', filename 
         else: 
             f = h5py.File(self.File(), 'r')
-            print 'Reading ', self.File() 
+            if not quiet: 
+                print 'Reading ', self.File() 
         
         cq_grps = ['ancestor']
         for i_snap in nsnap_descendants:

@@ -70,20 +70,27 @@ def RhoSSFR(simum, datum):
     datum_dist = datum[1]
     simum_dist = simum[1]
     drho = np.sum((datum_dist - simum_dist)**2)
-    print drho
     return drho
 
-def MakeABCrun(file_name=None, nsnap_start=15, subhalo=None, fq=None, sfms=None, dutycycle=None, mass_evol=None): 
+def MakeABCrun(abcrun=None, nsnap_start=15, subhalo=None, fq=None, sfms=None, dutycycle=None, mass_evol=None, 
+        Niter=None, Npart=None, prior_name=None, eps_val=None): 
     '''Pickle file that specifies all the choices of parameters and ABC settings 
     for record keeping purposes.
     '''
-    if file_name is None: 
-        file_name = ''.join(['abc/',
-            'RENAME_ME_', str(datetime.now()).replace(' ','.'), 
-            '.txt']) 
+    if abcrun is None: 
+        abcrun = ''.join(['RENAME_ME_', str(datetime.today().date())])
+    file_name = ''.join(['abc/', 'abcrun_', abcrun, '.txt']) 
     pickle_name = file_name.replace('.txt', '.p')
 
     f = open(file_name, 'w')
+
+    # ABC properities
+    f.write('# ABC Run Properties \n') 
+    f.write('N_iter = '+str(Niter)+'\n')
+    f.write('N_particles = '+str(Npart)+'\n')
+    f.write('Prior Name = '+prior_name+'\n')
+    f.write('Epsilon_0 = '+str(eps_val)+'\n')
+    f.write('\n')
 
     # Subhalo properties
     f.write('# Subhalo Properties \n') 
@@ -113,7 +120,7 @@ def MakeABCrun(file_name=None, nsnap_start=15, subhalo=None, fq=None, sfms=None,
     if dutycycle is None:   
         dutycycle = {'name': 'newamp_squarewave', 'freq_range': [2.*np.pi, 20.*np.pi], 'sigma': 0.3}
     f.write(''.join(['name = ', dutycycle['name'], '\n']))
-    f.write(''.join(['frequency range = ', str(dutycycle['freq_range'][0]), ',', str(dutycycle['freq_range'][0]), '\n']))
+    f.write(''.join(['frequency range = ', str(dutycycle['freq_range'][0]), ',', str(dutycycle['freq_range'][1]), '\n']))
     f.write(''.join(['sigma = ', str(dutycycle['sigma']), '\n']))
     f.write('\n')
     
@@ -140,31 +147,37 @@ def MakeABCrun(file_name=None, nsnap_start=15, subhalo=None, fq=None, sfms=None,
     pickle.dump(kwargs, open(pickle_name, 'wb'))
     return None 
 
-def ReadABCrun(file_name): 
+def ReadABCrun(abcrun): 
     ''' Read text file that specifies all the choices of parameters and ABC settings.
     '''
-    if not isinstance(file_name, str):
-        raise ValueError('ABC run file name has to be a string')
-    if file_name.rsplit('.')[-1] == 'txt':
-        pickle_name = ''.join(['.'.join(file_name.rsplit('.')[:-1]), '.p']) 
-    elif file_name.rsplit('.')[-1] == 'p':
-        pickle_name = file_name
-
-    return pickle.load(open(pickle_name, 'r'))
+    if abcrun is None: 
+        abcrun = ''.join(['RENAME_ME_', str(datetime.today().date())])
+    pickle_name = ''.join(['abc/', 'abcrun_', abcrun, '.p']) 
+    return pickle.load(open(pickle_name, 'r')), abcrun
 
 
-def ABC(T, eps_val, N_part=1000, prior_name='first_try', abcrun=None):
+def ABC(T, eps_val, Npart=1000, prior_name='try0', abcrun=None):
     ''' ABC-PMC implementation. 
 
     Parameters
     ----------
-    - T : Number of iterations 
-    - eps_val : 
-    - N_part : Number of particles
-    - observables : list of observables. Options are 'nbar', 'gmf', 'xi'
-    - data_dict : dictionary that specifies the observation keywords 
+    T : (int) 
+        Number of iterations
+
+    eps_val : (float)
+        Starting epsilon threshold value 
+
+    N_part : (int)
+        Number of particles
+
+    prior_name : (string)
+        String that specifies what prior to use.
+
+    abcrun : (string)
+        String that specifies abc run information 
     '''
-    MakeABCrun(file_name=abcrun) 
+    # output abc run details
+    MakeABCrun(abcrun=abcrun, Niter=T, Npart=Npart, prior_name=prior_name, eps_val=eps_val) 
 
     # Data 
     data_sum = DataSummary()
@@ -173,7 +186,7 @@ def ABC(T, eps_val, N_part=1000, prior_name='first_try', abcrun=None):
     prior = abcpmc.TophatPrior(prior_min, prior_max)    # ABCPMC prior object
 
     # Read in ABC run file
-    sfinherit_kwargs = ReadABCrun(abcrun)
+    sfinherit_kwargs, abcrun_flag = ReadABCrun(abcrun)
 
     def Simz(tt):       # Simulator (forward model) 
         gv_slope = tt[0]
@@ -192,30 +205,37 @@ def ABC(T, eps_val, N_part=1000, prior_name='first_try', abcrun=None):
         
         return [bins, dists]
 
-    theta_file = lambda pewl: ''.join(['dat/pmc_abc/', 'CenQue_theta_t', str(pewl), '.dat']) 
-    w_file = lambda pewl: ''.join(['dat/pmc_abc/', 'CenQue_theta_t', str(pewl), '.dat']) 
-
-    #mpi_pool = mpi_util.MpiPool()
-    abcpmc_sampler = abcpmc.Sampler(
-            N=N_part,               # N_particles
-            Y=data_sum,          # data
-            postfn=Simz,            # simulator 
-            dist=RhoSSFR            # distance function  
-            )
-    #        pool=mpi_pool)  
+    theta_file = lambda pewl: ''.join(['dat/pmc_abc/', 'CenQue_theta_t', str(pewl), '_', abcrun_flag, '.dat']) 
+    w_file = lambda pewl: ''.join(['dat/pmc_abc/', 'CenQue_w_t', str(pewl), '_', abcrun_flag, '.dat']) 
+    eps_file = ''.join(['dat/pmc_abc/epsilon_', abcrun_flag, '.dat'])
+    
+    try:
+        mpi_pool = mpi_util.MpiPool()
+        abcpmc_sampler = abcpmc.Sampler(
+                N=Npart,                # N_particles
+                Y=data_sum,             # data
+                postfn=Simz,            # simulator 
+                dist=RhoSSFR,           # distance function  
+                pool=mpi_pool)  
+    except AttributeError: 
+        abcpmc_sampler = abcpmc.Sampler(
+                N=Npart,                # N_particles
+                Y=data_sum,             # data
+                postfn=Simz,            # simulator 
+                dist=RhoSSFR)           # distance function  
     abcpmc_sampler.particle_proposal_cls = abcpmc.ParticleProposal
 
-    #eps = abcpmc.ConstEps(T, [1.e13,1.e13])
     eps = abcpmc.ConstEps(T, eps_val)
     pools = []
-    f = open("dat/pmc_abc/abc_tolerance.dat", "w")
+    f = open(eps_file, "w")
     f.close()
     eps_str = ''
     for pool in abcpmc_sampler.sample(prior, eps):
+        print '----------------------------------------'
         print 'eps ', pool.eps
         new_eps_str = '\t'+str(pool.eps)+'\n'
         if eps_str != new_eps_str:  # if eps is different, open fiel and append 
-            f = open("dat/pmc_abc/abc_tolerance.dat", "a")
+            f = open(eps_file, "a")
             eps_str = new_eps_str
             f.write(eps_str)
             f.close()
@@ -223,16 +243,13 @@ def ABC(T, eps_val, N_part=1000, prior_name='first_try', abcrun=None):
         print("T:{0},ratio: {1:>.4f}".format(pool.t, pool.ratio))
         print eps(pool.t)
         print pool.__dict__.keys()
-        # plot theta
-        #plot_thetas(pool.thetas, pool.ws , pool.t, 
-        #        Mr=data_dict["Mr"], truths=data_hod, plot_range=prior_range, observables=observables)
+
         # write theta and w to file 
         np.savetxt(theta_file(pool.t), pool.thetas)
         np.savetxt(w_file(pool.t), pool.ws)
         print pool.dists
         eps.eps = np.median(np.atleast_2d(pool.dists), axis = 0)
-
-
+        print '----------------------------------------'
         pools.append(pool)
 
     abcpmc_sampler.close()
@@ -241,4 +258,4 @@ def ABC(T, eps_val, N_part=1000, prior_name='first_try', abcrun=None):
 
 
 if __name__=="__main__": 
-    ABC(1, 10., N_part=2, prior_name='try0', abcrun='test.txt')
+    ABC(2, 10., Npart=3, prior_name='try0', abcrun='test')

@@ -70,11 +70,11 @@ def InheritSF(nsnap_descendant, nsnap_ancestor=20,
     # read in the lineage (< 0.05 seconds for one snapshot)
     if not quiet: 
         read_time = time.time()
-    bloodline = Lineage(nsnap_ancestor=nsnap_ancestor, subhalo_prop=subhalo_prop)
-    bloodline.Read(range(nsnap_descendant, nsnap_ancestor))
+    bloodline = Lineage(nsnap_ancestor=nsnap_ancestor, subhalo_prop=subhalo_prop, quiet=quiet)
+    bloodline.Read(range(nsnap_descendant, nsnap_ancestor), quiet=quiet)
     if 'subhalogrowth' in sfr_prop.keys(): 
         sfr_prop['subhalogrowth']['nsnap_descendant'] = nsnap_descendant
-    bloodline.AssignSFR_ancestor(sfr_prop=sfr_prop)
+    bloodline.AssignSFR_ancestor(sfr_prop=sfr_prop, quiet=quiet)
     if not quiet: 
         print 'Lineage Read Time = ', time.time() - read_time 
 

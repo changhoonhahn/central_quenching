@@ -1,0 +1,24 @@
+# ABC Run Properties 
+N_iter = 2
+N_particles = 3
+Prior Name = try0
+Epsilon_0 = 10.0
+
+# Subhalo Properties 
+scatter = 0.2
+source = li-march
+
+# Quiescent Fraction Properties 
+name = wetzel
+
+# Starforming Main Sequence Properties 
+name = linear
+zslope = 1.14
+
+# SF Dutycycle Properties 
+name = newamp_squarewave
+frequency range = 6.28318530718,62.8318530718
+sigma = 0.3
+
+# Mass Evolution Properties 
+name = sham

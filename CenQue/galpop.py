@@ -538,7 +538,7 @@ class CGPop(object):
             return sfms_plot 
     
 
-def AssignSFR(mass, redshift, sfr_prop=None, ancestor=None, descendant=None):
+def AssignSFR(mass, redshift, sfr_prop=None, ancestor=None, descendant=None, quiet=True):
     ''' Assign star-forming properties based on the input mass and redshift. 
     Return sfr_class (star-forming or quiescent), SFR, and sSFR given a set 
     of masses and redshifts.
@@ -597,7 +597,8 @@ def AssignSFR(mass, redshift, sfr_prop=None, ancestor=None, descendant=None):
     greenvalley = np.where(rand < gvfrac)[0]
     ngal_green = len(greenvalley) 
     ngal_green_M, dum = np.histogram(mass[massive[greenvalley]], bins=M_bins)
-    print ngal_green, ' green valley galaxies out of ', ngal, ' galaxies'
+    if not quiet: 
+        print ngal_green, ' green valley galaxies out of ', ngal, ' galaxies'
     
     sfr_class[massive[greenvalley]] = 'star-forming'    # classified as star-forming
     ssfr_q_peak = AverageLogSSFR_q_peak(mass[massive[greenvalley]]) # Q peak SSFR value
