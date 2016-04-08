@@ -155,7 +155,6 @@ def ReadABCrun(abcrun):
     pickle_name = ''.join(['abc/', 'abcrun_', abcrun, '.p']) 
     return pickle.load(open(pickle_name, 'r')), abcrun
 
-
 def ABC(T, eps_val, Npart=1000, prior_name='try0', abcrun=None):
     ''' ABC-PMC implementation. 
 
@@ -258,4 +257,8 @@ def ABC(T, eps_val, Npart=1000, prior_name='try0', abcrun=None):
 
 
 if __name__=="__main__": 
-    ABC(2, 10., Npart=3, prior_name='try0', abcrun='test')
+    Niter = int(sys.argv[1])
+    print 'N_iterations = ', Niter
+    Npart = int(sys.argv[2])
+    print 'N_particle = ', Npart
+    ABC(Niter, 10., Npart=Npart, prior_name='try0', abcrun='test')
