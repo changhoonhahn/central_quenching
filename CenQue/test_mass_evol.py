@@ -8,6 +8,7 @@ from scipy import interpolate
 
 import sfr_evol
 import mass_evol
+import util.util as Util
 
 from ChangTools.plotting import prettyplot
 from ChangTools.plotting import prettycolors 
@@ -84,7 +85,7 @@ def test_mass_evol(mass0, t0, tf,
     '''
 
     # spline between z and t_cosmic
-    z, t = np.loadtxt('snapshot_table.dat', unpack=True, usecols=[2, 3]) 
+    z, t = np.loadtxt(Util.snapshottable(), unpack=True, usecols=[2, 3]) 
     z_of_t = interpolate.interp1d(list(reversed(t)), list(reversed(z)), kind='cubic') 
     z0 = z_of_t(t0)
     zf = z_of_t(tf)
@@ -150,7 +151,7 @@ def plot_integrated_mass_evol(mass0, t0, tf,
     delt = (tf-t0)/10.0
     tfs = np.arange(t0+delt, tf+delt, delt)
 
-    z, t = np.loadtxt('snapshot_table.dat', unpack=True, usecols=[2, 3]) 
+    z, t = np.loadtxt(Util.snapshottable(), unpack=True, usecols=[2, 3]) 
     z_of_t = interpolate.interp1d(list(reversed(t)), list(reversed(z)), kind='cubic') 
     
     # SF MS 

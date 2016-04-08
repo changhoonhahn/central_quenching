@@ -150,7 +150,7 @@ class CGPop(object):
         self.metadata = [ 'nsnap', 'zsnap', 't_cosmic', 't_step', 'subhalo_prop']
         # get snapshot redshift/cosmic time data using Andrew's table
         n_snaps, z_snap, t_snap, t_wid = np.loadtxt(
-                'snapshot_table.dat', 
+                Util.snapshottable(), 
                 unpack=True, 
                 usecols=[0, 2, 3, 4]
                 )

@@ -14,6 +14,7 @@ import sfr_evol
 
 from gal_prop import Fq
 from gal_prop import dFqdt
+import util.util as Util
 from util.util import get_nsnap_t
 from util.util import intersection_index
 
@@ -23,7 +24,7 @@ from ChangTools.plotting import prettycolors
 
 
 # spline between z and t_cosmic
-z_snap, t_snap = np.loadtxt('snapshot_table.dat', unpack=True, usecols=[2, 3]) 
+z_snap, t_snap = np.loadtxt(Util.snapshottable(), unpack=True, usecols=[2, 3]) 
 z_of_t = interpolate.interp1d(list(reversed(t_snap)), list(reversed(z_snap)), kind='cubic') 
 
 def InheritSF(nsnap_descendant, nsnap_ancestor=20, 

@@ -209,6 +209,11 @@ def sfr_squarewave(mass, tcosmic, **sfr_param):
 
 # z_snap <--> t_snap ---------------------------------------------
 
+def snapshottable():
+    '''
+    '''
+    return os.path.dirname(os.path.realpath(__file__)).split('util')[0]+'snapshot_table.dat'
+
 def get_zsnap(tcosmic): 
     ''' Given cosmic time return redshift using spline interpolation of snapshot table 
 
