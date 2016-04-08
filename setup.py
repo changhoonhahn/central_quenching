@@ -9,7 +9,11 @@ data_dir = raw_input('Please enter local directory to dump data : ')
 u_sure = raw_input('Are you sure you want '+data_dir+' as your local data directory? [y/n]') 
 
 if u_sure == 'y': 
-    os.symlink(data_dir, 'dat')
+    try: 
+        os.symlink(data_dir, 'dat')
+    except OSError: 
+        os.remove('dat')
+        os.symlink(data_dir, 'dat')
 else: 
     raise ValueError("Don't doubt yourself next time") 
 
@@ -21,11 +25,11 @@ for dir in ['wetzel_tree', 'lineage', 'InheritSF', 'pmc_abc', 'galpop', 'observa
 # observations
 print 'Downloading SDSS group catalog ...'
 if not os.path.exists('dat/observations/clf_groups_M18_9.4_D360.prob'): 
-    subprocess.call(['wget', 'http://physics.nyu.edu/~chh327/data/groupcat.tar', 'dat/observations/']) 
+    subprocess.call(['wget', 'http://physics.nyu.edu/~chh327/data/groupcat.tar', 'dat/observations/groupcat.tar']) 
     subprocess.call(['tar', '-xzvf', 'dat/observations/groupcat.tar', '-C', 'dat/observations/'])
     print 'Downloading SDSS+PRIMUS iSEDfit data ...'
-    subprocess.call(['wget', 'http://physics.nyu.edu/~chh327/data/groupcat.tar', 'dat/observations/']) 
-    subprocess.call(['tar', '-xzvf', 'dat/observations/groupcat.tar', '-C', 'dat/observations/'])
+    subprocess.call(['wget', 'http://physics.nyu.edu/~chh327/data/primussdss.tar', 'dat/observations/']) 
+    subprocess.call(['tar', '-xzvf', 'dat/observations/primussdss.tar', '-C', 'dat/observations/'])
 print 'Building Group Catalog hdf5 files'
 [Obv.BuildGroupCat(Mrcut=Mr, position='central') for Mr in [18, 19, 20]]
 
