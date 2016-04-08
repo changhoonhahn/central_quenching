@@ -870,9 +870,9 @@ if __name__=="__main__":
                         mass_evol=mevo, 
                         evol_type='simult',
                         subhalogrowth=shgrow)
-                flag = 'initialGVfudgeMdep'
+                flag = 'testtest'
                 #AncestorPlots(**kwargs)
-                for nsnap in range(1,nsnap_a)[::-1]: 
+                for nsnap in [1]: #range(1,nsnap_a)[::-1]: 
                     Save_InheritSF(nsnap, flag=flag, **kwargs)
                     DescendantQAplot(nsnap, flag=flag, **kwargs)
                     DescendantSSFR(nsnap, flag=flag, **kwargs)
