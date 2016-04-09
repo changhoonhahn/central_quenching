@@ -5,6 +5,12 @@ Contact: chh327@nyu.edu
 
 Evolve central galaxy SFRs
 
+Required Python Modules 
+===
+
+* abcpmc
+* corner
+
 Recommended Python Modules
 ===
 
