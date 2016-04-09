@@ -15,19 +15,10 @@ from gal_prop import Ssfr
 from sfr_evol import getTauQ
 from sfr_evol import AverageLogSFR_sfms
 
-import bovy_plot as bovy
+from util.util import code_dir
 
-# SMF
-#from smf import SMF
-#from quiescent_fraction import get_fq
-#from quiescent_fraction import sfr_cut 
-## M*-Mhalo plot
-#from util import cenque_utility as util
-## SF-MS plot
-#from util.cenque_utility import get_z_nsnap
-#from sfms.fitting import get_param_sfr_mstar_z
-## Tau 
-#from util.tau_quenching import get_quenching_efold
+import corner 
+import bovy_plot as bovy
 
 from ChangTools.plotting import prettyplot
 from ChangTools.plotting import prettycolors 
@@ -628,7 +619,6 @@ class PlotSFMS(Plots):
         return None
 
 
-
 # Stellar Mass Function 
 class PlotSMF(Plots): 
     def __init__(self, **kwargs): 
@@ -741,69 +731,4 @@ class PlotSMF(Plots):
         
         self.sub.legend(loc='upper right', frameon=False)
         return None
-
-
-
-'''
-    for i_mass, panel_mass in enumerate(self.panel_mass_bins):       # loop through each panel 
-        
-        sf_massbin = np.where(
-                (cenque.mass >= panel_mass[0]) & 
-                (cenque.mass < panel_mass[1]) & 
-                (cenque.gal_type == 'star-forming') 
-                )
-
-        quenching_massbin = np.where(
-                (cenque.mass >= panel_mass[0]) & 
-                (cenque.mass < panel_mass[1]) & 
-                (cenque.tau > 0.0) 
-                )
-
-        q_notquenching_massbin = np.where(
-                (cenque.mass >= panel_mass[0]) & 
-                (cenque.mass < panel_mass[1]) & 
-                (cenque.gal_type == 'quiescent') &
-                (cenque.tau < 0.0) 
-                )
-
-        data_list, color_list, label_list = [], [], []
-
-        if len(quenching_massbin[0]) > 0: 
-            data_list.append(
-                    cenque.ssfr[quenching_massbin]
-                    )
-            color_list.append('orange')
-            label_list.append('Quenching')
-
-        if len(sf_massbin[0]) > 0: 
-            data_list.append(
-                    cenque.ssfr[sf_massbin]
-                    )
-            color_list.append('blue')
-            label_list.append('Star-Forming')
-
-        if len(q_notquenching_massbin[0]) > 0:
-            data_list.append(
-                    cenque.ssfr[q_notquenching_massbin]
-                    )
-            color_list.append('red')
-            label_list.append('Quiescent')
-        #print 'quenching ', len(quenching_massbin[0])
-        #print 'starforming ', len(sf_massbin[0])
-        #print 'quiescent ', len(q_notquenching_massbin[0])
-
-        self.subs[i_mass].hist(
-                data_list, 
-                50, 
-                normed = 1, 
-                stacked=True, 
-                color = color_list,
-                label = label_list 
-                )
-
-        if panel_mass == self.panel_mass_bins[-1]: 
-            self.subs[i_mass].text(-9.25, 1., 'z ='+str(cenque.zsnap),
-                fontsize=24
-                )
-'''
 

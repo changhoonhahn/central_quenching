@@ -8,8 +8,9 @@ Evolve central galaxy SFRs
 Required Python Modules 
 ===
 
-* abcpmc
-* corner
+* [abcpmc](https://github.com/jakeret/abcpmc)
+* [corner](https://github.com/dfm/corner.py)
+* [ChangTools](https://github.com/changhoonhahn/ChangTools)
 
 Recommended Python Modules
 ===

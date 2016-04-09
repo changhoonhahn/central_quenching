@@ -14,8 +14,11 @@ from util.util import code_dir
 from observations import GroupCat
 from sf_inherit import InheritSF
 
+import corner
 import abcpmc
 from abcpmc import mpi_util
+
+import matplotlib.pyplot as plt 
 
 def DataSummary(Mrcut=18): 
     ''' Summary statistics of the data. In our case that is the 
@@ -249,12 +252,117 @@ def ABC(T, eps_val, Npart=1000, prior_name='try0', abcrun=None):
 	    header='gv_slope, gv_offset, fudge_slope, fudge_offset, tau_slope, tau_offset')
         np.savetxt(w_file(pool.t), pool.ws)
         print pool.dists
-        #eps.eps = np.median(np.atleast_2d(pool.dists), axis = 0)
+        eps.eps = np.median(np.atleast_2d(pool.dists), axis = 0)
         print '----------------------------------------'
         pools.append(pool)
 
     abcpmc_sampler.close()
     return pools
+
+# ABC Corner Plot 
+class PlotABC(object): 
+    def __init__(self, t, abcrun=None, prior_name='try0'): 
+        '''
+        '''
+        if abcrun is None: 
+            raise ValueError('specify ABC run string') 
+
+        theta_file = ''.join([
+            code_dir(), 'dat/pmc_abc/', 'CenQue_theta_t', str(t), '_', abcrun, '.dat']) 
+        w_file = ''.join([
+            code_dir(), 'dat/pmc_abc/', 'CenQue_w_t', str(t), '_', abcrun, '.dat']) 
+
+        theta = np.loadtxt(theta_file)
+        w = np.loadtxt(w_file)
+
+        med_theta = [np.median(theta[:,i]) for i in range(len(theta[0]))]
+    
+        # prior range 
+        prior_min, prior_max = PriorRange(prior_name)
+        prior_range = [(prior_min[i], prior_max[i]) for i in range(len(prior_min))]
+        
+        # list of parameters
+        params = [
+                'slope_gv', 
+                'offset_gv', 
+                'slope_fudge', 
+                'offset_fudge', 
+                'slope_tau', 
+                'offset_tau'
+                ]
+        fig_name = ''.join([code_dir(), 
+            'figure/', 'abc_step', str(t), '_', abcrun, '.png']) 
+
+        self._thetas(theta, w=w, truths=med_theta, plot_range=prior_range, 
+                parameters=params, 
+                fig_name=fig_name)
+
+
+    def _thetas(self, theta, w=None, truths=None, plot_range=None, 
+            parameters=['slope_gv', 'offset_gv', 'slope_fudge', 'offset_fudge', 'slope_tau', 'offset_tau'], 
+            fig_name = None
+            ):
+        ''' Corner plots of input theta values 
+        '''
+        par_labels = [] 
+        for par in parameters: 
+            if par == 'slope_gv': 
+                par_labels.append(r'$\mathtt{A_{gv}}$')
+            if par == 'offset_gv': 
+                par_labels.append(r'$\sigma_\mathtt{gv}$')
+            if par == 'slope_fudge': 
+                par_labels.append(r'$\mathtt{A_{fudge}}$')
+            if par == 'offset_fudge': 
+                par_labels.append(r'$\sigma_\mathtt{fudge}$')
+            if par == 'slope_tau': 
+                par_labels.append(r'$\mathtt{A}_\tau$')
+            if par == 'offset_tau': 
+                par_labels.append(r'$\sigma_\tau$')
+
+        if w is not None: 
+            # weighted theta
+            fig = corner.corner(
+                    theta,
+                    weights=w.flatten(),
+                    truths=truths,
+                    truth_color='#ee6a50',
+                    labels=par_labels,
+                    label_kwargs={'fontsize': 25},
+                    range=plot_range,
+                    quantiles=[0.16,0.5,0.84],
+                    show_titles=True,
+                    title_args={"fontsize": 12},
+                    plot_datapoints=True,
+                    fill_contours=True,
+                    levels=[0.68, 0.95],
+                    color='b',
+                    bins=20,
+                    smooth=1.0)
+        else: 
+            # weighted theta
+            fig = corner.corner(
+                    theta,
+                    truths=truths,
+                    truth_color='#ee6a50',
+                    labels=par_labels,
+                    label_kwargs={'fontsize': 25},
+                    range=plot_range,
+                    quantiles=[0.16,0.5,0.84],
+                    show_titles=True,
+                    title_args={"fontsize": 12},
+                    plot_datapoints=True,
+                    fill_contours=True,
+                    levels=[0.68, 0.95],
+                    color='b',
+                    bins=20,
+                    smooth=1.0)
+
+        if fig_name is not None: 
+            plt.savefig(fig_name)
+            plt.close()
+        
+        return None
+
 
 
 
