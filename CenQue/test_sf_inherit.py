@@ -719,7 +719,7 @@ def InheritSF_file(nsnap_descendant, nsnap_ancestor=20, tau='abc', abc_step=None
         flag_str = '.'+flag
 
     hdf5_file = ''.join([
-        'dat/InheritSF/'
+        code_dir(), 'dat/InheritSF/'
         'InheritSF', 
         '.Snap', str(nsnap_descendant), '_', str(nsnap_ancestor), 
         '.subhalo_sig', str(round(subhalo_prop['scatter'], 2)), '_', subhalo_prop['source'], 
@@ -738,7 +738,7 @@ def abc_posterior_median(n_step):
     '''
     # read in ABC posterior file 
     posterior_file = ''.join([
-        'dat/pmc_abc/', 
+        code_dir, 'dat/pmc_abc/', 
         'theta_t', 
         str(n_step), 
         '.dat'])

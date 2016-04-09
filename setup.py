@@ -23,6 +23,9 @@ for dir in ['wetzel_tree', 'lineage', 'InheritSF', 'pmc_abc', 'galpop', 'observa
     if not os.path.exists('dat/'+dir):
         print 'creating directory dat/'+dir+'/'
         os.makedirs('dat/'+dir)
+if not os.path.exist('dat/pmc_abc/run'): 
+        print 'creating directory dat/pmc_abc/run/'
+        os.makedirs('dat/pmc_abc/run')
 
 # observations
 print 'Downloading SDSS group catalog ...'

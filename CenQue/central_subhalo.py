@@ -8,6 +8,7 @@ import os.path
 
 # --- Local --- 
 import sham_hack as sham
+from util.util import code_dir
 #from treepm import subhalo_io 
 #from utilities import utility as wetzel_util
 
@@ -24,7 +25,7 @@ class CentralSubhalos(object):
         '''
         # write to hdf5 file 
         subsham_cen_file = ''.join([ 
-            'dat/wetzel_tree/', 
+            code_dir(), 'dat/wetzel_tree/', 
             'subhalo_sham', 
             '.central',
             '.snapshot', 
@@ -193,7 +194,7 @@ class Subhalos(CentralSubhalos):
         '''
         # write to hdf5 file 
         subsham_file = ''.join([ 
-            'dat/wetzel_tree/', 
+            code_dir(), 'dat/wetzel_tree/', 
             'subhalo_sham', 
             '.all',
             '.snapshot', 

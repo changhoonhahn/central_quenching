@@ -158,7 +158,7 @@ class Fq(object):
 
             fq_z = [] 
             for zbin in zbins: 
-                fq_file = ''.join([ 'dat/wetzel_tree/', 
+                fq_file = ''.join([code_dir(), 'dat/wetzel_tree/', 
                     'qf_z', str(zbin), 'cen.dat' ]) 
                
                 # read in mass and quiescent fraction

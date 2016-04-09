@@ -10,6 +10,7 @@ import numpy as np
 from datetime import datetime 
 
 # --- Local ---
+from util.util import code_dir
 from observations import GroupCat
 from sf_inherit import InheritSF
 
@@ -79,7 +80,7 @@ def MakeABCrun(abcrun=None, nsnap_start=15, subhalo=None, fq=None, sfms=None, du
     '''
     if abcrun is None: 
         abcrun = ''.join(['RENAME_ME_', str(datetime.today().date())])
-    file_name = ''.join(['abc/', 'abcrun_', abcrun, '.txt']) 
+    file_name = ''.join([code_dir(), 'dat/pmc_abc/run/', 'abcrun_', abcrun, '.txt']) 
     pickle_name = file_name.replace('.txt', '.p')
 
     f = open(file_name, 'w')
@@ -152,7 +153,7 @@ def ReadABCrun(abcrun):
     '''
     if abcrun is None: 
         abcrun = ''.join(['RENAME_ME_', str(datetime.today().date())])
-    pickle_name = ''.join(['abc/', 'abcrun_', abcrun, '.p']) 
+    pickle_name = ''.join([code_dir(), 'dat/pmc_abc/run/', 'abcrun_', abcrun, '.p']) 
     return pickle.load(open(pickle_name, 'r')), abcrun
 
 def ABC(T, eps_val, Npart=1000, prior_name='try0', abcrun=None):
@@ -204,9 +205,9 @@ def ABC(T, eps_val, Npart=1000, prior_name='try0', abcrun=None):
         
         return [bins, dists]
 
-    theta_file = lambda pewl: ''.join(['dat/pmc_abc/', 'CenQue_theta_t', str(pewl), '_', abcrun_flag, '.dat']) 
-    w_file = lambda pewl: ''.join(['dat/pmc_abc/', 'CenQue_w_t', str(pewl), '_', abcrun_flag, '.dat']) 
-    eps_file = ''.join(['dat/pmc_abc/epsilon_', abcrun_flag, '.dat'])
+    theta_file = lambda pewl: ''.join([code_dir(), 'dat/pmc_abc/', 'CenQue_theta_t', str(pewl), '_', abcrun_flag, '.dat']) 
+    w_file = lambda pewl: ''.join([code_dir(), 'dat/pmc_abc/', 'CenQue_w_t', str(pewl), '_', abcrun_flag, '.dat']) 
+    eps_file = ''.join([code_dir(), 'dat/pmc_abc/epsilon_', abcrun_flag, '.dat'])
     
     try:
         mpi_pool = mpi_util.MpiPool()
@@ -244,10 +245,11 @@ def ABC(T, eps_val, Npart=1000, prior_name='try0', abcrun=None):
         print pool.__dict__.keys()
 
         # write theta and w to file 
-        np.savetxt(theta_file(pool.t), pool.thetas)
+        np.savetxt(theta_file(pool.t), pool.thetas, 
+	    header='gv_slope, gv_offset, fudge_slope, fudge_offset, tau_slope, tau_offset')
         np.savetxt(w_file(pool.t), pool.ws)
         print pool.dists
-        eps.eps = np.median(np.atleast_2d(pool.dists), axis = 0)
+        #eps.eps = np.median(np.atleast_2d(pool.dists), axis = 0)
         print '----------------------------------------'
         pools.append(pool)
 

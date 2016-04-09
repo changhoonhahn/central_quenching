@@ -237,7 +237,7 @@ class CGPop(object):
                 subhalo_prop=self.subhalo_prop, 
                 sfr_prop=self.sfr_prop
                 )
-        cgpop_file = ''.join([
+        cgpop_file = ''.join([Util.code_dir(), 
             'dat/galpop/', 
             'cgpop'
             '.snapshot', str(self.nsnap), 

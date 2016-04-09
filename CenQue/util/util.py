@@ -17,6 +17,10 @@ from scipy import interpolate
 
 # ---- Local -----
 
+# direcotry stuff
+def code_dir(): 
+    return os.path.dirname(os.path.realpath(__file__)).split('util')[0]
+
 def intersection_index(arr1, arr2):  
     """ 
     Find the indicies of the intersecting elements of arr1 and arr2.
@@ -322,108 +326,3 @@ def mpfit_line_fixedslope(p, slope=0.56, fjac=None, x=None, y=None, err=None):
     model = line_fixedslope(x, p, slope=slope) 
     status = 0 
     return([status, (y-model)/err]) 
-
-"""
-    def integrated_mass_rk4(sfr, mass, t0, tf, f_retain=0.6, **sfr_param): 
-        ''' Integrated stellar mass using RK4 integration
-        
-        Parameters
-        ----------
-        sfr : SFR python function (for example sfr_squarewave)
-        mass : initial stellar mass  
-        t0 : initial cosmic time 
-        tf : final cosmic time
-        f_retain : fraction of stellar mass not lost from SNe and winds from Wetzel Paper
-        sfr_param : parameters of the SFR function 
-
-        '''
-
-        delt = 0.025 # Gyr
-        iter = int(np.round( (tf-t0)/delt )) 
-        delt = (tf - t0)/np.float(iter) 
-        
-        t_n_1 = t0 
-        SFR_n_1 = sfr(mass, t0, **sfr_param)
-        M_n_1 = mass
-        
-        for i in range(iter): 
-            t_n = t_n_1 + delt
-
-            k1 = f_retain * (10.0 ** SFR_n_1)
-            k2 = f_retain * (10.0 ** (
-                sfr(np.log10(10.0**M_n_1 + 10**9 * delt/2.0 * k1), t_n_1 + delt/2.0, **sfr_param))) 
-            k3 = f_retain * (10.0 ** (
-                sfr(np.log10(10.0**M_n_1 + 10**9 * delt/2.0 * k2), t_n_1 + delt/2.0, **sfr_param))) 
-            k4 = f_retain * (10.0 ** (
-                sfr(np.log10(10.0**M_n_1 + 10**9 * delt * k3), t_n_1 + delt, **sfr_param))) 
-
-            M_n = np.log10(10.0 ** M_n_1 + 1.0/6.0 * delt * 10**9 * (k1 + 2.0*k2 + 2.0*k3 + k4)) 
-            
-            if np.sum(np.isnan(M_n)) > 0: 
-                raise NameError('asldkfjalkjsdflk;ajsdf') 
-
-            SFR_n_1 = sfr(M_n, t_n, **sfr_param)
-
-            M_n_1 = M_n
-            t_n_1 = t_n
-        
-        return M_n
-
-
-    def get_bestfit_qgroupcat_ssfr(Mrcut=18, fid_mass=10.5, clobber=False):
-        ''' Returns parameters for the best-fit line of the mass vs sSFR relation of the 
-        quiescent SDSS Group Catalog
-
-        Parameters 
-        ----------
-        Mrcut : absolute magntiude cut that specifies the group catalog
-        clobber : Rewrite if True
-
-        Notes
-        -----
-        * Uses the Q SDSS Group Catalog 
-        * Bestfit values are accessed from file,  unless it doesn't exist or clobber == True 
-
-        '''
-
-        save_file = ''.join([
-            'dat/central_quenching/sf_ms/'
-            'ssfr_mass_fit_quiescent_groupcat.hdf5'
-            ]) 
-        
-        if not os.path.isfile(save_file) or clobber: 
-            # if file doesn't exist save to hdf5 file 
-            f = h5py.File(save_file, 'w') 
-            grp = f.create_group('slope_yint')      # slope-yint group
-        
-            grp.attrs['fid_mass'] = fid_mass    # fid mass meta data 
-
-            med_ssfrs, var_ssfrs, masses = [], [], [] 
-            for mass in np.arange(9.5, 11.5, 0.25): 
-                med_ssfr, var_ssfr, ngal = get_ssfr_mstar_qgroupcat(mass, Mrcut=Mrcut)
-                
-                if ngal < 10: 
-                    continue 
-
-                masses.append(mass)
-                med_ssfrs.append(med_ssfr)
-                var_ssfrs.append(var_ssfr)
-
-            p0 = [-0.5, -12.0]
-            fa = {'x': np.array(masses)-10.5, 'y': np.array(med_ssfrs)}
-            bestfit = mpfit.mpfit(util.mpfit_line, p0, functkw=fa, nprint=0) 
-            
-            # save to file 
-            grp.create_dataset('zmid', data=[0.1]) 
-            grp.create_dataset('slope', data=[bestfit.params[0].item()]) 
-            grp.create_dataset('yint', data=[bestfit.params[1].item()]) 
-            
-            return [bestfit.params[0], bestfit.params[1]]
-        else: 
-
-            f = h5py.File(save_file, 'r') 
-
-            return [f['slope_yint/slope'][:], f['slope_yint/yint'][:]] 
-
-"""
-
