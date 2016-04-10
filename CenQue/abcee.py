@@ -252,7 +252,8 @@ def ABC(T, eps_val, Npart=1000, prior_name='try0', abcrun=None):
 	    header='gv_slope, gv_offset, fudge_slope, fudge_offset, tau_slope, tau_offset')
         np.savetxt(w_file(pool.t), pool.ws)
         print pool.dists
-        eps.eps = np.median(np.atleast_2d(pool.dists), axis = 0)
+        #eps.eps = np.median(np.atleast_2d(pool.dists), axis = 0)
+        eps.eps = np.median(pool.dists)
         print '----------------------------------------'
         pools.append(pool)
 
