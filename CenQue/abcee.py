@@ -3,7 +3,6 @@
 Module for ABC-PMC inference for the Central Quenching project
 
 '''
-import sys 
 import time
 import pickle
 import numpy as np
@@ -292,9 +291,13 @@ class PlotABC(object):
                 'offset_tau'
                 ]
         fig_name = ''.join([code_dir(), 
-            'figure/', 'abc_step', str(t), '_', abcrun, '.png']) 
-
+            'figure/', 'abc_step', str(t), '_', abcrun, '_weighted.png']) 
         self._thetas(theta, w=w, truths=med_theta, plot_range=prior_range, 
+                parameters=params, 
+                fig_name=fig_name)
+        fig_name = ''.join([code_dir(), 
+            'figure/', 'abc_step', str(t), '_', abcrun, '_unweighted.png']) 
+        self._thetas(theta, truths=med_theta, plot_range=prior_range, 
                 parameters=params, 
                 fig_name=fig_name)
 
@@ -310,15 +313,15 @@ class PlotABC(object):
             if par == 'slope_gv': 
                 par_labels.append(r'$\mathtt{A_{gv}}$')
             if par == 'offset_gv': 
-                par_labels.append(r'$\sigma_\mathtt{gv}$')
+                par_labels.append(r'$\delta_\mathtt{gv}$')
             if par == 'slope_fudge': 
                 par_labels.append(r'$\mathtt{A_{fudge}}$')
             if par == 'offset_fudge': 
-                par_labels.append(r'$\sigma_\mathtt{fudge}$')
+                par_labels.append(r'$\delta_\mathtt{fudge}$')
             if par == 'slope_tau': 
                 par_labels.append(r'$\mathtt{A}_\tau$')
             if par == 'offset_tau': 
-                par_labels.append(r'$\sigma_\tau$')
+                par_labels.append(r'$\delta_\tau$')
 
         if w is not None: 
             # weighted theta
@@ -368,8 +371,4 @@ class PlotABC(object):
 
 
 if __name__=="__main__": 
-    Niter = int(sys.argv[1])
-    print 'N_iterations = ', Niter
-    Npart = int(sys.argv[2])
-    print 'N_particle = ', Npart
-    ABC(Niter, 10., Npart=Npart, prior_name='try0', abcrun='firstrun')
+    pass
