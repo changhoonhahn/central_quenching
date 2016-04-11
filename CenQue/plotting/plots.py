@@ -732,3 +732,165 @@ class PlotSMF(Plots):
         self.sub.legend(loc='upper right', frameon=False)
         return None
 
+def QAplot(descendant, sfinh_kwargs, fig_name=None):
+    ''' Given galpop object and the SF Inheritance parametes, 
+    plot its SMF, 
+    '''
+    # Mass bins
+    mass_bins = np.arange(7., 12.5, 0.5)
+    mass_bin_low = mass_bins[:-1]
+    mass_bin_high = mass_bins[1:]
+
+    plt.close()
+    prettyplot()
+    fig = plt.figure(1, figsize=[20,12])
+    for i_sub in range(1,6): 
+        sub_i = fig.add_subplot(2,3,i_sub) 
+    
+        if i_sub == 1:  # SMF
+            mf = SMF()
+            mass, phi = mf.Obj(descendant)
+
+            sub_i.plot(mass, phi, lw=4, c='r', label=r'Simulated')
+
+            censub = CentralSubhalos()
+            censub.Read(descendant.nsnap, 
+                    scatter=sfinh_kwargs['subhalo_prop']['scatter'], 
+                    source=sfinh_kwargs['subhalo_prop']['source'], 
+                    nsnap_ancestor=sfinh_kwargs['nsnap_ancestor'])
+
+            mass, phi = mf._smf(censub.mass)
+            sub_i.plot(mass, phi, c='k', lw=4, ls='--', label='Central Subhalos') 
+
+            sub_i.set_ylim([10**-5, 10**-1])
+            sub_i.set_xlim([7.5, 12.0])
+            plt.xticks([8., 9., 10., 11., 12.])
+            sub_i.set_yscale('log')
+
+            # x,y labels
+            sub_i.set_ylabel(r'Stellar Mass ($\mathtt{log\; M_*}$)', fontsize=20) 
+            sub_i.set_ylabel(r'Stellar Mass Function $\mathtt{\Phi}$', fontsize=20) 
+            sub_i.legend(loc='upper right', frameon=False)
+
+        elif i_sub == 2: # SFMS
+            # SMF composition based on their initial mass at nsnap_ancestor 
+
+            # random subsample 
+            n_tot = len(descendant.mass)
+            r_subsample = np.random.choice(n_tot, size=100000)
+            sub_i.scatter(descendant.mass[r_subsample], descendant.sfr[r_subsample], color='b', s=0.5) 
+
+            qfrac = Fq()
+            m_arr = np.arange(9.0, 12.5, 0.5)
+            sub_i.plot(
+                    m_arr, 
+                    qfrac.SFRcut(m_arr, descendant.zsnap, sfms_prop=(sfinh_kwargs['sfr_prop'])['sfms']), 
+                    c='k', ls='--', lw=4)
+
+            sub_i.text(10.5, -4., r'$\mathtt{z='+str(descendant.zsnap)+'}$', fontsize=25)
+
+            sub_i.set_xlim([9.0, 12.0])
+            sub_i.set_ylim([-5.0, 2.0])
+            sub_i.set_ylabel(r'Stellar Mass ($\mathtt{log\; M_*}$)', fontsize=20) 
+            sub_i.set_ylabel(r'$\mathtt{log\;SFR}$', fontsize=20)
+
+        elif i_sub == 3: #SMHM
+            #corner.hist2d(descendant.halo_mass, descendant.mass, ax=sub_i, c='b', fill_contours=True, smooth=1.0)
+            n_tot = len(descendant.mass)
+            r_subsample = np.random.choice(n_tot, size=100000)
+            sub_i.scatter(descendant.halo_mass[r_subsample], descendant.mass[r_subsample], color='b', s=0.5)
+
+            stellarmass = descendant.mass
+            halomass = descendant.halo_mass
+            mbin = np.arange(halomass.min(), halomass.max(), 0.25) 
+            mlow = mbin[:-1]
+            mhigh = mbin[1:]
+            
+            muMstar = np.zeros(len(mlow))
+            sigMstar = np.zeros(len(mlow))
+
+            for im in range(len(mlow)): 
+                mbin = np.where((halomass > mlow[im]) & (halomass <= mhigh[im]))
+                muMstar[im] = np.mean(stellarmass[mbin])
+                sigMstar[im] = np.std(stellarmass[mbin])
+            sub_i.errorbar(0.5*(mlow+mhigh), muMstar, yerr=sigMstar, color='k', lw=3, fmt='o', capthick=2)
+
+            sub_i.set_ylim([9.0, 12.0])
+            sub_i.set_xlim([10.0, 15.0])
+            sub_i.set_ylabel(r'Stellar Mass ($\mathtt{log\; M_*}$)', fontsize=20) 
+            sub_i.set_xlabel(r'Halo Mass ($\mathtt{log\;M_{Halo}}$)', fontsize=20) 
+
+        elif i_sub == 4: # Fq
+            sfq = qfrac.Classify(descendant.mass, descendant.sfr, descendant.zsnap, 
+                    sfms_prop=descendant.sfr_prop['sfms'])
+            gc = GroupCat(Mrcut=18, position='central')
+            gc.Read()
+            gc_sfq = qfrac.Classify(gc.mass, gc.sfr, np.mean(gc.z), 
+                    sfms_prop=descendant.sfr_prop['sfms'])
+            #sub_i.plot(mass, fq, color=pretty_colors[descendant.nsnap], lw=3, ls='--', 
+            #        label=r'$\mathtt{z =} '+str(descendant.zsnap)+'$')
+            M_bin = np.array([9.7, 10.1, 10.5, 10.9, 11.3])
+            M_low = M_bin[:-1]
+            M_high = M_bin[1:]
+            M_mid = 0.5 * (M_low + M_high)
+
+            fq = np.zeros(len(M_low))
+            gc_fq = np.zeros(len(M_low))
+            for i_m in xrange(len(M_low)):
+                mlim = np.where((descendant.mass > M_low[i_m]) & (descendant.mass <= M_high[i_m]))
+                gc_mlim = np.where((gc.mass > M_low[i_m]) & (gc.mass <= M_high[i_m]))
+                ngal = np.float(len(mlim[0]))
+                gc_ngal = np.float(len(gc_mlim[0]))
+
+                if ngal != 0:  # no galaxy in mass bin 
+                    ngal_q = np.float(len(np.where(sfq[mlim] == 'quiescent')[0]))
+                    fq[i_m] = ngal_q/ngal
+                if gc_ngal != 0:
+                    gc_ngal_q = np.float(len(np.where(gc_sfq[gc_mlim] == 'quiescent')[0]))
+                    gc_fq[i_m] = gc_ngal_q/gc_ngal
+
+            sub_i.plot(M_mid, fq, color='r', lw=3, label=r'Simulated')
+            
+            # fQ of the Group Catalog 
+            sub_i.scatter(M_mid, gc_fq, color='k', s=100, lw=0, label='Group Catalog')
+            # fQ of the model (input) fQ
+            fq_model = qfrac.model(M_bin, descendant.zsnap, lit=sfinh_kwargs['sfr_prop']['fq']['name'])
+            sub_i.plot(M_bin, fq_model, color='k', lw=4, ls='--', label=sfinh_kwargs['sfr_prop']['fq']['name'])
+
+            sub_i.set_xlim([9.0, 12.0])
+            sub_i.set_ylim([0.0, 1.0])
+
+            sub_i.set_ylabel(r'Stellar Mass ($\mathtt{log\; M_*}$)', fontsize=20) 
+            sub_i.set_ylabel(r'Quiescent Fraction $\mathtt{f_Q}$', fontsize=20) 
+
+            sub_i.legend(loc='upper left', frameon=False, scatterpoints=1, markerscale=0.75)
+
+        elif i_sub == 5: # Tau_Q(M*)
+            mass_bin = np.arange(9.0, 12.0, 0.1)
+
+            tau_m = getTauQ(mass_bin, tau_prop=sfinh_kwargs['evol_prop']['tau']) 
+                
+            sub_i.plot(10**mass_bin, tau_m, color='r', lw=4, label='Simulated') 
+            
+            # satellite quenching fraction for comparison 
+            tau_sat = getTauQ(mass_bin, tau_prop={'name': 'satellite'}) 
+
+            sub_i.plot(10**mass_bin, tau_sat, color='black', lw=4, ls='--', label=r'Satellite (Wetzel+ 2013)') 
+
+            sub_i.set_xlim([10**9.5, 10**11.75])
+            sub_i.set_ylim([0.0, 2.0])
+            sub_i.set_xscale('log')
+
+            sub_i.set_xlabel(r'Stellar Mass $[\mathtt{M_\odot}]$',fontsize=20) 
+            sub_i.legend(loc='upper right') 
+
+            sub_i.set_ylabel(r'Quenching Timescales $(\tau_\mathtt{Q})$ [Gyr]',fontsize=20) 
+        
+    plt.tight_layout(pad=0.4, w_pad=0.5, h_pad=1.0) 
+    if fig_name is None: 
+        plt.show()
+        plt.close()
+    else: 
+        fig.savefig(fig_name, bbox_inches='tight') 
+        plt.close()
+    return None 

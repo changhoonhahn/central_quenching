@@ -17,7 +17,11 @@ import corner
 import abcpmc
 from abcpmc import mpi_util
 
+from plotting.plots import QAplot
+
 import matplotlib.pyplot as plt 
+from ChangTools.plotting import prettyplot
+from ChangTools.plotting import prettycolors
 
 def DataSummary(Mrcut=18): 
     ''' Summary statistics of the data. In our case that is the 
@@ -267,20 +271,28 @@ class PlotABC(object):
         if abcrun is None: 
             raise ValueError('specify ABC run string') 
 
+        self.t = t 
+        self.abcrun = abcrun
+
         theta_file = ''.join([
             code_dir(), 'dat/pmc_abc/', 'CenQue_theta_t', str(t), '_', abcrun, '.dat']) 
         w_file = ''.join([
             code_dir(), 'dat/pmc_abc/', 'CenQue_w_t', str(t), '_', abcrun, '.dat']) 
-
-        theta = np.loadtxt(theta_file)
-        w = np.loadtxt(w_file)
-
-        med_theta = [np.median(theta[:,i]) for i in range(len(theta[0]))]
-    
+        self.theta = np.loadtxt(theta_file)      # theta values 
+        self.w = np.loadtxt(w_file)              # w values 
+        
+        self.med_theta = [np.median(self.theta[:,i]) for i in range(len(self.theta[0]))]
+        
         # prior range 
         prior_min, prior_max = PriorRange(prior_name)
-        prior_range = [(prior_min[i], prior_max[i]) for i in range(len(prior_min))]
-        
+        self.prior_range = [(prior_min[i], prior_max[i]) for i in range(len(prior_min))]
+
+        self.descendant = None
+    
+    def Corner(self): 
+        ''' Wrapper to generate the corner plot of the ABC particle pool. The plot parameter 
+        ranges are the prior ranges. The median of the parameters are marked in the plots.
+        '''
         # list of parameters
         params = [
                 'slope_gv', 
@@ -291,22 +303,22 @@ class PlotABC(object):
                 'offset_tau'
                 ]
         fig_name = ''.join([code_dir(), 
-            'figure/', 'abc_step', str(t), '_', abcrun, '_weighted.png']) 
-        self._thetas(theta, w=w, truths=med_theta, plot_range=prior_range, 
+            'figure/', 'abc_step', str(self.t), '_', self.abcrun, '_weighted.png']) 
+        self._thetas(self.theta, w=self.w, truths=self.med_theta, plot_range=self.prior_range, 
                 parameters=params, 
                 fig_name=fig_name)
         fig_name = ''.join([code_dir(), 
-            'figure/', 'abc_step', str(t), '_', abcrun, '_unweighted.png']) 
-        self._thetas(theta, truths=med_theta, plot_range=prior_range, 
+            'figure/', 'abc_step', str(self.t), '_', self.abcrun, '_unweighted.png']) 
+        self._thetas(self.theta, truths=self.med_theta, plot_range=self.prior_range, 
                 parameters=params, 
                 fig_name=fig_name)
-
+        return None
 
     def _thetas(self, theta, w=None, truths=None, plot_range=None, 
             parameters=['slope_gv', 'offset_gv', 'slope_fudge', 'offset_fudge', 'slope_tau', 'offset_tau'], 
             fig_name = None
             ):
-        ''' Corner plots of input theta values 
+        ''' Actually runs the corner plots for the ABC pool thetas. 
         '''
         par_labels = [] 
         for par in parameters: 
@@ -367,8 +379,92 @@ class PlotABC(object):
         
         return None
 
+    def Ssfr(self): 
+        ''' Plot the SSFR distribution of the median paramater values of the 
+        ABC particle pool.
+        '''
+        sfinherit_kwargs, abcrun_flag = ReadABCrun(self.abcrun)
+
+        gv_slope = self.med_theta[0]
+        gv_offset = self.med_theta[1]
+        fudge_slope = self.med_theta[2]
+        fudge_offset = self.med_theta[3]
+        tau_slope = self.med_theta[4]
+        tau_offset = self.med_theta[5]
+
+        sim_kwargs = sfinherit_kwargs.copy()
+        sim_kwargs['sfr_prop']['gv'] = {'slope': gv_slope, 'fidmass': 10.5, 'offset': gv_offset}
+        sim_kwargs['evol_prop']['fudge'] = {'slope': fudge_slope, 'fidmass': 10.5, 'offset': fudge_offset}
+        sim_kwargs['evol_prop']['tau'] = {'name': 'line', 'slope': tau_slope, 'fid_mass': 11.1, 'yint': tau_offset}
+
+        if self.descendant is None: 
+            bloodline = InheritSF(
+                    1,
+                    nsnap_ancestor=sim_kwargs['nsnap_ancestor'],
+                    subhalo_prop=sim_kwargs['subhalo_prop'], 
+                    sfr_prop=sim_kwargs['sfr_prop'], 
+                    evol_prop=sim_kwargs['evol_prop'])
+            # descendant
+            descendant = getattr(bloodline, 'descendant_snapshot1') 
+            self.descendant = descendant
+        else: 
+            descendant = self.descendant
+
+        fig_name = ''.join([code_dir(), 
+            'figure/SSFR.abc_step', str(self.t), '_', self.abcrun, '.png']) 
+
+        descendant.plotSsfr(line_color='red', line_width=4, 
+                sfms_prop=sim_kwargs['sfr_prop']['sfms'], z=descendant.zsnap, 
+                groupcat=True, savefig=fig_name)
+        return None 
+
+    def QAplot(self, nsnap_descendant=1):
+        ''' Quality assurance plots
+        '''
+        sfinherit_kwargs, abcrun_flag = ReadABCrun(self.abcrun)
+
+        gv_slope = self.med_theta[0]
+        gv_offset = self.med_theta[1]
+        fudge_slope = self.med_theta[2]
+        fudge_offset = self.med_theta[3]
+        tau_slope = self.med_theta[4]
+        tau_offset = self.med_theta[5]
+
+        sim_kwargs = sfinherit_kwargs.copy()
+        sim_kwargs['sfr_prop']['gv'] = {'slope': gv_slope, 'fidmass': 10.5, 'offset': gv_offset}
+        sim_kwargs['evol_prop']['fudge'] = {'slope': fudge_slope, 'fidmass': 10.5, 'offset': fudge_offset}
+        sim_kwargs['evol_prop']['tau'] = {'name': 'line', 'slope': tau_slope, 'fid_mass': 11.1, 'yint': tau_offset}
+        
+        if self.descendant is not None and self.descendant.nsnap == nsnap_descendant: 
+            descendant = self.descendant
+        else: 
+            bloodline = InheritSF(
+                    nsnap_descendant,
+                    nsnap_ancestor=sim_kwargs['nsnap_ancestor'],
+                    subhalo_prop=sim_kwargs['subhalo_prop'], 
+                    sfr_prop=sim_kwargs['sfr_prop'], 
+                    evol_prop=sim_kwargs['evol_prop'])
+            # descendant
+            descendant = getattr(bloodline, 'descendant_snapshot'+str(nsnap_descendant)) 
+            self.descendant = descendant
+        
+        fig_name = ''.join([code_dir(), 
+            'figure/QAPlot',
+            '.nsnap', str(nsnap_descendant), 
+             '.abc_step', str(self.t), '_', self.abcrun, '.png']) 
+        QAplot(descendant, sim_kwargs, fig_name=fig_name)
+
+        return None 
+
 
 
 
 if __name__=="__main__": 
-    pass
+    tf = 9
+    ppp = PlotABC(tf, abcrun='run1')
+    ppp.Corner()
+    ppp.Ssfr()
+    ppp.QAplot(nsnap_descendant=1)
+    ppp.QAplot(nsnap_descendant=3)
+    ppp.QAplot(nsnap_descendant=5)
+    ppp.QAplot(nsnap_descendant=7)

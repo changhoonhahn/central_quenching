@@ -380,7 +380,7 @@ class CGPop(object):
             redshift = 0.1
         else: 
             redshift = self.zsnap
-        smf_plot.model(redshift, source=self.subhalo_prop['source'])
+        #smf_plot.model(redshift, source=self.subhalo_prop['source'])
         smf_plot.CentralSubhalo(self.nsnap, subhalo_prop=self.subhalo_prop)
         smf_plot.set_axes()
 
