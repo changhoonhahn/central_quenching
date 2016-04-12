@@ -322,7 +322,7 @@ class CGPop(object):
 
         return bin_mid, ssfr_dist 
 
-    def plotSsfr(self, ssfr_list=None, **pltkwargs):
+    def plotSsfr(self, ssfr_list=None, ssfr_plot=None, **pltkwargs):
         ''' Plot SSFR using PlotSSFR from plotting.plots 
 
         Parameters
@@ -333,7 +333,9 @@ class CGPop(object):
                 and star-fomring populations.
         '''
         plt.close() # in case there's another plot
-        ssfr_plot = plots.PlotSSFR()
+        if ssfr_plot is None: 
+            ssfr_plot = plots.PlotSSFR()
+
         ssfr_plot.plot(SSFRdist=self.Ssfr(), **pltkwargs)
 
         if 'groupcat' in pltkwargs.keys(): 

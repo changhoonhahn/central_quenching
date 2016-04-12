@@ -116,13 +116,19 @@ class PlotSSFR(Plots):
             else:
                 line_width = 4
 
+            if 'alpha' in kwargs: 
+                alpha = kwargs['alpha']
+            else:
+                alpha = 1
+
             self.subs[i_mass].plot(
                     ssfr_bin_mid[i_mass], 
                     ssfr_dist[i_mass], 
                     color=line_color, 
                     lw=line_width, 
                     ls=line_style, 
-                    label=hist_label
+                    label=hist_label, 
+                    alpha=alpha 
                     ) 
             
             if sfms_prop is not None: 
@@ -137,9 +143,9 @@ class PlotSSFR(Plots):
                         lw=3, linestyle='--', color='k')
 
             if i_mass == 2: 
-                plt.sca(self.subs[i_mass])
-                plt.xticks([-13, -12, -11, -10, -9, -8])
-                plt.yticks([0.0, 0.2, 0.4, 0.6, 0.8, 1.0, 1.2, 1.4])
+                #plt.sca(self.subs[i_mass])
+                self.subs[i_mass].set_xticks([-13, -12, -11, -10, -9, -8])
+                self.subs[i_mass].set_yticks([0.0, 0.2, 0.4, 0.6, 0.8, 1.0, 1.2, 1.4])
 
         return None   
 

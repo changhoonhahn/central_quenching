@@ -145,13 +145,16 @@ def RhoSSFR_Fq(simum, datum):
     return [rho_ssfr, rho_fq]
 
 def MakeABCrun(abcrun=None, nsnap_start=15, subhalo=None, fq=None, sfms=None, dutycycle=None, mass_evol=None, 
-        Niter=None, Npart=None, prior_name=None, eps_val=None): 
+        Niter=None, Npart=None, prior_name=None, eps_val=None, restart=False): 
     '''Pickle file that specifies all the choices of parameters and ABC settings 
     for record keeping purposes.
     '''
     if abcrun is None: 
         abcrun = ''.join(['RENAME_ME_', str(datetime.today().date())])
-    file_name = ''.join([code_dir(), 'dat/pmc_abc/run/', 'abcrun_', abcrun, '.txt']) 
+    restart_str = ''
+    if restart: 
+        restart_str = '.restart'
+    file_name = ''.join([code_dir(), 'dat/pmc_abc/run/', 'abcrun_', abcrun, restart_str, '.txt']) 
     pickle_name = file_name.replace('.txt', '.p')
 
     f = open(file_name, 'w')
@@ -162,6 +165,8 @@ def MakeABCrun(abcrun=None, nsnap_start=15, subhalo=None, fq=None, sfms=None, du
     f.write('N_particles = '+str(Npart)+'\n')
     f.write('Prior Name = '+prior_name+'\n')
     f.write('Epsilon_0 = '+str(eps_val)+'\n')
+    if restart: 
+        f.write('Restarting')
     f.write('\n')
 
     # Subhalo properties
@@ -219,15 +224,20 @@ def MakeABCrun(abcrun=None, nsnap_start=15, subhalo=None, fq=None, sfms=None, du
     pickle.dump(kwargs, open(pickle_name, 'wb'))
     return None 
 
-def ReadABCrun(abcrun): 
+def ReadABCrun(abcrun, restart=False): 
     ''' Read text file that specifies all the choices of parameters and ABC settings.
     '''
     if abcrun is None: 
         abcrun = ''.join(['RENAME_ME_', str(datetime.today().date())])
-    pickle_name = ''.join([code_dir(), 'dat/pmc_abc/run/', 'abcrun_', abcrun, '.p']) 
+    restart_str = ''
+    if restart: 
+        restart_str = '.restart'
+    pickle_name = ''.join([code_dir(), 'dat/pmc_abc/run/', 'abcrun_', abcrun, restart_str, '.p']) 
     return pickle.load(open(pickle_name, 'r')), abcrun
 
-def ABC(T, eps_val, Npart=1000, prior_name='try0', observables=['ssfr'], abcrun=None):
+
+def ABC(T, eps_input, Npart=1000, prior_name='try0', observables=['ssfr'], abcrun=None, 
+        restart=False, t_restart=None, eps_restart=None):
     ''' ABC-PMC implementation. 
 
     Parameters
@@ -235,7 +245,7 @@ def ABC(T, eps_val, Npart=1000, prior_name='try0', observables=['ssfr'], abcrun=
     T : (int) 
         Number of iterations
 
-    eps_val : (float)
+    eps_input : (float)
         Starting epsilon threshold value 
 
     N_part : (int)
@@ -247,14 +257,14 @@ def ABC(T, eps_val, Npart=1000, prior_name='try0', observables=['ssfr'], abcrun=
     abcrun : (string)
         String that specifies abc run information 
     '''
-    if isinstance(eps_val, list):
-        if len(eps_val) != len(observables): 
+    if isinstance(eps_input, list):
+        if len(eps_input) != len(observables): 
             raise ValueError
-    if len(observables) > 1 and isinstance(eps_val, float): 
+    if len(observables) > 1 and isinstance(eps_input, float): 
         raise ValueError
 
     # output abc run details
-    MakeABCrun(abcrun=abcrun, Niter=T, Npart=Npart, prior_name=prior_name, eps_val=eps_val) 
+    MakeABCrun(abcrun=abcrun, Niter=T, Npart=Npart, prior_name=prior_name, eps_val=eps_input, restart=restart) 
 
     # Data 
     data_sum = DataSummary(observables=observables)
@@ -263,7 +273,7 @@ def ABC(T, eps_val, Npart=1000, prior_name='try0', observables=['ssfr'], abcrun=
     prior = abcpmc.TophatPrior(prior_min, prior_max)    # ABCPMC prior object
 
     # Read in ABC run file
-    sfinherit_kwargs, abcrun_flag = ReadABCrun(abcrun)
+    sfinherit_kwargs, abcrun_flag = ReadABCrun(abcrun, restart=restart)
 
     def Simz(tt):       # Simulator (forward model) 
         gv_slope = tt[0]
@@ -284,6 +294,8 @@ def ABC(T, eps_val, Npart=1000, prior_name='try0', observables=['ssfr'], abcrun=
         'dat/pmc_abc/', 'CenQue_theta_t', str(pewl), '_', abcrun_flag, '.dat']) 
     w_file = lambda pewl: ''.join([code_dir(), 
         'dat/pmc_abc/', 'CenQue_w_t', str(pewl), '_', abcrun_flag, '.dat']) 
+    dist_file = lambda pewl: ''.join([code_dir(), 
+        'dat/pmc_abc/', 'CenQue_dist_t', str(pewl), '_', abcrun_flag, '.dat']) 
     eps_file = ''.join([code_dir(), 
         'dat/pmc_abc/epsilon_', abcrun_flag, '.dat'])
 
@@ -291,7 +303,20 @@ def ABC(T, eps_val, Npart=1000, prior_name='try0', observables=['ssfr'], abcrun=
         distfn = RhoSSFR
     elif observables == ['ssfr', 'fqz03']: 
         distfn = RhoSSFR_Fq
+   
+    if restart:
+        if t_restart is None: 
+            raise ValueError
 
+        last_thetas = np.loadtxt(theta_file(t_restart))
+        last_ws = np.loadtxt(w_file(t_restart))
+        last_dist = np.loadtxt(dist_file(t_restart))
+
+        init_pool = abcpmc.PoolSpec(t_restart, None, None, last_thetas, last_dist, last_ws)
+    else: 
+        init_pool = None 
+
+    eps = abcpmc.ConstEps(T, eps_input)
     try:
         mpi_pool = mpi_util.MpiPool()
         abcpmc_sampler = abcpmc.Sampler(
@@ -308,12 +333,12 @@ def ABC(T, eps_val, Npart=1000, prior_name='try0', observables=['ssfr'], abcrun=
                 dist=distfn)           # distance function  
     abcpmc_sampler.particle_proposal_cls = abcpmc.ParticleProposal
 
-    eps = abcpmc.ConstEps(T, eps_val)
     pools = []
-    f = open(eps_file, "w")
-    f.close()
+    if init_pool is None: 
+        f = open(eps_file, "w")
+        f.close()
     eps_str = ''
-    for pool in abcpmc_sampler.sample(prior, eps):
+    for pool in abcpmc_sampler.sample(prior, eps, pool=init_pool):
         print '----------------------------------------'
         print 'eps ', pool.eps
         new_eps_str = '\t'+str(pool.eps)+'\n'
@@ -326,21 +351,24 @@ def ABC(T, eps_val, Npart=1000, prior_name='try0', observables=['ssfr'], abcrun=
         print("T:{0},ratio: {1:>.4f}".format(pool.t, pool.ratio))
         print eps(pool.t)
 
-        # write theta and w to file 
+        # write theta, weights, and distances to file 
         np.savetxt(theta_file(pool.t), pool.thetas, 
-	    header='gv_slope, gv_offset, fudge_slope, fudge_offset, tau_slope, tau_offset')
+            header='gv_slope, gv_offset, fudge_slope, fudge_offset, tau_slope, tau_offset')
         np.savetxt(w_file(pool.t), pool.ws)
+        np.savetxt(dist_file(pool.t), pool.dists)
+    
+        # update epsilon based on median thresholding 
         if len(observables) == 1: 
             eps.eps = np.median(pool.dists)
         else:
-            print pool.dists
+            #print pool.dists
             print np.median(np.atleast_2d(pool.dists), axis = 0)
             eps.eps = np.median(np.atleast_2d(pool.dists), axis = 0)
         print '----------------------------------------'
         pools.append(pool)
 
-    abcpmc_sampler.close()
-    return pools
+    return pools 
+
 
 # ABC Corner Plot 
 class PlotABC(object): 
@@ -458,12 +486,37 @@ class PlotABC(object):
         
         return None
 
-    def Ssfr(self): 
+    def Ssfr(self, subsample_thetas=False): 
         ''' Plot the SSFR distribution of the median paramater values of the 
         ABC particle pool.
         '''
         sfinherit_kwargs, abcrun_flag = ReadABCrun(self.abcrun)
+        
+        ssfr_plot = None
+        if subsample_thetas: 
+            N_theta = len(self.theta)
+            i_subs = np.random.choice(N_theta, size=20)
 
+            for i_sub in i_subs: 
+                gv_slope, gv_offset, fudge_slope, fudge_offset, tau_slope, tau_offset = self.theta[i_sub]
+
+                sim_kwargs = sfinherit_kwargs.copy()
+                sim_kwargs['sfr_prop']['gv'] = {'slope': gv_slope, 'fidmass': 10.5, 'offset': gv_offset}
+                sim_kwargs['evol_prop']['fudge'] = {'slope': fudge_slope, 'fidmass': 10.5, 'offset': fudge_offset}
+                sim_kwargs['evol_prop']['tau'] = {'name': 'line', 'slope': tau_slope, 'fid_mass': 11.1, 'yint': tau_offset}
+
+                bloodline = InheritSF(
+                        1,
+                        nsnap_ancestor=sim_kwargs['nsnap_ancestor'],
+                        subhalo_prop=sim_kwargs['subhalo_prop'], 
+                        sfr_prop=sim_kwargs['sfr_prop'], 
+                        evol_prop=sim_kwargs['evol_prop'])
+                # descendant
+                desc = getattr(bloodline, 'descendant_snapshot1') 
+
+                ssfr_plot = desc.plotSsfr(line_color='red', lw=2, alpha=0.25, ssfr_plot=ssfr_plot)
+
+        # plot the median 'best-fit' theta
         gv_slope = self.med_theta[0]
         gv_offset = self.med_theta[1]
         fudge_slope = self.med_theta[2]
@@ -491,10 +544,10 @@ class PlotABC(object):
 
         fig_name = ''.join([code_dir(), 
             'figure/SSFR.abc_step', str(self.t), '_', self.abcrun, '.png']) 
-
         descendant.plotSsfr(line_color='red', line_width=4, 
                 sfms_prop=sim_kwargs['sfr_prop']['sfms'], z=descendant.zsnap, 
-                groupcat=True, savefig=fig_name)
+                groupcat=True, ssfr_plot=ssfr_plot, savefig=fig_name)
+        plt.close()
         return None 
 
     def QAplot(self, nsnap_descendant=1):
@@ -539,11 +592,11 @@ class PlotABC(object):
 
 
 if __name__=="__main__": 
-    tf = 8
-    ppp = PlotABC(tf, abcrun='run1')
-    #ppp.Corner()
-    #ppp.Ssfr()
-    ppp.QAplot(nsnap_descendant=1)
-    ppp.QAplot(nsnap_descendant=3)
-    ppp.QAplot(nsnap_descendant=5)
-    ppp.QAplot(nsnap_descendant=7)
+    for tf in [10]:
+        ppp = PlotABC(10, abcrun='run1')
+        #ppp.Corner()
+        ppp.Ssfr(subsample_thetas=True)
+        #ppp.QAplot(nsnap_descendant=1)
+        #ppp.QAplot(nsnap_descendant=3)
+        #ppp.QAplot(nsnap_descendant=5)
+        #ppp.QAplot(nsnap_descendant=7)
