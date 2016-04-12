@@ -10,6 +10,7 @@ from datetime import datetime
 
 # --- Local ---
 from util.util import code_dir
+from gal_prop import Fq 
 from observations import GroupCat
 from sf_inherit import InheritSF
 
@@ -23,30 +24,68 @@ import matplotlib.pyplot as plt
 from ChangTools.plotting import prettyplot
 from ChangTools.plotting import prettycolors
 
-def DataSummary(Mrcut=18): 
+def DataSummary(Mrcut=18, observables=['ssfr']): 
     ''' Summary statistics of the data. In our case that is the 
     SSFR distribution of the SDSS group catalog.
     '''
-    # Group Catalog object
-    groupcat = GroupCat(Mrcut=Mrcut, position='central')
-    # SSFR distribution of group catalog
-    bins, dist = groupcat.Ssfr()   
-    return [np.array(bins), np.array(dist)]
+    obvs = []
+    if 'ssfr' in observables:
+        # Group Catalog object
+        groupcat = GroupCat(Mrcut=Mrcut, position='central')
+        # SSFR distribution of group catalog
+        bins, dist = groupcat.Ssfr()   
+        obvs.append([np.array(bins), np.array(dist)])
+    if 'fqz03' in observables: 
+        qfrac = Fq()
+        M_bin = np.array([9.7, 10.1, 10.5, 10.9, 11.3])
+        M_mid = 0.5 * (M_bin[:-1] + M_bin[1:])
+        fq_model = qfrac.model(M_mid, 0.3412, lit='wetzel')
+        obvs.append([M_mid, fq_model])
+    
+    if len(observables) == 1: 
+        obvs = obvs[0]
+    return obvs
 
-def SimSummary(**sim_kwargs):
+def SimSummary(observables=['ssfr'], **sim_kwargs):
     ''' Summary statistics of the simulation. In our case, the simulation is InheritSF 
     and the summary statistic is the SSFR distribution. 
     '''
-    bloodline = InheritSF(
-            1,
-            nsnap_ancestor=sim_kwargs['nsnap_ancestor'],
-            subhalo_prop=sim_kwargs['subhalo_prop'], 
-            sfr_prop=sim_kwargs['sfr_prop'], 
-            evol_prop=sim_kwargs['evol_prop'])
-    descendant = getattr(bloodline, 'descendant_snapshot1') 
+    obvs = []
+    if 'ssfr' in observables:
+        bloodline = InheritSF(
+                1,
+                nsnap_ancestor=sim_kwargs['nsnap_ancestor'],
+                subhalo_prop=sim_kwargs['subhalo_prop'], 
+                sfr_prop=sim_kwargs['sfr_prop'], 
+                evol_prop=sim_kwargs['evol_prop'])
+        descendant = getattr(bloodline, 'descendant_snapshot1') 
+        
+        bins, dist = descendant.Ssfr()
+        obvs.append([np.array(bins), np.array(dist)])
+    if 'fqz03' in observables: 
+        bloodline = InheritSF(
+                6,
+                nsnap_ancestor=sim_kwargs['nsnap_ancestor'],
+                subhalo_prop=sim_kwargs['subhalo_prop'], 
+                sfr_prop=sim_kwargs['sfr_prop'], 
+                evol_prop=sim_kwargs['evol_prop'])
+        descendant = getattr(bloodline, 'descendant_snapshot6') 
+
+        qfrac = Fq()
+        M_bin = np.array([9.7, 10.1, 10.5, 10.9, 11.3])
+        M_mid = 0.5 * (M_bin[:-1] + M_bin[1:]) 
+
+        sfq = qfrac.Classify(descendant.mass, descendant.sfr, descendant.zsnap, 
+                sfms_prop=sim_kwargs['sfr_prop']['sfms'])
+
+        ngal, dum = np.histogram(descendant.mass, bins=M_bin)
+        ngal_q, dum = np.histogram(descendant.mass[sfq == 'quiescent'], bins=M_bin)
+
+        obvs.append([M_mid, ngal_q.astype('float')/ngal.astype('float')])
     
-    bins, dist = descendant.Ssfr()
-    return [np.array(bins), np.array(dist)]
+    if len(observables) == 1: 
+        obvs = obvs[0]
+    return obvs
     
 def PriorRange(name): 
     ''' Return predetermined prior ranges based on their assigned name.
@@ -78,6 +117,32 @@ def RhoSSFR(simum, datum):
     simum_dist = simum[1]
     drho = np.sum((datum_dist - simum_dist)**2)
     return drho
+
+def RhoSSFR_Fq(simum, datum): 
+    ''' Multivariate distance metric. First dimension is 
+    L2 Norm between the data SSFR distribution and the simulation SSFR distribution. 
+    While the second dimension is L2 Norm between the model fQ(z=0.34) and the 
+    simulated fQ at snapshot 6. 
+    
+    Parameters
+    ----------
+    datum : list
+        List [bins, dist] where bins is a np.ndarray of the SSFR bin values and 
+        dist is a np.ndarray that specifies the SSFR distribution of the group catalog.
+    model : list 
+        List [bins, dist] where bins is a np.ndarray of the SSFR bin values and 
+        dist is a np.ndarray that specifies the SSFR distribution of the simulation.
+
+    '''
+    
+    datum_ssfr = datum[0][1]
+    simum_ssfr = simum[0][1]
+    rho_ssfr = np.sum((datum_ssfr - simum_ssfr)**2)
+    
+    datum_fq = datum[1][1]
+    simum_fq = simum[1][1]
+    rho_fq = np.sum((datum_fq - simum_fq)**2)
+    return [rho_ssfr, rho_fq]
 
 def MakeABCrun(abcrun=None, nsnap_start=15, subhalo=None, fq=None, sfms=None, dutycycle=None, mass_evol=None, 
         Niter=None, Npart=None, prior_name=None, eps_val=None): 
@@ -162,7 +227,7 @@ def ReadABCrun(abcrun):
     pickle_name = ''.join([code_dir(), 'dat/pmc_abc/run/', 'abcrun_', abcrun, '.p']) 
     return pickle.load(open(pickle_name, 'r')), abcrun
 
-def ABC(T, eps_val, Npart=1000, prior_name='try0', abcrun=None):
+def ABC(T, eps_val, Npart=1000, prior_name='try0', observables=['ssfr'], abcrun=None):
     ''' ABC-PMC implementation. 
 
     Parameters
@@ -182,11 +247,17 @@ def ABC(T, eps_val, Npart=1000, prior_name='try0', abcrun=None):
     abcrun : (string)
         String that specifies abc run information 
     '''
+    if isinstance(eps_val, list):
+        if len(eps_val) != len(observables): 
+            raise ValueError
+    if len(observables) > 1 and isinstance(eps_val, float): 
+        raise ValueError
+
     # output abc run details
     MakeABCrun(abcrun=abcrun, Niter=T, Npart=Npart, prior_name=prior_name, eps_val=eps_val) 
 
     # Data 
-    data_sum = DataSummary()
+    data_sum = DataSummary(observables=observables)
     # Priors
     prior_min, prior_max = PriorRange(prior_name)
     prior = abcpmc.TophatPrior(prior_min, prior_max)    # ABCPMC prior object
@@ -207,28 +278,34 @@ def ABC(T, eps_val, Npart=1000, prior_name='try0', abcrun=None):
         sim_kwargs['evol_prop']['fudge'] = {'slope': fudge_slope, 'fidmass': 10.5, 'offset': fudge_offset}
         sim_kwargs['evol_prop']['tau'] = {'name': 'line', 'slope': tau_slope, 'fid_mass': 11.1, 'yint': tau_offset}
 
-        bins, dists = SimSummary(**sim_kwargs)
-        
-        return [bins, dists]
+        return SimSummary(observables=observables, **sim_kwargs)
 
-    theta_file = lambda pewl: ''.join([code_dir(), 'dat/pmc_abc/', 'CenQue_theta_t', str(pewl), '_', abcrun_flag, '.dat']) 
-    w_file = lambda pewl: ''.join([code_dir(), 'dat/pmc_abc/', 'CenQue_w_t', str(pewl), '_', abcrun_flag, '.dat']) 
-    eps_file = ''.join([code_dir(), 'dat/pmc_abc/epsilon_', abcrun_flag, '.dat'])
-    
+    theta_file = lambda pewl: ''.join([code_dir(), 
+        'dat/pmc_abc/', 'CenQue_theta_t', str(pewl), '_', abcrun_flag, '.dat']) 
+    w_file = lambda pewl: ''.join([code_dir(), 
+        'dat/pmc_abc/', 'CenQue_w_t', str(pewl), '_', abcrun_flag, '.dat']) 
+    eps_file = ''.join([code_dir(), 
+        'dat/pmc_abc/epsilon_', abcrun_flag, '.dat'])
+
+    if observables == ['ssfr']:
+        distfn = RhoSSFR
+    elif observables == ['ssfr', 'fqz03']: 
+        distfn = RhoSSFR_Fq
+
     try:
         mpi_pool = mpi_util.MpiPool()
         abcpmc_sampler = abcpmc.Sampler(
                 N=Npart,                # N_particles
                 Y=data_sum,             # data
                 postfn=Simz,            # simulator 
-                dist=RhoSSFR,           # distance function  
+                dist=distfn,           # distance function  
                 pool=mpi_pool)  
     except AttributeError: 
         abcpmc_sampler = abcpmc.Sampler(
                 N=Npart,                # N_particles
                 Y=data_sum,             # data
                 postfn=Simz,            # simulator 
-                dist=RhoSSFR)           # distance function  
+                dist=distfn)           # distance function  
     abcpmc_sampler.particle_proposal_cls = abcpmc.ParticleProposal
 
     eps = abcpmc.ConstEps(T, eps_val)
@@ -248,15 +325,17 @@ def ABC(T, eps_val, Npart=1000, prior_name='try0', abcrun=None):
 
         print("T:{0},ratio: {1:>.4f}".format(pool.t, pool.ratio))
         print eps(pool.t)
-        print pool.__dict__.keys()
 
         # write theta and w to file 
         np.savetxt(theta_file(pool.t), pool.thetas, 
 	    header='gv_slope, gv_offset, fudge_slope, fudge_offset, tau_slope, tau_offset')
         np.savetxt(w_file(pool.t), pool.ws)
-        print pool.dists
-        #eps.eps = np.median(np.atleast_2d(pool.dists), axis = 0)
-        eps.eps = np.median(pool.dists)
+        if len(observables) == 1: 
+            eps.eps = np.median(pool.dists)
+        else:
+            print pool.dists
+            print np.median(np.atleast_2d(pool.dists), axis = 0)
+            eps.eps = np.median(np.atleast_2d(pool.dists), axis = 0)
         print '----------------------------------------'
         pools.append(pool)
 
@@ -460,10 +539,10 @@ class PlotABC(object):
 
 
 if __name__=="__main__": 
-    tf = 9
+    tf = 8
     ppp = PlotABC(tf, abcrun='run1')
-    ppp.Corner()
-    ppp.Ssfr()
+    #ppp.Corner()
+    #ppp.Ssfr()
     ppp.QAplot(nsnap_descendant=1)
     ppp.QAplot(nsnap_descendant=3)
     ppp.QAplot(nsnap_descendant=5)

@@ -131,8 +131,6 @@ def InheritSF(nsnap_descendant, nsnap_ancestor=20,
         raise ValueError('Specify SF evolution method') 
     if not quiet: 
         print 'Star Forming Evolution takes ', time.time() - sf_time
-    #descendant.plotFq(model=True, savefig='figure/test/test_fq_desc_afterSFevol.png')      # testing Fq
-    #descendant.plotSFMS(sfqcut=True, allgal=True, bovyplot=False, sigSFR=False, model=False, savefig='figure/test/test_sfms_desc_afterSFevol.png')      # testing Fq
 
     # Assign final quenched SSFR to star-forming galaxies. This is specified 
     # due to the fact that there's a lower bound on the SSFR. These values are effectively 
@@ -150,16 +148,14 @@ def InheritSF(nsnap_descendant, nsnap_ancestor=20,
             descendant.min_ssfr[succession[sf_ancestors]] > descendant.ssfr[succession[sf_ancestors]]
             )
     if len(overquenched[0]) > 0: 
-        descendant.ssfr[succession[sf_ancestors[overquenched]]] = descendant.min_ssfr[succession[sf_ancestors[overquenched]]]
-        descendant.sfr[succession[sf_ancestors[overquenched]]] = descendant.ssfr[succession[sf_ancestors[overquenched]]] \
+        descendant.ssfr[succession[sf_ancestors[overquenched]]] = \
+                descendant.min_ssfr[succession[sf_ancestors[overquenched]]]
+        descendant.sfr[succession[sf_ancestors[overquenched]]] = \
+                descendant.ssfr[succession[sf_ancestors[overquenched]]] \
                 + descendant.mass[succession[sf_ancestors[overquenched]]]
 
     descendant.data_columns = list(descendant.data_columns) + ['ssfr', 'sfr', 'min_ssfr', 'sfr_class']
     setattr(bloodline, 'descendant_snapshot'+str(nsnap_descendant), descendant)
-
-    #descendant.plotFq(model=True, savefig='figure/test/test_fq_desc_afterOverQuenching.png')      # testing Fq
-    #descendant.plotSFMS(sfqcut=True, allgal=True, bovyplot=False, model=False, sigSFR=False, savefig='figure/test/test_sfms_desc_afterOverQuenching.png')      # testing Fq
-
     return bloodline 
 
 
