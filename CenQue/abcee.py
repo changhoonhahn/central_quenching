@@ -222,7 +222,7 @@ def MakeABCrun(abcrun=None, nsnap_start=15, subhalo=None, fq=None, sfms=None, du
             }
 
     pickle.dump(kwargs, open(pickle_name, 'wb'))
-    return None 
+    return kwargs, abcrun 
 
 def ReadABCrun(abcrun, restart=False): 
     ''' Read text file that specifies all the choices of parameters and ABC settings.
@@ -264,7 +264,9 @@ def ABC(T, eps_input, Npart=1000, prior_name='try0', observables=['ssfr'], abcru
         raise ValueError
 
     # output abc run details
-    MakeABCrun(abcrun=abcrun, Niter=T, Npart=Npart, prior_name=prior_name, eps_val=eps_input, restart=restart) 
+    sfinherit_kwargs, abcrun_flag = MakeABCrun(
+            abcrun=abcrun, Niter=T, Npart=Npart, prior_name=prior_name, 
+            eps_val=eps_input, restart=restart) 
 
     # Data 
     data_sum = DataSummary(observables=observables)
@@ -272,8 +274,8 @@ def ABC(T, eps_input, Npart=1000, prior_name='try0', observables=['ssfr'], abcru
     prior_min, prior_max = PriorRange(prior_name)
     prior = abcpmc.TophatPrior(prior_min, prior_max)    # ABCPMC prior object
 
-    # Read in ABC run file
-    sfinherit_kwargs, abcrun_flag = ReadABCrun(abcrun, restart=restart)
+    ## Read in ABC run file
+    #sfinherit_kwargs, abcrun_flag = ReadABCrun(abcrun, restart=restart)
 
     def Simz(tt):       # Simulator (forward model) 
         gv_slope = tt[0]
@@ -561,11 +563,18 @@ class PlotABC(object):
         fudge_offset = self.med_theta[3]
         tau_slope = self.med_theta[4]
         tau_offset = self.med_theta[5]
+        
+        # tau slopes and offsets of random particles 
+        tau_slopes = self.theta[:,4]
+        tau_offsets = self.theta[:,5]
 
         sim_kwargs = sfinherit_kwargs.copy()
-        sim_kwargs['sfr_prop']['gv'] = {'slope': gv_slope, 'fidmass': 10.5, 'offset': gv_offset}
-        sim_kwargs['evol_prop']['fudge'] = {'slope': fudge_slope, 'fidmass': 10.5, 'offset': fudge_offset}
-        sim_kwargs['evol_prop']['tau'] = {'name': 'line', 'slope': tau_slope, 'fid_mass': 11.1, 'yint': tau_offset}
+        sim_kwargs['sfr_prop']['gv'] = {
+                'slope': gv_slope, 'fidmass': 10.5, 'offset': gv_offset}
+        sim_kwargs['evol_prop']['fudge'] = {
+                'slope': fudge_slope, 'fidmass': 10.5, 'offset': fudge_offset}
+        sim_kwargs['evol_prop']['tau'] = {
+                'name': 'line', 'slope': tau_slope, 'fid_mass': 11.1, 'yint': tau_offset}
         
         if self.descendant is not None and self.descendant.nsnap == nsnap_descendant: 
             descendant = self.descendant
@@ -584,7 +593,7 @@ class PlotABC(object):
             'figure/QAPlot',
             '.nsnap', str(nsnap_descendant), 
              '.abc_step', str(self.t), '_', self.abcrun, '.png']) 
-        QAplot(descendant, sim_kwargs, fig_name=fig_name)
+        QAplot(descendant, sim_kwargs, fig_name=fig_name, taus=[tau_slopes, tau_offsets])
 
         return None 
 
@@ -593,10 +602,10 @@ class PlotABC(object):
 
 if __name__=="__main__": 
     for tf in [10]:
-        ppp = PlotABC(10, abcrun='run1')
+        ppp = PlotABC(tf, abcrun='run1')
         #ppp.Corner()
-        ppp.Ssfr(subsample_thetas=True)
-        #ppp.QAplot(nsnap_descendant=1)
-        #ppp.QAplot(nsnap_descendant=3)
+        #ppp.Ssfr()
+        ppp.QAplot(nsnap_descendant=1)
+        #ppp.QAplot(nsnap_descendant=6)
         #ppp.QAplot(nsnap_descendant=5)
         #ppp.QAplot(nsnap_descendant=7)

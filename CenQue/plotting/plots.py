@@ -738,7 +738,7 @@ class PlotSMF(Plots):
         self.sub.legend(loc='upper right', frameon=False)
         return None
 
-def QAplot(descendant, sfinh_kwargs, fig_name=None):
+def QAplot(descendant, sfinh_kwargs, fig_name=None, **kwargs):
     ''' Given galpop object and the SF Inheritance parametes, 
     plot its SMF, 
     '''
@@ -875,9 +875,27 @@ def QAplot(descendant, sfinh_kwargs, fig_name=None):
             mass_bin = np.arange(9.0, 12.0, 0.1)
 
             tau_m = getTauQ(mass_bin, tau_prop=sfinh_kwargs['evol_prop']['tau']) 
-                
             sub_i.plot(10**mass_bin, tau_m, color='r', lw=4, label='Simulated') 
+
+            if 'taus' in kwargs: 
+                tau_slopes, tau_offsets = kwargs['taus']
+
+                i_tau_ms = np.zeros((len(mass_bin), len(tau_slopes)))
+                for i_tau in range(len(tau_slopes)): 
+                    i_tau_prop = sfinh_kwargs['evol_prop']['tau'].copy()
+                    i_tau_prop['slope'] = tau_slopes[i_tau]
+                    i_tau_prop['yint'] = tau_offsets[i_tau]
+
+                    i_tau_m = getTauQ(mass_bin, tau_prop=i_tau_prop) 
+                    #sub_i.plot(10**mass_bin, i_tau_m, color='r', alpha=0.25, lw=2) 
+                    i_tau_ms[:,i_tau] = i_tau_m
             
+            sig_tau = np.zeros(len(mass_bin))
+            for im in range(len(mass_bin)):
+                sig_tau[im] = np.std(i_tau_ms[im,:])
+            
+            sub_i.errorbar(10**mass_bin, tau_m, yerr=sig_tau, color='r', lw=4) 
+
             # satellite quenching fraction for comparison 
             tau_sat = getTauQ(mass_bin, tau_prop={'name': 'satellite'}) 
 
