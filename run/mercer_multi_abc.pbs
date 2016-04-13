@@ -1,7 +1,7 @@
 #!/bin/bash
 
-#PBS -l nodes=3:ppn=20,mem=200GB
-#PBS -l walltime=48:00:00
+#PBS -l nodes=2:ppn=2,mem=40GB
+#PBS -l walltime=01:00:00
 #PBS -N CenQueMultiABC
 #PBS -M chh327@nyu.edu
 #PBS -m abe
@@ -13,6 +13,6 @@ module load ipython/4.0.0 numpy/intel/1.10.1
 
 mpiexec \
     python -W ignore /home/chh327/project/central_quenching/CenQue/run_abcee.py \
-        0 20 1000 multirho_fast
+        0 3 8 multirho_fast_test
 
 # leave a blank line at the end

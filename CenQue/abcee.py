@@ -233,7 +233,7 @@ def ReadABCrun(abcrun, restart=False):
     if restart: 
         restart_str = '.restart'
     pickle_name = ''.join([code_dir(), 'dat/pmc_abc/run/', 'abcrun_', abcrun, restart_str, '.p']) 
-    return pickle.load(open(pickle_name, 'r')), abcrun
+    return pickle.load(open(pickle_name, 'rb')), abcrun
 
 
 def ABC(T, eps_input, Npart=1000, prior_name='try0', observables=['ssfr'], abcrun=None, 
