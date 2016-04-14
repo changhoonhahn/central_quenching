@@ -601,11 +601,11 @@ class PlotABC(object):
 
 
 if __name__=="__main__": 
-    for tf in [10]:
-        ppp = PlotABC(tf, abcrun='run1')
-        #ppp.Corner()
-        #ppp.Ssfr()
+    for tf in [4]:
+        ppp = PlotABC(tf, abcrun='multirho_fast')
+        ppp.Corner()
+        ppp.Ssfr()
         ppp.QAplot(nsnap_descendant=1)
-        #ppp.QAplot(nsnap_descendant=6)
+        ppp.QAplot(nsnap_descendant=6)
         #ppp.QAplot(nsnap_descendant=5)
         #ppp.QAplot(nsnap_descendant=7)

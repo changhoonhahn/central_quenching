@@ -1,7 +1,7 @@
 """ 
 
 Evolve star forming properties of ancestor CenQue objects within the 
-Lineage object ancestor for the descendant CenQue objects
+Lineage object for the descendant CenQue objects
 
 """
 import time
@@ -27,19 +27,13 @@ from ChangTools.plotting import prettycolors
 z_snap, t_snap = np.loadtxt(Util.snapshottable(), unpack=True, usecols=[2, 3]) 
 z_of_t = interpolate.interp1d(list(reversed(t_snap)), list(reversed(z_snap)), kind='cubic') 
 
-def InheritSF(nsnap_descendant, nsnap_ancestor=20, 
-        subhalo_prop = {'scatter': 0.0, 'source': 'li-march'}, 
-        sfr_prop = {
-            'fq': {'name': 'wetzelsmooth'}, 
-            'sfms': {'name': 'lineage', 'mslope': 0.55, 'zslope': 1.1}},
-        evol_prop = {
-            'pq': {'slope': 0.05, 'yint': 0.0}, 
-            'tau': {'name': 'line', 'fid_mass': 10.75, 'slope': -0.6, 'yint': 0.6}, 
-            'sfr': {'dutycycle': {'name': 'notperiodic'}}, 
-            'mass': {'name': 'sham'}}, 
-        quiet=True):
-    ''' Evolve star formation properties of ancestor CentralGalaxyPopulation class within 
-    the Lineage Class to descendant CentralGalaxlyPopulation object
+
+def InheritSF(nsnap_descendant, nsnap_ancestor=20, subhalo_prop=None, sfr_prop=None, evol_prop=None, quiet=True):
+    ''' Evolve star formation properties of 'ancestor' CentralGalaxyPopulation class at 
+    redshift specified by nsnap_ancestor to descendant CentralGalaxlyPopulation object
+    at redshift specified by nsnap_descendant. Both ancestor and descendant objects
+    are attributes in the Lineage class, which contains all the 'lineage' information 
+    i.e. all the halo tracking information. 
 
     Parameters
     ----------
@@ -63,21 +57,17 @@ def InheritSF(nsnap_descendant, nsnap_ancestor=20,
         - evol_prop['sfr'] dictates the SFR evolution. 
         - evol_prop['mass'] dictates the mass evolution. 
     '''
-    # make sure that snapshot = 1 is included among imported descendants
-    # and the first element of the list
-    if isinstance(nsnap_descendant, list): 
-        raise ValueError('nsnap_descendant arg has to be an int')
-    
     # read in the lineage (< 0.05 seconds for one snapshot)
-    if not quiet: 
-        read_time = time.time()
+    #read_time = time.time()
     bloodline = Lineage(nsnap_ancestor=nsnap_ancestor, subhalo_prop=subhalo_prop, quiet=quiet)
-    bloodline.Read(range(nsnap_descendant, nsnap_ancestor), quiet=quiet)
-    if 'subhalogrowth' in sfr_prop.keys(): 
+    if isinstance(nsnap_descendant, list): 
+        bloodline.Read(range(np.min(nsnap_descendant), nsnap_ancestor), quiet=quiet)
+    else: 
+        bloodline.Read(range(nsnap_descendant, nsnap_ancestor), quiet=quiet)
+    if 'subhalogrowth' in sfr_prop.keys():  # depending on whether SFR assign includes subhalo growth AM
         sfr_prop['subhalogrowth']['nsnap_descendant'] = nsnap_descendant
     bloodline.AssignSFR_ancestor(sfr_prop=sfr_prop, quiet=quiet)
-    if not quiet: 
-        print 'Lineage Read Time = ', time.time() - read_time 
+    #print 'Lineage Read Time = ', time.time() - read_time 
 
     ancestor = bloodline.ancestor    # ancestor object
     t_init = ancestor.t_cosmic
