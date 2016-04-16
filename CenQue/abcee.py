@@ -601,7 +601,7 @@ class PlotABC(object):
 
 
 if __name__=="__main__": 
-    for tf in [4]:
+    for tf in [5]:
         ppp = PlotABC(tf, abcrun='multirho_fast')
         ppp.Corner()
         ppp.Ssfr()

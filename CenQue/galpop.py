@@ -296,6 +296,22 @@ class CGPop(object):
             setattr(self, column, new_attr)
 
         return None 
+   
+    def _clean_initialize(self): 
+        ''' Convenience method for sf_inherit.py where all the attributes are initialized
+        '''
+        if self.snap_index is None: 
+            raise ValueError("nothing to clean here") 
+    
+        n_gal = len(self.snap_index)
+        self.sfr      = np.repeat(-999., n_gal)
+        self.ssfr     = np.repeat(-999., n_gal)
+        self.min_ssfr = np.repeat(-999., n_gal)
+        self.sfr_class = np.chararray(n_gal, itemsize=16)
+        self.sfr_class[:] = ''
+
+        return None
+
     # -------------------------
     # Galaxy properties  
     # -------------------------

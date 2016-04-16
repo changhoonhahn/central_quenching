@@ -11,9 +11,12 @@ from gal_prop import Fq
 from gal_prop import SMF
 from lineage import Lineage
 from sf_inherit import InheritSF 
+from util.util import code_dir
 from util.util import get_t_nsnap
 from observations import GroupCat
 from central_subhalo import CentralSubhalos
+
+from inherit import Inherit
 
 from plotting.plots import PlotSMF
 
@@ -133,187 +136,195 @@ def AncestorPlots(**sfinh_kwargs):
     plt.close()
     return None
 
-def DescendantQAplot(nsnap_descendant, **sfinh_kwargs): 
+def DescendantQAplot(nsnap_descendants, **sfinh_kwargs): 
     ''' The ultimate QAplot t rule them all. 4 panels showing all the properties.
     '''
-    sfinherit_file = InheritSF_file(nsnap_descendant, **sfinh_kwargs)
+    sfinherit_file = InheritSF_file(nsnap_descendants, **sfinh_kwargs)
     bloodline = Lineage(
             nsnap_ancestor=sfinh_kwargs['nsnap_ancestor'], 
             subhalo_prop=sfinh_kwargs['subhalo_prop']
             )
-    bloodline.Read([nsnap_descendant], filename=sfinherit_file)
+    if not isinstance(nsnap_descendants, list): 
+        nsnap_descendants = [nsnap_descendants]
+    bloodline.Read(nsnap_descendants, filename=sfinherit_file)
+    
+    for nsnap_descendant in nsnap_descendants: 
+        descendant = getattr(bloodline, 'descendant_snapshot'+str(nsnap_descendant)) 
+        descendant.sfr_prop = sfinh_kwargs['sfr_prop']
+        started_here = np.where(descendant.nsnap_genesis == sfinh_kwargs['nsnap_ancestor'])
+        start_mass = descendant.mass_genesis[started_here]
 
-    descendant = getattr(bloodline, 'descendant_snapshot'+str(nsnap_descendant)) 
-    descendant.sfr_prop = sfinh_kwargs['sfr_prop']
-    started_here = np.where(descendant.nsnap_genesis == sfinh_kwargs['nsnap_ancestor'])
-    start_mass = descendant.mass_genesis[started_here]
+        # Mass bins
+        mass_bins = np.arange(7., 12.5, 0.5)
+        mass_bin_low = mass_bins[:-1]
+        mass_bin_high = mass_bins[1:]
 
-    # Mass bins
-    mass_bins = np.arange(7., 12.5, 0.5)
-    mass_bin_low = mass_bins[:-1]
-    mass_bin_high = mass_bins[1:]
-
-    plt.close()
-    prettyplot()
-    fig = plt.figure(1, figsize=[25,6])
-    for i_sub in range(1,5): 
-        sub_i = fig.add_subplot(1,4,i_sub) 
-        
-        if i_sub == 1:  # SMF
-            mf = SMF()
-            mass, phi = mf.Obj(descendant)
-
-            sub_i.plot(mass, phi, lw=4, c=pretty_colors[descendant.nsnap], label=r'Simulated')
-
-            censub = CentralSubhalos()
-            censub.Read(descendant.nsnap, 
-                    scatter=sfinh_kwargs['subhalo_prop']['scatter'], 
-                    source=sfinh_kwargs['subhalo_prop']['source'], 
-                    nsnap_ancestor=sfinh_kwargs['nsnap_ancestor'])
-
-            mass, phi = mf._smf(censub.mass)
-            sub_i.plot(mass, phi, c='k', lw=4, ls='--', label='Central Subhalos') 
-
-            sub_i.set_ylim([10**-5, 10**-1])
-            sub_i.set_xlim([7.5, 12.0])
-            plt.xticks([8., 9., 10., 11., 12.])
-            sub_i.set_yscale('log')
-
-            # x,y labels
-            sub_i.set_xlabel(r'Mass $\mathtt{M_*}$', fontsize=25) 
-            sub_i.set_ylabel(r'Stellar Mass Function $\mathtt{\Phi}$', fontsize=25) 
-            sub_i.legend(loc='upper right', frameon=False)
-
-        elif i_sub == 2: # SFMS
-            # SMF composition based on their initial mass at nsnap_ancestor 
-            for i_m in range(len(mass_bin_low)): 
-                mbin = np.where((start_mass > mass_bin_low[i_m]) & (start_mass <= mass_bin_high[i_m]))
-
-                sub_i.scatter(
-                        descendant.mass[started_here[0][mbin]], 
-                        descendant.sfr[started_here[0][mbin]], 
-                        color=pretty_colors[i_m], 
-                        label=r"$\mathtt{M_{*,i}=}$"+str(round(mass_bin_low[i_m],2))+"-"+str(round(mass_bin_high[i_m],2))
-                        )
+        plt.close()
+        prettyplot()
+        fig = plt.figure(1, figsize=[25,6])
+        for i_sub in range(1,5): 
+            sub_i = fig.add_subplot(1,4,i_sub) 
             
-            qfrac = Fq()
-            m_arr = np.arange(9.0, 12.5, 0.5)
-            sub_i.plot(
-                    m_arr, 
-                    qfrac.SFRcut(m_arr, descendant.zsnap, sfms_prop=(sfinh_kwargs['sfr_prop'])['sfms']), 
-                    c='k', ls='--', lw=4)
+            if i_sub == 1:  # SMF
+                mf = SMF()
+                mass, phi = mf.Obj(descendant)
 
-            sub_i.set_xlim([9.0, 12.0])
-            sub_i.set_ylim([-5.0, 2.0])
-            sub_i.set_xlabel(r'$\mathtt{log\;M_*}$', fontsize=25)
-            sub_i.set_ylabel(r'$\mathtt{log\;SFR}$', fontsize=25)
+                sub_i.plot(mass, phi, lw=4, c=pretty_colors[descendant.nsnap], label=r'Simulated')
 
-        elif i_sub == 3: #SMHM
-            for i_m in range(len(mass_bin_low)): 
-                mbin = np.where((start_mass > mass_bin_low[i_m]) & (start_mass <= mass_bin_high[i_m]))
+                censub = CentralSubhalos()
+                censub.Read(descendant.nsnap, 
+                        scatter=sfinh_kwargs['subhalo_prop']['scatter'], 
+                        source=sfinh_kwargs['subhalo_prop']['source'], 
+                        nsnap_ancestor=sfinh_kwargs['nsnap_ancestor'])
 
-                sub_i.scatter(
-                        descendant.halo_mass[started_here[0][mbin]], 
-                        descendant.mass[started_here[0][mbin]], 
-                        color=pretty_colors[i_m], 
-                        label=r"$\mathtt{M_{*,i}=}$"+str(round(mass_bin_low[i_m],2))+"-"+str(round(mass_bin_high[i_m],2))
-                        )
+                mass, phi = mf._smf(censub.mass)
+                sub_i.plot(mass, phi, c='k', lw=4, ls='--', label='Central Subhalos') 
 
-            stellarmass = descendant.mass[started_here]
-            halomass = descendant.halo_mass[started_here]
-            mbin = np.arange(halomass.min(), halomass.max(), 0.25) 
-            mlow = mbin[:-1]
-            mhigh = mbin[1:]
-            
-            muMstar = np.zeros(len(mlow))
-            sigMstar = np.zeros(len(mlow))
+                sub_i.set_ylim([10**-5, 10**-1])
+                sub_i.set_xlim([7.5, 12.0])
+                plt.xticks([8., 9., 10., 11., 12.])
+                sub_i.set_yscale('log')
 
-            for im in range(len(mlow)): 
-                mbin = np.where((halomass > mlow[im]) & (halomass <= mhigh[im]))
-                muMstar[im] = np.mean(stellarmass[mbin])
-                sigMstar[im] = np.std(stellarmass[mbin])
-            sub_i.errorbar(0.5*(mlow+mhigh), muMstar, yerr=sigMstar, color='k', lw=3, fmt='o', capthick=2)
+                # x,y labels
+                sub_i.set_xlabel(r'Mass $\mathtt{M_*}$', fontsize=25) 
+                sub_i.set_ylabel(r'Stellar Mass Function $\mathtt{\Phi}$', fontsize=25) 
+                sub_i.legend(loc='upper right', frameon=False)
 
-            sub_i.set_ylim([9.0, 12.0])
-            sub_i.set_xlim([10.0, 15.0])
-            sub_i.set_ylabel(r'Stellar Mass $\mathtt{M_*}$', fontsize=25) 
-            sub_i.set_xlabel(r'Halo Mass $\mathtt{M_{Halo}}$', fontsize=25) 
+            elif i_sub == 2: # SFMS
+                # SMF composition based on their initial mass at nsnap_ancestor 
+                for i_m in range(len(mass_bin_low)): 
+                    mbin = np.where((start_mass > mass_bin_low[i_m]) & (start_mass <= mass_bin_high[i_m]))
 
-            #sub_i.legend(loc='upper left', frameon=False, scatterpoints=1)
-        elif i_sub == 4: # Fq
-            #mass, fq = descendant.Fq()
-            sfq = qfrac.Classify(descendant.mass, descendant.sfr, descendant.zsnap, 
-                    sfms_prop=descendant.sfr_prop['sfms'])
-            gc = GroupCat(Mrcut=18, position='central')
-            gc.Read()
-            gc_sfq = qfrac.Classify(gc.mass, gc.sfr, np.mean(gc.z), 
-                    sfms_prop=descendant.sfr_prop['sfms'])
-            #sub_i.plot(mass, fq, color=pretty_colors[descendant.nsnap], lw=3, ls='--', 
-            #        label=r'$\mathtt{z =} '+str(descendant.zsnap)+'$')
-            M_bin = np.array([9.7, 10.1, 10.5, 10.9, 11.3])
-            M_low = M_bin[:-1]
-            M_high = M_bin[1:]
-            M_mid = 0.5 * (M_low + M_high)
+                    sub_i.scatter(
+                            descendant.mass[started_here[0][mbin]], 
+                            descendant.sfr[started_here[0][mbin]], 
+                            color=pretty_colors[i_m], 
+                            label=r"$\mathtt{M_{*,i}=}$"+str(round(mass_bin_low[i_m],2))+"-"+str(round(mass_bin_high[i_m],2))
+                            )
+                
+                qfrac = Fq()
+                m_arr = np.arange(9.0, 12.5, 0.5)
+                sub_i.plot(
+                        m_arr, 
+                        qfrac.SFRcut(m_arr, descendant.zsnap, sfms_prop=(sfinh_kwargs['sfr_prop'])['sfms']), 
+                        c='k', ls='--', lw=4)
 
-            fq = np.zeros(len(M_low))
-            gc_fq = np.zeros(len(M_low))
-            for i_m in xrange(len(M_low)):
-                mlim = np.where((descendant.mass > M_low[i_m]) & (descendant.mass <= M_high[i_m]))
-                gc_mlim = np.where((gc.mass > M_low[i_m]) & (gc.mass <= M_high[i_m]))
-                ngal = np.float(len(mlim[0]))
-                gc_ngal = np.float(len(gc_mlim[0]))
+                sub_i.set_xlim([9.0, 12.0])
+                sub_i.set_ylim([-5.0, 2.0])
+                sub_i.set_xlabel(r'$\mathtt{log\;M_*}$', fontsize=25)
+                sub_i.set_ylabel(r'$\mathtt{log\;SFR}$', fontsize=25)
 
-                if ngal != 0:  # no galaxy in mass bin 
-                    ngal_q = np.float(len(np.where(sfq[mlim] == 'quiescent')[0]))
-                    fq[i_m] = ngal_q/ngal
-                if gc_ngal != 0:
-                    gc_ngal_q = np.float(len(np.where(gc_sfq[gc_mlim] == 'quiescent')[0]))
-                    gc_fq[i_m] = gc_ngal_q/gc_ngal
+            elif i_sub == 3: #SMHM
+                for i_m in range(len(mass_bin_low)): 
+                    mbin = np.where((start_mass > mass_bin_low[i_m]) & (start_mass <= mass_bin_high[i_m]))
 
-            sub_i.plot(M_mid, fq, color=pretty_colors[descendant.nsnap], lw=3, label=r'$\mathtt{z =} '+str(descendant.zsnap)+'$')
-            
-            fq_model = qfrac.model(M_bin, descendant.zsnap, lit=sfinh_kwargs['sfr_prop']['fq']['name'])
-            sub_i.plot(M_bin, fq_model, color='k', lw=4, ls='--', label=sfinh_kwargs['sfr_prop']['fq']['name'])
-            sub_i.scatter(M_mid, gc_fq, color='k', s=100, lw=0, label='Group Catalog')
+                    sub_i.scatter(
+                            descendant.halo_mass[started_here[0][mbin]], 
+                            descendant.mass[started_here[0][mbin]], 
+                            color=pretty_colors[i_m], 
+                            label=r"$\mathtt{M_{*,i}=}$"+str(round(mass_bin_low[i_m],2))+"-"+str(round(mass_bin_high[i_m],2))
+                            )
 
-            sub_i.set_xlim([9.0, 12.0])
-            sub_i.set_ylim([0.0, 1.0])
+                stellarmass = descendant.mass[started_here]
+                halomass = descendant.halo_mass[started_here]
+                mbin = np.arange(halomass.min(), halomass.max(), 0.25) 
+                mlow = mbin[:-1]
+                mhigh = mbin[1:]
+                
+                muMstar = np.zeros(len(mlow))
+                sigMstar = np.zeros(len(mlow))
 
-            sub_i.set_xlabel(r'Mass $\mathtt{M_*}$') 
-            sub_i.set_ylabel(r'Quiescent Fraction $\mathtt{f_Q}$', fontsize=20) 
+                for im in range(len(mlow)): 
+                    mbin = np.where((halomass > mlow[im]) & (halomass <= mhigh[im]))
+                    muMstar[im] = np.mean(stellarmass[mbin])
+                    sigMstar[im] = np.std(stellarmass[mbin])
+                sub_i.errorbar(0.5*(mlow+mhigh), muMstar, yerr=sigMstar, color='k', lw=3, fmt='o', capthick=2)
 
-            sub_i.legend(loc='upper left', frameon=False, scatterpoints=1, markerscale=0.75)
+                sub_i.set_ylim([9.0, 12.0])
+                sub_i.set_xlim([10.0, 15.0])
+                sub_i.set_ylabel(r'Stellar Mass $\mathtt{M_*}$', fontsize=25) 
+                sub_i.set_xlabel(r'Halo Mass $\mathtt{M_{Halo}}$', fontsize=25) 
 
-    plt.tight_layout(pad=0.4, w_pad=0.5, h_pad=1.0) 
-    fig_name = ''.join([
-        'figure/test/', 
-        'QAplot.',
-        '.'.join((sfinherit_file.rsplit('/')[-1]).rsplit('.')[:-1]), 
-        '.png'])
-    fig.savefig(fig_name, bbox_inches='tight') 
-    plt.close()
+                #sub_i.legend(loc='upper left', frameon=False, scatterpoints=1)
+            elif i_sub == 4: # Fq
+                #mass, fq = descendant.Fq()
+                sfq = qfrac.Classify(descendant.mass, descendant.sfr, descendant.zsnap, 
+                        sfms_prop=descendant.sfr_prop['sfms'])
+                gc = GroupCat(Mrcut=18, position='central')
+                gc.Read()
+                gc_sfq = qfrac.Classify(gc.mass, gc.sfr, np.mean(gc.z), 
+                        sfms_prop=descendant.sfr_prop['sfms'])
+                #sub_i.plot(mass, fq, color=pretty_colors[descendant.nsnap], lw=3, ls='--', 
+                #        label=r'$\mathtt{z =} '+str(descendant.zsnap)+'$')
+                M_bin = np.array([9.7, 10.1, 10.5, 10.9, 11.3])
+                M_low = M_bin[:-1]
+                M_high = M_bin[1:]
+                M_mid = 0.5 * (M_low + M_high)
+
+                fq = np.zeros(len(M_low))
+                gc_fq = np.zeros(len(M_low))
+                for i_m in xrange(len(M_low)):
+                    mlim = np.where((descendant.mass > M_low[i_m]) & (descendant.mass <= M_high[i_m]))
+                    gc_mlim = np.where((gc.mass > M_low[i_m]) & (gc.mass <= M_high[i_m]))
+                    ngal = np.float(len(mlim[0]))
+                    gc_ngal = np.float(len(gc_mlim[0]))
+
+                    if ngal != 0:  # no galaxy in mass bin 
+                        ngal_q = np.float(len(np.where(sfq[mlim] == 'quiescent')[0]))
+                        fq[i_m] = ngal_q/ngal
+                    if gc_ngal != 0:
+                        gc_ngal_q = np.float(len(np.where(gc_sfq[gc_mlim] == 'quiescent')[0]))
+                        gc_fq[i_m] = gc_ngal_q/gc_ngal
+
+                sub_i.plot(M_mid, fq, color=pretty_colors[descendant.nsnap], lw=3, label=r'$\mathtt{z =} '+str(descendant.zsnap)+'$')
+                
+                fq_model = qfrac.model(M_bin, descendant.zsnap, lit=sfinh_kwargs['sfr_prop']['fq']['name'])
+                sub_i.plot(M_bin, fq_model, color='k', lw=4, ls='--', label=sfinh_kwargs['sfr_prop']['fq']['name'])
+                sub_i.scatter(M_mid, gc_fq, color='k', s=100, lw=0, label='Group Catalog')
+
+                sub_i.set_xlim([9.0, 12.0])
+                sub_i.set_ylim([0.0, 1.0])
+
+                sub_i.set_xlabel(r'Mass $\mathtt{M_*}$') 
+                sub_i.set_ylabel(r'Quiescent Fraction $\mathtt{f_Q}$', fontsize=20) 
+
+                sub_i.legend(loc='upper left', frameon=False, scatterpoints=1, markerscale=0.75)
+
+        plt.tight_layout(pad=0.4, w_pad=0.5, h_pad=1.0) 
+        fig_name = ''.join([
+            'figure/test/', 
+            'QAplot.',
+            '.nsnap', str(nsnap_descendant),  
+            '.'.join((sfinherit_file.rsplit('/')[-1]).rsplit('.')[:-1]), 
+            '.png'])
+        fig.savefig(fig_name, bbox_inches='tight') 
+        plt.close()
     return None 
 
-def DescendantSSFR(nsnap_descendant, **kwargs):
+def DescendantSSFR(nsnap_descendants, **kwargs):
     ''' Halo Mass Function composition at z = z_final by initial halo mass at 
     nsnap_ancestor. 
     '''
     # import SF inherited Lineage
-    sf_inherit_file = InheritSF_file(nsnap_descendant, **kwargs)
+    sf_inherit_file = InheritSF_file(nsnap_descendants, **kwargs)
     bloodline = Lineage(nsnap_ancestor=kwargs['nsnap_ancestor'], subhalo_prop=kwargs['subhalo_prop'])
-    bloodline.Read([nsnap_descendant], filename=sf_inherit_file)
+    if not isinstance(nsnap_descendants, list): 
+        nsnap_descendants = [nsnap_descendants]
+    bloodline.Read(nsnap_descendants, filename=sf_inherit_file)
     # descendant
-    descendant = getattr(bloodline, 'descendant_snapshot'+str(nsnap_descendant)) 
-    fig_name = ''.join([
-        'figure/test/', 
-        'SSFR.',
-        '.'.join((sf_inherit_file.rsplit('/')[-1]).rsplit('.')[:-1]), 
-        '.png'])
+    for nsnap_descendant in nsnap_descendants: 
+        descendant = getattr(bloodline, 'descendant_snapshot'+str(nsnap_descendant)) 
+        fig_name = ''.join([
+            'figure/test/', 
+            'SSFR.',
+            '.nsnap', str(nsnap_descendant), 
+            '.'.join((sf_inherit_file.rsplit('/')[-1]).rsplit('.')[:-1]), 
+            '.png'])
 
-    descendant.plotSsfr(line_color='red', line_width=4, 
-            sfms_prop=kwargs['sfr_prop']['sfms'], z=descendant.zsnap, 
-            groupcat=True, savefig=fig_name)
-    plt.close()
+        descendant.plotSsfr(line_color='red', line_width=4, 
+                sfms_prop=kwargs['sfr_prop']['sfms'], z=descendant.zsnap, 
+                groupcat=True, savefig=fig_name)
+        plt.close()
     return None
 
 def DescendantHMF_composition(nsnap_descendant, nsnap_ancestor=20, n_step=29, 
@@ -673,8 +684,8 @@ def Save_InheritSF(nsnap_descendant, **kwargs):
             nsnap_ancestor=kwargs['nsnap_ancestor'], 
             subhalo_prop=kwargs['subhalo_prop'], 
             sfr_prop=kwargs['sfr_prop'], 
-            evol_prop=kwargs['evol_prop'])
-    
+            evol_prop=kwargs['evol_prop'], 
+            quiet=True)
     sfinherit_file = InheritSF_file(nsnap_descendant, **kwargs)
     print 'Writing ', sfinherit_file 
     bloodline.Write(sfinherit_file)
@@ -688,6 +699,8 @@ def InheritSF_file(nsnap_descendant, nsnap_ancestor=20, tau='abc', abc_step=None
     flag=None):
     '''
     '''
+    if not isinstance(nsnap_descendant, list): 
+        nsnap_descendant = [nsnap_descendant]
     tau_str = ''
     if abc_step is not None:
         tau_str = '.tau_ABC'+str(abc_step)
@@ -721,7 +734,7 @@ def InheritSF_file(nsnap_descendant, nsnap_ancestor=20, tau='abc', abc_step=None
     hdf5_file = ''.join([
         code_dir(), 'dat/InheritSF/'
         'InheritSF', 
-        '.Snap', str(nsnap_descendant), '_', str(nsnap_ancestor), 
+        '.Snap', ''.join([str(nsnap) for nsnap in nsnap_descendant]), '_', str(nsnap_ancestor), 
         '.subhalo_sig', str(round(subhalo_prop['scatter'], 2)), '_', subhalo_prop['source'], 
         '.fq_', sfr_prop['fq']['name'], 
         sfms_str, 
@@ -738,7 +751,7 @@ def abc_posterior_median(n_step):
     '''
     # read in ABC posterior file 
     posterior_file = ''.join([
-        code_dir, 'dat/pmc_abc/', 
+        code_dir(), 'dat/pmc_abc/', 
         'theta_t', 
         str(n_step), 
         '.dat'])
@@ -847,7 +860,6 @@ def kwargs_InheritSF(nsnap_ancestor=10, tau='abc', subhalo_prop=None, fq_prop=No
 
 
 if __name__=="__main__":
-    print abc_posterior_median(29)
     mevo = 'sham'
     for nsnap_a in [15]: 
         for duty in ['newamp_squarewave']: 
@@ -870,9 +882,16 @@ if __name__=="__main__":
                         mass_evol=mevo, 
                         evol_type='simult',
                         subhalogrowth=shgrow)
-                flag = 'testtest'
+                #flag = 'testtest'
+                Inherit([1, 5, 10, 14],  
+                        nsnap_ancestor=kwargs['nsnap_ancestor'], 
+                        gv=[0.3, 0.3], 
+                        tau=[-0.72827483846612151, 0.57825125514919362], 
+                        fudge=[-1.25, 1.75], 
+                        quiet=True)
                 #AncestorPlots(**kwargs)
-                for nsnap in [1]: #range(1,nsnap_a)[::-1]: 
-                    Save_InheritSF(nsnap, flag=flag, **kwargs)
-                    DescendantQAplot(nsnap, flag=flag, **kwargs)
-                    DescendantSSFR(nsnap, flag=flag, **kwargs)
+                #Save_InheritSF([1, 14], flag=flag, **kwargs)
+                #DescendantQAplot([1, 14], flag=flag, **kwargs)
+
+                #Save_InheritSF([1], flag=flag, **kwargs)
+                #DescendantQAplot([1], flag=flag, **kwargs)

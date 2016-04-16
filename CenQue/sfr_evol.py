@@ -92,22 +92,20 @@ def dutycycle_param(ngal, dutycycle_prop=None):
 
     elif dutycycle_prop['name'] == 'newamp_squarewave': 
         # square wave with new amplitude assigned every full period  
-        freq = np.random.uniform(
-                dutycycle_prop['freq_range'][0], 
-                dutycycle_prop['freq_range'][1], 
-                size=ngal)
+        freq = np.random.uniform(dutycycle_prop['freq_range'][0], dutycycle_prop['freq_range'][1], size=ngal)
         phase = np.random.uniform(0.0, 2.*np.pi, size=ngal)
 
         # maximum of number of cycles based on frequency 
         min_period = 2.0 * np.pi / freq.max()
         # overestimated max number of cycles for convenience 
-        n_cycle = int((20.0 + phase.max()) // min_period)
+        n_cycle = int((10.0 + phase.max()) // min_period)
 
-        amp = (np.random.normal(
-            loc=0., 
-            scale=dutycycle_prop['sigma'], 
-            size=n_cycle * ngal)
-            ).reshape([ngal, n_cycle])
+        amp = np.random.randn(ngal, n_cycle) * dutycycle_prop['sigma']
+        #amp = (np.random.normal(
+        #    loc=0., 
+        #    scale=dutycycle_prop['sigma'], 
+        #    size=n_cycle * ngal)
+        #    ).reshape([ngal, n_cycle])
     
         dutycycle_prop['amp'] = amp 
         dutycycle_prop['freq'] = freq 
