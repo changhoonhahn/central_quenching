@@ -70,7 +70,7 @@ def SimSummary(observables=['ssfr'], **sim_kwargs):
 
     nsnap_ds = [1]
     if 'fqz03' in observables: 
-        nsap_ds += [6]
+        nsnap_ds += [6]
     if 'fqz_multi' in observables: 
         nsnap_ds += [3, 6] 
 

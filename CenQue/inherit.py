@@ -101,14 +101,14 @@ class Inherit(object):
             sf_ancestors = np.where(anc_sfr_class[allwill] == 'star-forming')[0]  # SF ancestors
 
             # star-formation duty cycle parameters (takes a long time ~15 sec)
-            #if not self.quiet: 
-            dutycycle_time = time.time()
+            if not self.quiet: 
+                dutycycle_time = time.time()
             self.dutycycle_prop = sfr_evol.dutycycle_param(
                     len(sf_ancestors), 
                     dutycycle_prop=self.evol_prop['sfr']['dutycycle'])
             self.dutycycle_prop['delta_sfr'] = self.ancestor.delta_sfr[allwill[sf_ancestors]].copy()
-            #if not self.quiet: 
-            print 'SFR dutycycle properties take ', time.time() - dutycycle_time, ' to generate'
+            if not self.quiet: 
+                print 'SFR dutycycle properties take ', time.time() - dutycycle_time, ' to generate'
         
             logsfr, t_quench = self._Evol_MshamSFR(nsnap_d, allwill, sf_ancestors, q_ancestors)
 
@@ -460,7 +460,7 @@ class Inherit(object):
             elif isinstance(self.gv, dict): 
                 gv_prop = self.gv
             sfms_prop = {'name': 'linear', 'zslope': 1.5}   # SFMS 
-        self.sfr_prop = {'fq': fq_prop, 'sfms': sfms_prop, 'gv': gv_prop}
+            self.sfr_prop = {'fq': fq_prop, 'sfms': sfms_prop, 'gv': gv_prop}
 
         if self.evol_prop is None: 
             mass_prop = {'name': 'sham'} 
@@ -481,12 +481,12 @@ class Inherit(object):
             elif isinstance(self.fudge, dict): 
                 fudge_dict = fudge 
             del self.fudge
-        self.evol_prop = {
-                'sfr': {'dutycycle': dutycycle_prop},
-                'mass': mass_prop,
-                'tau': tau_dict, 
-                'fudge': fudge_dict
-                }
+            self.evol_prop = {
+                    'sfr': {'dutycycle': dutycycle_prop},
+                    'mass': mass_prop,
+                    'tau': tau_dict, 
+                    'fudge': fudge_dict
+                    }
         return None 
 
     def _UnpackProps(self): 
