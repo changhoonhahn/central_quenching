@@ -183,31 +183,41 @@ def DescendantQAplot(nsnap_descendants, nsnap_ancestor=15, gv=None, tau=None, fu
     return None 
 
 
+def DescendantSSFR(nsnap_descendants, nsnap_ancestor=15, gv=None, tau=None, fudge=None): 
+    '''     
+    '''
+    inh_time = time.time() 
+    inh = Inherit(nsnap_descendants,  nsnap_ancestor=nsnap_ancestor, gv=gv, tau=tau, fudge=fudge, quiet=True)
+    des_dict = inh() 
+    print time.time() - inh_time 
+
+    for n_d in des_dict.keys():
+        descendant = des_dict[str(n_d)]
+
+        fig_name = ''.join([
+            'figure/test/', 
+            'SSFR',
+            '.nsnap', str(n_d), 
+            '.', ''.join([str(nd) for nd in nsnap_descendants]),
+            '.png'])
+
+        descendant.plotSsfr(line_color='red', line_width=4, 
+                sfms_prop=inh.sfr_prop['sfms'], z=descendant.zsnap, 
+                groupcat=True, savefig=fig_name)
+        plt.close()
+    return None
+
 if __name__=='__main__': 
-    #DescendantQAplot([1], nsnap_ancestor=15, 
-
-    inh_time = time.time() 
-    inh = Inherit([1],  nsnap_ancestor=15, 
-            gv=[0.3, 0.3], tau=[-0.72827483846612151, 0.57825125514919362], fudge=[-1.25, 1.75], quiet=True)
-    print time.time() - inh_time 
+    DescendantQAplot([1], nsnap_ancestor=15, 
+            gv=[0.3, 0.3], tau=[-0.72827483846612151, 0.57825125514919362], fudge=[-1.25, 1.75])
+    DescendantSSFR([1], nsnap_ancestor=15, 
+            gv=[0.3, 0.3], tau=[-0.72827483846612151, 0.57825125514919362], fudge=[-1.25, 1.75])
+    DescendantQAplot([5], nsnap_ancestor=15, 
+            gv=[0.3, 0.3], tau=[-0.72827483846612151, 0.57825125514919362], fudge=[-1.25, 1.75])
+    DescendantSSFR([5], nsnap_ancestor=15, 
+            gv=[0.3, 0.3], tau=[-0.72827483846612151, 0.57825125514919362], fudge=[-1.25, 1.75])
     
-    inh_time = time.time() 
-    inh = Inherit([1, 6],  nsnap_ancestor=15, 
-            gv=[0.3, 0.3], tau=[-0.72827483846612151, 0.57825125514919362], fudge=[-1.25, 1.75], quiet=True)
-    print time.time() - inh_time 
-
-    inh_time = time.time() 
-    inh = Inherit([1, 3, 6],  nsnap_ancestor=15, 
-            gv=[0.3, 0.3], tau=[-0.72827483846612151, 0.57825125514919362], fudge=[-1.25, 1.75], quiet=True)
-    print time.time() - inh_time 
-
-
-    #DescendantQAplot([5], nsnap_ancestor=15, 
-    #        gv=[0.3, 0.3], tau=[-0.72827483846612151, 0.57825125514919362], fudge=[-1.25, 1.75])
-    #DescendantQAplot([10], nsnap_ancestor=15, 
-    #        gv=[0.3, 0.3], tau=[-0.72827483846612151, 0.57825125514919362], fudge=[-1.25, 1.75])
-    #DescendantQAplot([14], nsnap_ancestor=15, 
-    #        gv=[0.3, 0.3], tau=[-0.72827483846612151, 0.57825125514919362], fudge=[-1.25, 1.75])
-    
-    DescendantQAplot([1, 5, 10, 14], nsnap_ancestor=15, 
+    DescendantQAplot([1, 5], nsnap_ancestor=15, 
+            gv=[0.3, 0.3], tau=[-0.72827483846612151, 0.57825125514919362], fudge=[-1.25, 1.75])
+    DescendantSSFR([1, 5], nsnap_ancestor=15, 
             gv=[0.3, 0.3], tau=[-0.72827483846612151, 0.57825125514919362], fudge=[-1.25, 1.75])

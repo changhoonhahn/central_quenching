@@ -12,7 +12,7 @@ from datetime import datetime
 from util.util import code_dir
 from gal_prop import Fq 
 from observations import GroupCat
-from sf_inherit import InheritSF
+from inherit import Inherit
 
 import corner
 import abcpmc
@@ -41,47 +41,86 @@ def DataSummary(Mrcut=18, observables=['ssfr']):
         M_mid = 0.5 * (M_bin[:-1] + M_bin[1:])
         fq_model = qfrac.model(M_mid, 0.3412, lit='wetzel')
         obvs.append([M_mid, fq_model])
+    if 'fqz_multi' in observables: 
+        qfrac = Fq()
+        M_bin = np.array([9.7, 10.1, 10.5, 10.9, 11.3])
+        M_mid = 0.5 * (M_bin[:-1] + M_bin[1:])
+        
+        fq_out = [M_mid]
+        for zz in [0.0502, 0.1581, 0.3412]: 
+            fq_model = qfrac.model(M_mid, zz, lit='wetzel')
+            fq_out += [fq_model]
+
+        obvs.append(fq_out)
     
     if len(observables) == 1: 
         obvs = obvs[0]
     return obvs
 
 def SimSummary(observables=['ssfr'], **sim_kwargs):
-    ''' Summary statistics of the simulation. In our case, the simulation is InheritSF 
+    ''' Summary statistics of the simulation. In our case, the simulation is Inherit 
     and the summary statistic is the SSFR distribution. 
     '''
     obvs = []
-    if 'ssfr' in observables:
-        bloodline = InheritSF(
-                1,
-                nsnap_ancestor=sim_kwargs['nsnap_ancestor'],
-                subhalo_prop=sim_kwargs['subhalo_prop'], 
-                sfr_prop=sim_kwargs['sfr_prop'], 
-                evol_prop=sim_kwargs['evol_prop'])
-        descendant = getattr(bloodline, 'descendant_snapshot1') 
-        
-        bins, dist = descendant.Ssfr()
-        obvs.append([np.array(bins), np.array(dist)])
+
+    if 'ssfr' not in observables: 
+        raise ValueError
+    if 'fqz03' in observables and 'fqz_multi' in observables: 
+        raise ValueError
+
+    nsnap_ds = [1]
     if 'fqz03' in observables: 
-        bloodline = InheritSF(
-                6,
-                nsnap_ancestor=sim_kwargs['nsnap_ancestor'],
-                subhalo_prop=sim_kwargs['subhalo_prop'], 
-                sfr_prop=sim_kwargs['sfr_prop'], 
-                evol_prop=sim_kwargs['evol_prop'])
-        descendant = getattr(bloodline, 'descendant_snapshot6') 
+        nsap_ds += [6]
+    if 'fqz_multi' in observables: 
+        nsnap_ds += [3, 6] 
+
+    inh = Inherit(nsnap_ds, 
+            nsnap_ancestor=sim_kwargs['nsnap_ancestor'],
+            subhalo_prop=sim_kwargs['subhalo_prop'], 
+            sfr_prop=sim_kwargs['sfr_prop'], 
+            evol_prop=sim_kwargs['evol_prop'])
+    des_dict = inh() 
+
+    # SSFR 
+    des1 = des_dict['1']
+    bins, dist = des1.Ssfr()
+    obvs.append([np.array(bins), np.array(dist)])
+
+    if 'fqz03' in observables:  # fQ(nsnap = 6) 
+        des6 = des_dict['6']
 
         qfrac = Fq()
         M_bin = np.array([9.7, 10.1, 10.5, 10.9, 11.3])
         M_mid = 0.5 * (M_bin[:-1] + M_bin[1:]) 
 
-        sfq = qfrac.Classify(descendant.mass, descendant.sfr, descendant.zsnap, 
+        sfq = qfrac.Classify(des6.mass, des6.sfr, des6.zsnap, 
                 sfms_prop=sim_kwargs['sfr_prop']['sfms'])
 
-        ngal, dum = np.histogram(descendant.mass, bins=M_bin)
-        ngal_q, dum = np.histogram(descendant.mass[sfq == 'quiescent'], bins=M_bin)
+        ngal, dum = np.histogram(des6.mass, bins=M_bin)
+        ngal_q, dum = np.histogram(des6.mass[sfq == 'quiescent'], bins=M_bin)
 
         obvs.append([M_mid, ngal_q.astype('float')/ngal.astype('float')])
+
+    if 'fqz_multi' in observables:  # fQ at multiple snapshots 
+        qfrac = Fq()
+        M_bin = np.array([9.7, 10.1, 10.5, 10.9, 11.3])
+        M_mid = 0.5 * (M_bin[:-1] + M_bin[1:]) 
+
+        fq_list = [M_mid]
+
+        for nd in nsnap_ds: 
+            des_tmp = des_dict[str(nd)]
+
+            sfq = qfrac.Classify(des_tmp.mass, des_tmp.sfr, des_tmp.zsnap, 
+                    sfms_prop=sim_kwargs['sfr_prop']['sfms'])
+
+            ngal, dum = np.histogram(des6.mass, bins=M_bin)
+            ngal_q, dum = np.histogram(des6.mass[sfq == 'quiescent'], bins=M_bin)
+            fq_tmp = ngal_q.astype('float')/ngal.astype('float')
+
+            fq_list += [fq_tmp]
+
+        obvs.append(fq_list)
     
     if len(observables) == 1: 
         obvs = obvs[0]
@@ -134,14 +173,18 @@ def RhoSSFR_Fq(simum, datum):
         dist is a np.ndarray that specifies the SSFR distribution of the simulation.
 
     '''
-    
+    # rho_SSFR  
     datum_ssfr = datum[0][1]
     simum_ssfr = simum[0][1]
     rho_ssfr = np.sum((datum_ssfr - simum_ssfr)**2)
     
-    datum_fq = datum[1][1]
-    simum_fq = simum[1][1]
-    rho_fq = np.sum((datum_fq - simum_fq)**2)
+    # rho_fq
+    n_fq = len(datum[1])-1 
+    rho_fq = 0.
+    for i_fq in range(n_fq):
+        datum_fq = datum[1][i_fq+1]
+        simum_fq = simum[1][i_fq+1]
+        rho_fq += np.sum((datum_fq - simum_fq)**2)
     return [rho_ssfr, rho_fq]
 
 def MakeABCrun(abcrun=None, nsnap_start=15, subhalo=None, fq=None, sfms=None, dutycycle=None, mass_evol=None, 
@@ -234,7 +277,6 @@ def ReadABCrun(abcrun, restart=False):
         restart_str = '.restart'
     pickle_name = ''.join([code_dir(), 'dat/pmc_abc/run/', 'abcrun_', abcrun, restart_str, '.p']) 
     return pickle.load(open(pickle_name, 'rb')), abcrun
-
 
 def ABC(T, eps_input, Npart=1000, prior_name='try0', observables=['ssfr'], abcrun=None, 
         restart=False, t_restart=None, eps_restart=None):
