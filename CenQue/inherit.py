@@ -18,7 +18,6 @@ import matplotlib.pyplot as plt
 z_snap, t_snap = np.loadtxt(Util.snapshottable(), unpack=True, usecols=[2, 3]) 
 z_of_t = interpolate.interp1d(list(reversed(t_snap)), list(reversed(z_snap)), kind='cubic') 
 
-
 class Inherit(object): 
     '''
     Evolve star formation properties of 'ancestor' CentralGalaxyPopulation class at 

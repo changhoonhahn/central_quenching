@@ -14,7 +14,7 @@ if restart == 0:
     abcrun = sys.argv[4]
     print 'ABC run name = ', abcrun
 
-    ABC(Niter, [10., 10.], Npart=Npart, prior_name='try0', observables=['ssfr', 'fqz03'], abcrun=abcrun)
+    ABC(Niter, [10., 10.], Npart=Npart, prior_name='try0', observables=['ssfr', 'fqz_multi'], abcrun=abcrun)
     #ABC(Niter, [10.], Npart=Npart, prior_name='try0', observables=['ssfr'], abcrun=abcrun)
 
 elif restart == 1:  

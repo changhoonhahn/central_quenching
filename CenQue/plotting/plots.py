@@ -887,7 +887,7 @@ def QAplot(descendant, sfinh_kwargs, fig_name=None, **kwargs):
                     i_tau_prop['yint'] = tau_offsets[i_tau]
 
                     i_tau_m = getTauQ(mass_bin, tau_prop=i_tau_prop) 
-                    #sub_i.plot(10**mass_bin, i_tau_m, color='r', alpha=0.25, lw=2) 
+                    #sub_i.plot(10**mass_bin, i_tau_m, color='r', alpha=0.1, lw=2) 
                     i_tau_ms[:,i_tau] = i_tau_m
             
             sig_tau = np.zeros(len(mass_bin))

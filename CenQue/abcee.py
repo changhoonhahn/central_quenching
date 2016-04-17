@@ -114,8 +114,8 @@ def SimSummary(observables=['ssfr'], **sim_kwargs):
             sfq = qfrac.Classify(des_tmp.mass, des_tmp.sfr, des_tmp.zsnap, 
                     sfms_prop=sim_kwargs['sfr_prop']['sfms'])
 
-            ngal, dum = np.histogram(des6.mass, bins=M_bin)
-            ngal_q, dum = np.histogram(des6.mass[sfq == 'quiescent'], bins=M_bin)
+            ngal, dum = np.histogram(des_tmp.mass, bins=M_bin)
+            ngal_q, dum = np.histogram(des_tmp.mass[sfq == 'quiescent'], bins=M_bin)
             fq_tmp = ngal_q.astype('float')/ngal.astype('float')
 
             fq_list += [fq_tmp]
@@ -347,6 +347,8 @@ def ABC(T, eps_input, Npart=1000, prior_name='try0', observables=['ssfr'], abcru
         distfn = RhoSSFR
     elif observables == ['ssfr', 'fqz03']: 
         distfn = RhoSSFR_Fq
+    elif observables == ['ssfr', 'fqz_multi']: 
+        distfn = RhoSSFR_Fq
    
     if restart:
         if t_restart is None: 
@@ -549,14 +551,14 @@ class PlotABC(object):
                 sim_kwargs['evol_prop']['fudge'] = {'slope': fudge_slope, 'fidmass': 10.5, 'offset': fudge_offset}
                 sim_kwargs['evol_prop']['tau'] = {'name': 'line', 'slope': tau_slope, 'fid_mass': 11.1, 'yint': tau_offset}
 
-                bloodline = InheritSF(
-                        1,
+                inh = Inherit([1], 
                         nsnap_ancestor=sim_kwargs['nsnap_ancestor'],
                         subhalo_prop=sim_kwargs['subhalo_prop'], 
                         sfr_prop=sim_kwargs['sfr_prop'], 
                         evol_prop=sim_kwargs['evol_prop'])
+                des_dict = inh() 
                 # descendant
-                desc = getattr(bloodline, 'descendant_snapshot1') 
+                desc = des_dict['1'] 
 
                 ssfr_plot = desc.plotSsfr(line_color='red', lw=2, alpha=0.25, ssfr_plot=ssfr_plot)
 
@@ -573,18 +575,14 @@ class PlotABC(object):
         sim_kwargs['evol_prop']['fudge'] = {'slope': fudge_slope, 'fidmass': 10.5, 'offset': fudge_offset}
         sim_kwargs['evol_prop']['tau'] = {'name': 'line', 'slope': tau_slope, 'fid_mass': 11.1, 'yint': tau_offset}
 
-        if self.descendant is None: 
-            bloodline = InheritSF(
-                    1,
-                    nsnap_ancestor=sim_kwargs['nsnap_ancestor'],
-                    subhalo_prop=sim_kwargs['subhalo_prop'], 
-                    sfr_prop=sim_kwargs['sfr_prop'], 
-                    evol_prop=sim_kwargs['evol_prop'])
-            # descendant
-            descendant = getattr(bloodline, 'descendant_snapshot1') 
-            self.descendant = descendant
-        else: 
-            descendant = self.descendant
+        inh = Inherit([1], 
+                nsnap_ancestor=sim_kwargs['nsnap_ancestor'],
+                subhalo_prop=sim_kwargs['subhalo_prop'], 
+                sfr_prop=sim_kwargs['sfr_prop'], 
+                evol_prop=sim_kwargs['evol_prop'])
+        des_dict = inh() 
+        descendant = des_dict['1'] 
+        self.descendant = descendant
 
         fig_name = ''.join([code_dir(), 
             'figure/SSFR.abc_step', str(self.t), '_', self.abcrun, '.png']) 
@@ -618,24 +616,18 @@ class PlotABC(object):
         sim_kwargs['evol_prop']['tau'] = {
                 'name': 'line', 'slope': tau_slope, 'fid_mass': 11.1, 'yint': tau_offset}
         
-        if self.descendant is not None and self.descendant.nsnap == nsnap_descendant: 
-            descendant = self.descendant
-        else: 
-            bloodline = InheritSF(
-                    nsnap_descendant,
-                    nsnap_ancestor=sim_kwargs['nsnap_ancestor'],
-                    subhalo_prop=sim_kwargs['subhalo_prop'], 
-                    sfr_prop=sim_kwargs['sfr_prop'], 
-                    evol_prop=sim_kwargs['evol_prop'])
-            # descendant
-            descendant = getattr(bloodline, 'descendant_snapshot'+str(nsnap_descendant)) 
-            self.descendant = descendant
-        
-        fig_name = ''.join([code_dir(), 
-            'figure/QAPlot',
-            '.nsnap', str(nsnap_descendant), 
-             '.abc_step', str(self.t), '_', self.abcrun, '.png']) 
-        QAplot(descendant, sim_kwargs, fig_name=fig_name, taus=[tau_slopes, tau_offsets])
+        inh = Inherit(nsnap_descendant, 
+                nsnap_ancestor=sim_kwargs['nsnap_ancestor'],
+                subhalo_prop=sim_kwargs['subhalo_prop'], 
+                sfr_prop=sim_kwargs['sfr_prop'], 
+                evol_prop=sim_kwargs['evol_prop'])
+        des_dict = inh() 
+        for nd in nsnap_descendant: 
+            fig_name = ''.join([code_dir(), 
+                'figure/QAPlot',
+                '.nsnap', str(nd), 
+                 '.abc_step', str(self.t), '_', self.abcrun, '.png']) 
+            QAplot(des_dict[str(nd)], sim_kwargs, fig_name=fig_name, taus=[tau_slopes, tau_offsets])
 
         return None 
 
@@ -644,10 +636,7 @@ class PlotABC(object):
 
 if __name__=="__main__": 
     for tf in [5]:
-        ppp = PlotABC(tf, abcrun='multirho_fast')
-        ppp.Corner()
-        ppp.Ssfr()
-        ppp.QAplot(nsnap_descendant=1)
-        ppp.QAplot(nsnap_descendant=6)
-        #ppp.QAplot(nsnap_descendant=5)
-        #ppp.QAplot(nsnap_descendant=7)
+        ppp = PlotABC(tf, abcrun='multirho_inh')
+        #ppp.Corner()
+        #ppp.Ssfr()
+        ppp.QAplot(nsnap_descendant=[1, 6])
