@@ -24,12 +24,16 @@ if restart == 0:
         obvs_list = ['ssfr', 'fqz_multi'] 
     else: 
         raise ValueError 
-    abcrun = sys.argv[5]
+    prior = sys.argv[5]
+    print 'ABC Prior name = ', prior
+    if prior not in ['try0', 'updated']:
+        raise ValueError("Prior can only be 'try0' and 'updated'")
+    abcrun = sys.argv[6]
     print 'ABC run name = ', abcrun
 
     guess = [10. for i in range(len(obvs_list))]
 
-    ABC(Niter, guess, Npart=Npart, prior_name='try0', observables=obvs_list, abcrun=abcrun)
+    ABC(Niter, guess, Npart=Npart, prior_name=prior, observables=obvs_list, abcrun=abcrun)
 
 elif restart == 1:  
     raise NotImplementedError('Reimplement... carefully.')

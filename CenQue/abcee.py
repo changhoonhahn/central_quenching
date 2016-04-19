@@ -134,6 +134,11 @@ def PriorRange(name):
     if name =='try0':   # guess 
         prior_min = [0.0, 0.0, -3., 1., -1.5, 0.01]
         prior_max = [1.0, 1.0, 0.0, 3., 0.0, 1.0]
+    elif name == 'updated': # updated after try0 
+        # These priors are overall wider in order to 
+        # explore more of the parameter space. 
+        prior_min = [0.0, -0.4, -5., 0.5, -1.5, 0.01]
+        prior_max = [2.0, 0.6, 0.0, 2.5, 0.5, 1.5]
     else: 
         raise NotImplementedError
 
@@ -635,8 +640,11 @@ class PlotABC(object):
 
 
 if __name__=="__main__": 
-    for tf in [5]:
-        ppp = PlotABC(tf, abcrun='multirho_inh')
-        #ppp.Corner()
-        #ppp.Ssfr()
+    for tf in [5, 6]:
+        ppp = PlotABC(tf, abcrun='multirho_multifqz')
+        ppp.Corner()
+
+    for tf in [5, 6]: 
+        ppp = PlotABC(tf, abcrun='multirho_multifqz')
+        ppp.Ssfr()
         ppp.QAplot(nsnap_descendant=[1, 6])

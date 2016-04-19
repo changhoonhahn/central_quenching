@@ -23,7 +23,11 @@ def AverageLogSFR_sfms(mstar, z_in, sfms_prop=None):
         # mass slope
         A_highmass = 0.53
         A_lowmass = 0.53
-        mslope = np.repeat(A_highmass, len(mstar))
+        try: 
+            mslope = np.repeat(A_highmass, len(mstar))
+        except TypeError: 
+            mstar = np.array([mstar])
+            mslope = np.repeat(A_highmass, len(mstar))
         # z slope
         zslope = sfms_prop['zslope']            # 0.76, 1.1
         # offset 
@@ -33,7 +37,11 @@ def AverageLogSFR_sfms(mstar, z_in, sfms_prop=None):
         # mass slope
         A_highmass = 0.53 
         A_lowmass = sfms_prop['mslope_lowmass'] 
-        mslope = np.repeat(A_highmass, len(mstar))
+        try: 
+            mslope = np.repeat(A_highmass, len(mstar))
+        except TypeError: 
+            mstar = np.array([mstar])
+            mslope = np.repeat(A_highmass, len(mstar))
         lowmass = np.where(mstar < 9.5)
         mslope[lowmass] = A_lowmass
         # z slope
@@ -216,10 +224,13 @@ def DeltaLogSFR_quenching(tq, tf, M_q=None, tau_prop=None):
     if len(qing[0]) == 0: 
         return logsfrq
     else: 
-        tau = getTauQ(M_q[qing], tau_prop=tau_prop)
+        if isinstance(tf, float) and isinstance(Mq, float): 
+            tau = getTauQ(M_q, tau_prop=tau_prop)
+        else: 
+            tau = getTauQ(M_q[qing], tau_prop=tau_prop)
         
         if isinstance(tf, float): 
-            logsfrq[qing] = np.log10( np.exp( (tq[qing] - tf) / tau ) ) 
+            logsfrq = np.log10( np.exp( (tq - tf) / tau ) ) 
         else: 
             logsfrq[qing] = np.log10( np.exp( (tq[qing] - tf[qing]) / tau ) ) 
 
