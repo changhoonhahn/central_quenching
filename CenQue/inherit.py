@@ -121,7 +121,7 @@ class Inherit(object):
 
             self.descendant_dict[str(nsnap_d)].sfr_class[is_qing] = 'quiescent'
             self.descendant_dict[str(nsnap_d)].sfr_class[is_notqing] = 'star-forming'
-        
+
         return None
 
     def _Evol_MshamSFR(self, nsnap_d, allwill, sf_ancestor, q_ancestor): 
