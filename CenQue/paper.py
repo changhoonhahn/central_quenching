@@ -326,7 +326,7 @@ def fig_SSFRevol(t, abcrun, prior_name='try0'):
 
         sub.plot(bin_mid[1], ssfr_dist[1], c=pretty_colors[i_snap], lw=2, ls='-', label=label)
 
-        sub.text(-10., 1.3, r"$\mathtt{-10.1 < log\;M_* < 10.5}$", fontsize=20)
+        sub.text(-10., 1.3, r"$\mathtt{log\;M_* = [-10.1, 10.5]}$", fontsize=20)
 
     sub.set_xlim([-13.0, -8.0])
     sub.set_xlabel(r'$\mathtt{log \; SSFR \;[yr^{-1}]}$', fontsize=25) 
