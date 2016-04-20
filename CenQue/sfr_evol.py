@@ -224,13 +224,16 @@ def DeltaLogSFR_quenching(tq, tf, M_q=None, tau_prop=None):
     if len(qing[0]) == 0: 
         return logsfrq
     else: 
-        if isinstance(tf, float) and isinstance(Mq, float): 
+        if isinstance(M_q, float): 
             tau = getTauQ(M_q, tau_prop=tau_prop)
         else: 
             tau = getTauQ(M_q[qing], tau_prop=tau_prop)
         
         if isinstance(tf, float): 
-            logsfrq = np.log10( np.exp( (tq - tf) / tau ) ) 
+            if isinstance(tq, float): 
+                logsfrq = np.log10( np.exp( (tq - tf) / tau ) ) 
+            else: 
+                logsfrq[qing] = np.log10( np.exp( (tq[qing] - tf) / tau ) ) 
         else: 
             logsfrq[qing] = np.log10( np.exp( (tq[qing] - tf[qing]) / tau ) ) 
 

@@ -266,6 +266,11 @@ class Lineage(object):
                 ).reshape(len(self.ancestor.snap_index), len(child_list)+1)
         anc_Msham[:, self.nsnap_ancestor-1] = self.ancestor.mass
     
+        anc_Mhalo = np.repeat(
+                -999., len(self.ancestor.snap_index)*(len(child_list)+1)
+                ).reshape(len(self.ancestor.snap_index), len(child_list)+1)
+        anc_Mhalo[:, self.nsnap_ancestor-1] = self.ancestor.halo_mass
+
         # go down the snapshots from nsnap_ancestor and track subhalos
         for i_snap in range(1, self.nsnap_ancestor)[::-1]:    
 
@@ -281,6 +286,8 @@ class Lineage(object):
 
             # save SHAM masses
             anc_Msham[has_descendant, i_snap-1] = child.mass[has_ancestor]
+            # save Halo masses
+            anc_Mhalo[has_descendant, i_snap-1] = child.halo_mass[has_ancestor]
     
             # snapshot, t_cosmic, and redshift where the subhalo starts 
             # hosting a galaxy. Aslo the mass of the new galaxy
@@ -337,7 +344,7 @@ class Lineage(object):
 
         positive = np.where(anc_nsnap_genesis > 0)
         self.ancestor.sample_trim(positive[0])
-        self.ancestor.data_columns += ['nsnap_genesis', 'tsnap_genesis', 'zsnap_genesis', 'mass_genesis', 'halomass_genesis', 'Msham_evol']
+        self.ancestor.data_columns += ['nsnap_genesis', 'tsnap_genesis', 'zsnap_genesis', 'mass_genesis', 'halomass_genesis', 'Msham_evol', 'Mhalo_evol']
 
         anc_tsnap_genesis[positive] = Util.get_t_nsnap(anc_nsnap_genesis[positive])
         anc_zsnap_genesis[positive] = Util.get_z_nsnap(anc_nsnap_genesis[positive])
@@ -348,12 +355,13 @@ class Lineage(object):
         setattr(self.ancestor, 'mass_genesis', anc_mass_genesis[positive])
         setattr(self.ancestor, 'halomass_genesis', anc_halomass_genesis[positive])
         setattr(self.ancestor, 'Msham_evol', anc_Msham[positive, :])
+        setattr(self.ancestor, 'Mhalo_evol', anc_Mhalo[positive, :])
 
         return None
 
 
 if __name__=="__main__": 
-    for nsnap in [15, 20]: 
+    for nsnap in [15]: 
         for scat in [0.0, 0.2]:
             start_time = time.time()
             bloodline = Lineage(nsnap_ancestor=nsnap, 

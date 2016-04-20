@@ -9,8 +9,8 @@ import os.path
 # --- Local --- 
 import sham_hack as sham
 from util.util import code_dir
-#from treepm import subhalo_io 
-#from utilities import utility as wetzel_util
+from treepm import subhalo_io 
+from utilities import utility as wetzel_util
 
 class CentralSubhalos(object): 
     def __init__(self, **kwargs): 
@@ -299,7 +299,7 @@ class Subhalos(CentralSubhalos):
 if __name__=='__main__': 
     for nsnap_ancestor in [10, 15, 20]: 
         for scat in [ 0.0, 0.2 ]: 
-            subh = Subhalos() 
+            subh = CentralSubhalos() 
             subh.build_catalogs(
                     snapshots=range(1, nsnap_ancestor+1), 
                     scatter=scat, 
