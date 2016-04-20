@@ -447,7 +447,7 @@ class PlotABC(object):
 
         self.descendant = None
     
-    def Corner(self): 
+    def Corner(self, filename=None): 
         ''' Wrapper to generate the corner plot of the ABC particle pool. The plot parameter 
         ranges are the prior ranges. The median of the parameters are marked in the plots.
         '''
@@ -460,13 +460,22 @@ class PlotABC(object):
                 'slope_tau', 
                 'offset_tau'
                 ]
-        fig_name = ''.join([code_dir(), 
-            'figure/', 'abc_step', str(self.t), '_', self.abcrun, '_weighted.png']) 
+        if filename is None: 
+            fig_name = ''.join([code_dir(), 
+                'figure/', 'abc_step', str(self.t), '_', self.abcrun, '_weighted.png']) 
+        else: 
+            fig_name = filename
+
+        if 'weighted' not in fig_name:
+            fig_name = '_weighted.pn'.join(fig_name.split('.pn'))
+
         self._thetas(self.theta, w=self.w, truths=self.med_theta, plot_range=self.prior_range, 
                 parameters=params, 
                 fig_name=fig_name)
-        fig_name = ''.join([code_dir(), 
-            'figure/', 'abc_step', str(self.t), '_', self.abcrun, '_unweighted.png']) 
+
+        fig_name = 'unweighted'.join(fig_name.split('weighted'))
+        # fig_name = ''.join([code_dir(), 
+        #    'figure/', 'abc_step', str(self.t), '_', self.abcrun, '_unweighted.png']) 
         self._thetas(self.theta, truths=self.med_theta, plot_range=self.prior_range, 
                 parameters=params, 
                 fig_name=fig_name)
@@ -537,7 +546,7 @@ class PlotABC(object):
         
         return None
 
-    def Ssfr(self, subsample_thetas=False): 
+    def Ssfr(self, subsample_thetas=False, filename=None ): 
         ''' Plot the SSFR distribution of the median paramater values of the 
         ABC particle pool.
         '''
@@ -588,9 +597,13 @@ class PlotABC(object):
         des_dict = inh() 
         descendant = des_dict['1'] 
         self.descendant = descendant
+    
+        if filename is None: 
+            fig_name = ''.join([code_dir(), 
+                'figure/SSFR.abc_step', str(self.t), '_', self.abcrun, '.png']) 
+        else: 
+            fig_name = filename 
 
-        fig_name = ''.join([code_dir(), 
-            'figure/SSFR.abc_step', str(self.t), '_', self.abcrun, '.png']) 
         descendant.plotSsfr(line_color='red', line_width=4, 
                 sfms_prop=sim_kwargs['sfr_prop']['sfms'], z=descendant.zsnap, 
                 groupcat=True, ssfr_plot=ssfr_plot, savefig=fig_name)
@@ -640,11 +653,11 @@ class PlotABC(object):
 
 
 if __name__=="__main__": 
-    for tf in [5, 6]:
-        ppp = PlotABC(tf, abcrun='multirho_multifqz')
+    for tf in [0, 1]:
+        ppp = PlotABC(tf, abcrun='multirhofqz_newprior', prior_name='updated')
         ppp.Corner()
 
-    for tf in [5, 6]: 
-        ppp = PlotABC(tf, abcrun='multirho_multifqz')
-        ppp.Ssfr()
-        ppp.QAplot(nsnap_descendant=[1, 6])
+    #for tf in [0, 1]: 
+    #    ppp = PlotABC(tf, abcrun='_multirhofqz_newprior')
+    #    ppp.Ssfr()
+    #    ppp.QAplot(nsnap_descendant=[1, 6])

@@ -14,6 +14,8 @@ from inherit import Inherit
 from abcee import PlotABC
 from abcee import ReadABCrun
 
+from observations import GroupCat 
+
 import matplotlib.pyplot as plt 
 from ChangTools.plotting import prettyplot
 from ChangTools.plotting import prettycolors
@@ -73,27 +75,32 @@ def fig_SFRassign(t, abcrun, prior_name='try0'):
     sub = fig.add_subplot(111)
     for gv_key in gv_dict.keys():
         if gv_key == 'no_gv': 
-            lstyle = '-.'
+            lstyle = '--'
             label = 'No green valley'
             colors = pretty_colors[1]
         elif gv_key == 'med_gv': 
             lstyle = '-' 
             label = r'$\mathtt{f_{GV} = '+str(round(med_gv[0], 1))+' (log\;M_* - 10.5) + '+str(round(med_gv[1], 1))+'}$'
-            colors = pretty_colors[4]
+            colors = 'k'#pretty_colors[4]
         elif gv_key == 'lot_gv': 
             lstyle = '--'
             label = r'$\mathtt{f_{GV} = '+str(round(lot_gv[0], 1))+' (log\;M_* - 10.5) + '+str(round(lot_gv[1], 1))+'}$'
-            colors = pretty_colors[8]
+            colors = pretty_colors[7]
 
         bin_mid, ssfr_dist = gv_dict[gv_key].Ssfr()
+        
+        if gv_key == 'no_gv': 
+            dashes = [5,2,10,5]
+            ssfr_line, = sub.plot(bin_mid[2], ssfr_dist[2], c=colors, lw=3, ls=lstyle, label=label)
+            ssfr_line.set_dashes(dashes)
+        else: 
+            sub.plot(bin_mid[2], ssfr_dist[2], c=colors, lw=3, ls=lstyle, label=label)
 
-        sub.plot(bin_mid[2], ssfr_dist[2], c=colors, lw=3, ls=lstyle, label=label)
-
-    sub.set_xlim([-13.0, -7.0])
+    sub.set_xlim([-13.2, -8.0])
     sub.set_xlabel(r'$\mathtt{log \; SSFR \;[yr^{-1}]}$', fontsize=25) 
     sub.set_ylim([0.0, 1.6])
     sub.set_ylabel(r'$\mathtt{P(log \; SSFR)}$', fontsize=25) 
-    sub.legend(loc='upper left', prop={'size': 20})
+    sub.legend(loc='upper left', prop={'size': 17}, borderpad=1.25)
 
     fig_file = ''.join(['figure/paper/', 'assignSFR_SSFR.png'])
     fig.savefig(fig_file, bbox_inches='tight', dpi=150) 
@@ -278,8 +285,9 @@ def figSFH_demo(t, abcrun, prior_name='try0'):
     sub1.set_ylim([-5., 2.0]) 
 
     fig.subplots_adjust(wspace=0.0, hspace=0.0)
-    fig_file = ''.join(['figure/paper/', 'paper_SFH_demo.png'])
+    fig_file = ''.join(['figure/paper/', 'SFH_demo.png'])
     fig.savefig(fig_file, bbox_inches='tight', dpi=150) 
+    plt.close() 
     return None 
 
 
@@ -300,8 +308,6 @@ def fig_SSFRevol(t, abcrun, prior_name='try0'):
             'name': 'line', 'slope': tau_slope, 'fid_mass': 11.1, 'yint': tau_offset}
     sim_kwargs['sfr_prop']['gv'] = {
             'slope': gv_slope, 'fidmass': 10.5, 'offset': gv_offset}
-
-    figdata_file = lambda gv_str: ''.join(['/data1/hahn/paper/', 'fig_SFRassign.', gv_str, '.data_file.p']) 
     
     nsnaps = [1,4,7,10,12]
     inh = Inherit(nsnaps, 
@@ -320,13 +326,13 @@ def fig_SSFRevol(t, abcrun, prior_name='try0'):
     bin_mid, ssfr_dist = anc.Ssfr()
     sub.plot(bin_mid[1], ssfr_dist[1], c='k', lw=2, ls='--', label=r"$\mathtt{z=1.0}$")
     
-    for i_snap in nsnaps: 
+    for i_snap in nsnaps[::-1]: 
         bin_mid, ssfr_dist = des_dict[str(i_snap)].Ssfr()
         label = r"$\mathtt{z="+str(round(des_dict[str(i_snap)].zsnap,1))+"}$"
 
         sub.plot(bin_mid[1], ssfr_dist[1], c=pretty_colors[i_snap], lw=2, ls='-', label=label)
 
-        sub.text(-10., 1.3, r"$\mathtt{log\;M_* = [-10.1, 10.5]}$", fontsize=20)
+        sub.text(-10.75, 1.4, r"$\mathtt{log\;M_* = [-10.1, 10.5]}$", fontsize=20)
 
     sub.set_xlim([-13.0, -8.0])
     sub.set_xlabel(r'$\mathtt{log \; SSFR \;[yr^{-1}]}$', fontsize=25) 
@@ -336,6 +342,144 @@ def fig_SSFRevol(t, abcrun, prior_name='try0'):
 
     fig_file = ''.join(['figure/paper/', 'SSFRevol.png'])
     fig.savefig(fig_file, bbox_inches='tight', dpi=150) 
+    plt.close() 
+    return None 
+
+
+def fig_ABC_posterior(tf, abcrun=None, prior_name='try0'):
+    ''' The posterior corner plots from ABC given time step, abcrun name and prior name. 
+    '''
+    ppp = PlotABC(tf, abcrun=abcrun, prior_name=prior_name)
+
+    fig_file = ''.join(['figure/paper/',
+        'ABC_posterior',
+        '.', abcrun, 
+        '.', prior_name, '_prior', 
+        '.png'])
+    ppp.Corner(filename=fig_file)
+    plt.close() 
+
+
+def fig_SSFR_ABC_post(tf, abcrun=None, prior_name='try0'): 
+    ''' The SSFR distribution from the median value of the ABC posterior
+    '''
+    # model 
+    ppp = PlotABC(tf, abcrun=abcrun, prior_name=prior_name)
+    gv_slope, gv_offset, fudge_slope, fudge_offset, tau_slope, tau_offset = ppp.med_theta
+
+    sfinherit_kwargs, abcrun_flag = ReadABCrun(abcrun)
+    sim_kwargs = sfinherit_kwargs.copy()
+    sim_kwargs['sfr_prop']['gv'] = {'slope': gv_slope, 'fidmass': 10.5, 'offset': gv_offset}
+    sim_kwargs['evol_prop']['fudge'] = {'slope': fudge_slope, 'fidmass': 10.5, 'offset': fudge_offset}
+    sim_kwargs['evol_prop']['tau'] = {'name': 'line', 'slope': tau_slope, 'fid_mass': 11.1, 'yint': tau_offset}
+    inh = Inherit([1], 
+            nsnap_ancestor=sim_kwargs['nsnap_ancestor'],
+            subhalo_prop=sim_kwargs['subhalo_prop'], 
+            sfr_prop=sim_kwargs['sfr_prop'], 
+            evol_prop=sim_kwargs['evol_prop'])
+    des_dict = inh() 
+    descendant = des_dict['1'] 
+    model_bin_mid, model_ssfr_dist = descendant.Ssfr()
+
+    # group catalog
+    groupcat = GroupCat(Mrcut=18, position='central')
+    sdss_bin_mid, sdss_ssfr_dist = groupcat.Ssfr()
+
+
+    prettyplot() 
+    pretty_colors = prettycolors() 
+    fig = plt.figure(figsize=(20, 6))
+
+    panel_mass_bins = [[9.7, 10.1], [10.1, 10.5], [10.5, 10.9], [10.9, 11.3]]
+    for i_m, mass_bin in enumerate(panel_mass_bins): 
+        sub = fig.add_subplot(1, 4, i_m+1)
+
+        if i_m == 1:  
+            model_label = 'Hahn et al.(2016)'
+            sdss_label = None 
+        elif i_m == 2: 
+            model_label = None
+            sdss_label = 'SDSS Centrals'
+        else: 
+            sdss_label = None 
+            model_label = None
+
+        sub.plot(model_bin_mid[i_m], model_ssfr_dist[i_m], 
+                lw=3, ls='-', c=pretty_colors[3], label=model_label)
+
+        sub.plot(sdss_bin_mid[i_m], sdss_ssfr_dist[i_m], 
+                lw=2, ls='--', c='k', label=sdss_label)
+
+        massbin_str = ''.join([ 
+            r'$\mathtt{log \; M_{*} = [', 
+            str(mass_bin[0]), ',\;', 
+            str(mass_bin[1]), ']}$'
+            ])
+        sub.text(-12., 1.4, massbin_str, fontsize=20)
+    
+        # x-axis
+        if i_m == 3:
+            sub.set_xticks([-13, -12, -11, -10, -9])
+        else: 
+            sub.set_xticks([-13, -12, -11, -10])
+        sub.set_xlim([-13., -9.])
+        sub.set_xlabel(r'$\mathtt{log \; SSFR \;[yr^{-1}]}$', fontsize=25) 
+        # y-axis 
+        sub.set_ylim([0.0, 1.6])
+        if i_m == 0: 
+            sub.set_ylabel(r'$\mathtt{P(log \; SSFR)}$', fontsize=25) 
+        else: 
+            sub.set_yticklabels([])
+        
+        sub.legend(loc='upper center', prop={'size': 20}, borderpad=3)
+     
+    fig.subplots_adjust(wspace=0.0, hspace=0.0)
+
+    fig_file = ''.join(['figure/paper/',
+        'SSFR.ABC_posterior',
+        '.', abcrun, 
+        '.', prior_name, '_prior', 
+        '.png'])
+    fig.savefig(fig_file, bbox_inches='tight', dpi=150)
+
+    #ppp.Ssfr(filename=fig_file)
+
+    plt.close() 
+    return None
+
+def fig_tau_ABC_post(tf, abcrun=None, prior_name='try0'): 
+    ''' The SSFR distribution from the median value of the ABC posterior
+    '''
+    # model 
+    ppp = PlotABC(tf, abcrun=abcrun, prior_name=prior_name)
+    gv_slope, gv_offset, fudge_slope, fudge_offset, tau_slope, tau_offset = ppp.med_theta
+
+    tau_dict = {'name': 'line', 'slope': tau_slope, 'fid_mass': 11.1, 'yint': tau_offset}
+
+    prettyplot() 
+    pretty_colors = prettycolors() 
+    fig = plt.figure(figsize=(7,7))
+    sub = fig.add_subplot(111)
+
+    m_arr = np.arange(8.5, 12.5, 0.25)
+    
+    sub.semilogx(10**m_arr, sfr_evol.getTauQ(m_arr, tau_prop=tau_dict), 
+            c=pretty_colors[3], lw=3, label='Hahn et al.(2016)')
+    sub.semilogx(10**m_arr, sfr_evol.getTauQ(m_arr, tau_prop={'name': 'satellite'}), 
+            c='k', ls='--', lw=3, label='Satellite')
+    sub.set_xlabel(r"$\mathtt{log(M_*\;[M_\odot])}$", fontsize=25)
+    sub.set_xlim([10**9.5, 10**12.0])
+
+    sub.set_ylabel(r"$\tau_\mathtt{Q}\;[\mathtt{Gyr}]$", fontsize=25)
+    sub.legend(loc='upper right')
+    
+    fig_file = ''.join(['figure/paper/',
+        'tau.ABC_posterior',
+        '.', abcrun, 
+        '.', prior_name, '_prior', 
+        '.png'])
+    fig.savefig(fig_file, bbox_inches='tight', dpi=150)
+    plt.close()
     return None 
 
 
@@ -353,6 +497,9 @@ def keep_non_descreasing(L):
     return out, indices
 
 if __name__=='__main__': 
-    fig_SSFRevol(7, 'multirho_inh', prior_name='try0')
+    #fig_SSFRevol(7, 'multirho_inh', prior_name='try0')
     #fig_SFRassign(7, 'multirho_inh', prior_name='try0')
-    figSFH_demo(7, 'multirho_inh', prior_name='try0')
+    #figSFH_demo(7, 'multirho_inh', prior_name='try0')
+    #fig_ABC_posterior(7, abcrun='multirho_inh', prior_name='try0')
+    fig_SSFR_ABC_post(7, abcrun='multirho_inh', prior_name='try0')
+    #fig_tau_ABC_post(7, abcrun='multirho_inh', prior_name='try0')
