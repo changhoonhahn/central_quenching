@@ -20,7 +20,7 @@ if restart == 0:
         print 'ssfr + f_Q(z=0.34)'
         obvs_list = ['ssfr', 'fqz03'] 
     elif obvs == 2: 
-        print 'ssfr + [f_Q(z=0.05), f_Q(z=0.16), f_Q(z=0.3)]'
+        print 'ssfr + [f_Q(z=0.05), f_Q(z=0.16), f_Q(z=0.3), f_Q(z=1.)]'
         obvs_list = ['ssfr', 'fqz_multi'] 
     else: 
         raise ValueError 

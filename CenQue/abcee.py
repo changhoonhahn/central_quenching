@@ -47,7 +47,7 @@ def DataSummary(Mrcut=18, observables=['ssfr']):
         M_mid = 0.5 * (M_bin[:-1] + M_bin[1:])
         
         fq_out = [M_mid]
-        for zz in [0.0502, 0.1581, 0.3412]: 
+        for zz in [0.0502, 0.1581, 0.3412, 1.0833]: 
             fq_model = qfrac.model(M_mid, zz, lit='wetzel')
             fq_out += [fq_model]
 
@@ -119,6 +119,13 @@ def SimSummary(observables=['ssfr'], **sim_kwargs):
             fq_tmp = ngal_q.astype('float')/ngal.astype('float')
 
             fq_list += [fq_tmp]
+        # ancesotr 
+        sfq = qfrac.Classify(inh.ancestor.mass, inh.ancestor.sfr, inh.ancestor.zsnap, 
+                sfms_prop=sim_kwargs['sfr_prop']['sfms'])
+        ngal, dum = np.histogram(inh.ancestor.mass, bins=M_bin)
+        ngal_q, dum = np.histogram(inh.ancestor.mass[sfq == 'quiescent'], bins=M_bin)
+        fq_tmp = ngal_q.astype('float')/ngal.astype('float')
+        fq_list += [fq_tmp]
 
         obvs.append(fq_list)
     
@@ -653,11 +660,11 @@ class PlotABC(object):
 
 
 if __name__=="__main__": 
-    for tf in [0, 1]:
-        ppp = PlotABC(tf, abcrun='multirhofqz_newprior', prior_name='updated')
-        ppp.Corner()
+    #for tf in [7]:
+    #    ppp = PlotABC(tf, abcrun='multirhofqz_newprior', prior_name='updated')
+    #    ppp.Corner()
 
-    #for tf in [0, 1]: 
-    #    ppp = PlotABC(tf, abcrun='_multirhofqz_newprior')
-    #    ppp.Ssfr()
-    #    ppp.QAplot(nsnap_descendant=[1, 6])
+    for tf in [7]: 
+        ppp = PlotABC(tf, abcrun='multirhofqz_newprior')
+        ppp.Ssfr()
+        ppp.QAplot(nsnap_descendant=[1, 6])

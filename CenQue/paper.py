@@ -363,28 +363,33 @@ def fig_ABC_posterior(tf, abcrun=None, prior_name='try0'):
 def fig_SSFR_ABC_post(tf, abcrun=None, prior_name='try0'): 
     ''' The SSFR distribution from the median value of the ABC posterior
     '''
-    # model 
-    ppp = PlotABC(tf, abcrun=abcrun, prior_name=prior_name)
-    gv_slope, gv_offset, fudge_slope, fudge_offset, tau_slope, tau_offset = ppp.med_theta
+    figdata_file = ''.join(['/data1/hahn/paper/',  
+        'SSFR.ABC_posterior', '.', abcrun, '.', prior_name, '_prior', '.p'])
+    if not os.path.isfile(figdata_file):
+        # model 
+        ppp = PlotABC(tf, abcrun=abcrun, prior_name=prior_name)
+        gv_slope, gv_offset, fudge_slope, fudge_offset, tau_slope, tau_offset = ppp.med_theta
 
-    sfinherit_kwargs, abcrun_flag = ReadABCrun(abcrun)
-    sim_kwargs = sfinherit_kwargs.copy()
-    sim_kwargs['sfr_prop']['gv'] = {'slope': gv_slope, 'fidmass': 10.5, 'offset': gv_offset}
-    sim_kwargs['evol_prop']['fudge'] = {'slope': fudge_slope, 'fidmass': 10.5, 'offset': fudge_offset}
-    sim_kwargs['evol_prop']['tau'] = {'name': 'line', 'slope': tau_slope, 'fid_mass': 11.1, 'yint': tau_offset}
-    inh = Inherit([1], 
-            nsnap_ancestor=sim_kwargs['nsnap_ancestor'],
-            subhalo_prop=sim_kwargs['subhalo_prop'], 
-            sfr_prop=sim_kwargs['sfr_prop'], 
-            evol_prop=sim_kwargs['evol_prop'])
-    des_dict = inh() 
-    descendant = des_dict['1'] 
-    model_bin_mid, model_ssfr_dist = descendant.Ssfr()
+        sfinherit_kwargs, abcrun_flag = ReadABCrun(abcrun)
+        sim_kwargs = sfinherit_kwargs.copy()
+        sim_kwargs['sfr_prop']['gv'] = {'slope': gv_slope, 'fidmass': 10.5, 'offset': gv_offset}
+        sim_kwargs['evol_prop']['fudge'] = {'slope': fudge_slope, 'fidmass': 10.5, 'offset': fudge_offset}
+        sim_kwargs['evol_prop']['tau'] = {'name': 'line', 'slope': tau_slope, 'fid_mass': 11.1, 'yint': tau_offset}
+        inh = Inherit([1], 
+                nsnap_ancestor=sim_kwargs['nsnap_ancestor'],
+                subhalo_prop=sim_kwargs['subhalo_prop'], 
+                sfr_prop=sim_kwargs['sfr_prop'], 
+                evol_prop=sim_kwargs['evol_prop'])
+        des_dict = inh() 
+        descendant = des_dict['1'] 
+        model_bin_mid, model_ssfr_dist = descendant.Ssfr()
+        pickle.dump([model_bin_mid, model_ssfr_dist], open(figdata_file, 'wb'))
+    else: 
+        model_bin_mid, model_ssfr_dist = pickle.load(open(figdata_file, 'rb')) 
 
     # group catalog
     groupcat = GroupCat(Mrcut=18, position='central')
     sdss_bin_mid, sdss_ssfr_dist = groupcat.Ssfr()
-
 
     prettyplot() 
     pretty_colors = prettycolors() 
@@ -394,11 +399,8 @@ def fig_SSFR_ABC_post(tf, abcrun=None, prior_name='try0'):
     for i_m, mass_bin in enumerate(panel_mass_bins): 
         sub = fig.add_subplot(1, 4, i_m+1)
 
-        if i_m == 1:  
-            model_label = 'Hahn et al.(2016)'
-            sdss_label = None 
-        elif i_m == 2: 
-            model_label = None
+        if i_m == 3:  
+            model_label = 'Hahn+(2016)'
             sdss_label = 'SDSS Centrals'
         else: 
             sdss_label = None 
@@ -415,7 +417,7 @@ def fig_SSFR_ABC_post(tf, abcrun=None, prior_name='try0'):
             str(mass_bin[0]), ',\;', 
             str(mass_bin[1]), ']}$'
             ])
-        sub.text(-12., 1.4, massbin_str, fontsize=20)
+        sub.text(-12., 1.6, massbin_str, fontsize=20)
     
         # x-axis
         if i_m == 3:
@@ -425,14 +427,17 @@ def fig_SSFR_ABC_post(tf, abcrun=None, prior_name='try0'):
         sub.set_xlim([-13., -9.])
         sub.set_xlabel(r'$\mathtt{log \; SSFR \;[yr^{-1}]}$', fontsize=25) 
         # y-axis 
-        sub.set_ylim([0.0, 1.6])
+        sub.set_ylim([0.0, 1.8])
+        sub.set_yticks([0.0, 0.5, 1.0, 1.5])
         if i_m == 0: 
             sub.set_ylabel(r'$\mathtt{P(log \; SSFR)}$', fontsize=25) 
         else: 
             sub.set_yticklabels([])
         
-        sub.legend(loc='upper center', prop={'size': 20}, borderpad=3)
-     
+        ax = plt.gca()
+        leg = sub.legend(bbox_to_anchor=(-8.5, 1.75), loc='upper right', prop={'size': 20}, borderpad=2, 
+                bbox_transform=ax.transData, handletextpad=0.5)
+        
     fig.subplots_adjust(wspace=0.0, hspace=0.0)
 
     fig_file = ''.join(['figure/paper/',
@@ -464,14 +469,15 @@ def fig_tau_ABC_post(tf, abcrun=None, prior_name='try0'):
     m_arr = np.arange(8.5, 12.5, 0.25)
     
     sub.semilogx(10**m_arr, sfr_evol.getTauQ(m_arr, tau_prop=tau_dict), 
-            c=pretty_colors[3], lw=3, label='Hahn et al.(2016)')
+            c=pretty_colors[3], lw=3, label='Centrals (Hahn+2016)')
     sub.semilogx(10**m_arr, sfr_evol.getTauQ(m_arr, tau_prop={'name': 'satellite'}), 
-            c='k', ls='--', lw=3, label='Satellite')
+            c='k', ls='--', lw=3, label='Satellite (Wetzel+2014)')
     sub.set_xlabel(r"$\mathtt{log(M_*\;[M_\odot])}$", fontsize=25)
-    sub.set_xlim([10**9.5, 10**12.0])
+    sub.set_xlim([10**9.5, 10**11.5])
 
+    sub.set_yticks([0.0, 0.25, 0.5, 0.75, 1.0, 1.25, 1.5])
     sub.set_ylabel(r"$\tau_\mathtt{Q}\;[\mathtt{Gyr}]$", fontsize=25)
-    sub.legend(loc='upper right')
+    sub.legend(loc='upper right', prop={'size': 25}, handletextpad=0.5)
     
     fig_file = ''.join(['figure/paper/',
         'tau.ABC_posterior',
@@ -498,8 +504,8 @@ def keep_non_descreasing(L):
 
 if __name__=='__main__': 
     #fig_SSFRevol(7, 'multirho_inh', prior_name='try0')
-    #fig_SFRassign(7, 'multirho_inh', prior_name='try0')
+    fig_SFRassign(7, 'multirho_inh', prior_name='try0')
     #figSFH_demo(7, 'multirho_inh', prior_name='try0')
     #fig_ABC_posterior(7, abcrun='multirho_inh', prior_name='try0')
-    fig_SSFR_ABC_post(7, abcrun='multirho_inh', prior_name='try0')
+    #fig_SSFR_ABC_post(7, abcrun='multirho_inh', prior_name='try0')
     #fig_tau_ABC_post(7, abcrun='multirho_inh', prior_name='try0')

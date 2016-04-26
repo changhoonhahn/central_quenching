@@ -297,9 +297,9 @@ class Subhalos(CentralSubhalos):
 
 
 if __name__=='__main__': 
-    for nsnap_ancestor in [10, 15, 20]: 
-        for scat in [ 0.0, 0.2 ]: 
-            subh = CentralSubhalos() 
+    for nsnap_ancestor in [15]: 
+        for scat in [0.1, 0.3]: 
+            subh = Subhalos() 
             subh.build_catalogs(
                     snapshots=range(1, nsnap_ancestor+1), 
                     scatter=scat, 
