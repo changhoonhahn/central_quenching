@@ -465,7 +465,7 @@ class Inherit(object):
                 gv_prop = {'fidmass': 10.5, 'slope': self.gv[0], 'offset': self.gv[1]}  
             elif isinstance(self.gv, dict): 
                 gv_prop = self.gv
-            sfms_prop = {'name': 'linear', 'zslope': 1.5}   # SFMS 
+            sfms_prop = {'name': 'linear', 'zslope': 1.1}   # SFMS 
             self.sfr_prop = {'fq': fq_prop, 'sfms': sfms_prop, 'gv': gv_prop}
 
         if self.evol_prop is None: 

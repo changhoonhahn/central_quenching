@@ -228,6 +228,8 @@ def MakeABCrun(abcrun=None, nsnap_start=15, subhalo=None, fq=None, sfms=None, du
     f.write('# Subhalo Properties \n') 
     if subhalo is None:    
         subhalo = {'scatter': 0.2, 'source': 'li-march'}
+    elif isinstance(subhalo, str):  
+        subhalo = {'scatter': 0.2, 'source': subhalo}
     f.write(''.join(['scatter = ', str(subhalo['scatter']), '\n']))
     f.write(''.join(['source = ', subhalo['source'], '\n']))
     f.write('\n')
@@ -291,7 +293,7 @@ def ReadABCrun(abcrun, restart=False):
     return pickle.load(open(pickle_name, 'rb')), abcrun
 
 def ABC(T, eps_input, Npart=1000, prior_name='try0', observables=['ssfr'], abcrun=None, 
-        restart=False, t_restart=None, eps_restart=None):
+        restart=False, t_restart=None, eps_restart=None, **sim_kwargs):
     ''' ABC-PMC implementation. 
 
     Parameters
@@ -320,7 +322,7 @@ def ABC(T, eps_input, Npart=1000, prior_name='try0', observables=['ssfr'], abcru
     # output abc run details
     sfinherit_kwargs, abcrun_flag = MakeABCrun(
             abcrun=abcrun, Niter=T, Npart=Npart, prior_name=prior_name, 
-            eps_val=eps_input, restart=restart) 
+            eps_val=eps_input, restart=restart, **sim_kwargs) 
 
     # Data 
     data_sum = DataSummary(observables=observables)

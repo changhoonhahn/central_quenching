@@ -184,6 +184,9 @@ def Plot_rhoSFR(source='li-march', sfms_prop=None, fq_lit='wetzel', zslope=None)
 
         rhoSFR_z.append(rhoSFR_int) 
     
+    z_behroozi = [0.036209892874743854, 0.40889165564288144, 0.6761600913028816,  0.9616372266749669,  1.170544445309055,   1.4822192825461054,  1.6049075298939122]
+    sfr_cosmic = [0.010063810047184728 ,  0.02228775362744163 , 0.03802861399461939 , 0.06050175265988725 , 0.0805521892279678 , 0.10063810047184728, 0.10862045113189879]
+    
     prettyplot()
     pretty_colors = prettycolors()
     
@@ -191,6 +194,7 @@ def Plot_rhoSFR(source='li-march', sfms_prop=None, fq_lit='wetzel', zslope=None)
     sub = fig.add_subplot(111)
     sub.scatter(z_range, rhoSFR_z, s=10) 
     sub.plot(z_range, rhoSFR_z, c='k', lw=2) 
+    sub.plot(z_behroozi, sfr_cosmic, lw=3, c='r', label='Behroozi Best-fit')
     
     sub.set_xlabel(r'Redshift $\mathtt{(z)}$', fontsize=25)
     sub.set_xlim([0.0, z_range.max()])
@@ -198,6 +202,7 @@ def Plot_rhoSFR(source='li-march', sfms_prop=None, fq_lit='wetzel', zslope=None)
     sub.set_ylim([0.001, 0.1])
     sub.set_ylabel(r'$\rho_\mathtt{SFR}$', fontsize=25)
     sub.set_yscale('log') 
+    sub.legend(loc='upper left') 
 
     fig_name = ''.join(['figure/test/', 
         'rhoSFR', 
@@ -212,7 +217,7 @@ def Plot_rhoSFR(source='li-march', sfms_prop=None, fq_lit='wetzel', zslope=None)
 
 
 if __name__=='__main__': 
-    Plot_rhoSFR(source='li-march', sfms_prop=None, fq_lit='wetzel', zslope=1.5)
+    #Plot_rhoSFR(source='li-march', sfms_prop=None, fq_lit='wetzel', zslope=1.5)
     Plot_rhoSFR(source='li-march', sfms_prop=None, fq_lit='wetzel', zslope=1.1)
     #PlotFq_t(lit='wetzelsmooth')
     #PlotFq_t(lit='wetzel')
