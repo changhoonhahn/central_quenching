@@ -360,7 +360,16 @@ class Lineage(object):
         return None
 
 
+
 if __name__=="__main__": 
+    for scat in [0.0, 0.2]:
+        start_time = time.time()
+        bloodline = SatLineage(subhalo_prop={'scatter': scat, 'source': 'li-march'}, 
+                clobber=True)
+        bloodline.InfallTrack() 
+        bloodline.Write()
+        print 'lineage construction and write out takes ', (time.time() - start_time)/60.0
+    '''
     for nsnap in [15]: 
         for scat in [0.0, 0.2]:
             start_time = time.time()
@@ -369,3 +378,4 @@ if __name__=="__main__":
             bloodline.Descend(clobber=True) 
             bloodline.Write()
             print 'lineage construction and write out takes ', (time.time() - start_time)/60.0
+    '''

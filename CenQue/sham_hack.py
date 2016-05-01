@@ -10,8 +10,8 @@ import numpy as np
 from numpy import log10, Inf
 from scipy import integrate, interpolate, ndimage
 # local -----
-#from visualize import plot_sm
-#from utilities import utility as ut
+from visualize import plot_sm
+from utilities import utility as ut
 
 
 def assign(sub, m_kind='m.star', scat=0, dis_mf=0.007, source='', sham_prop='m.max', zis=None):
@@ -128,6 +128,17 @@ class SMFClass:
             self.slopes = np.array([-1.155, -1.00, -1.01, -1.39, -1.39])
             self.make_splines()
             self.initialize_redshift(redshift)
+        elif source == 'constant-li': 
+            '''
+            Li & White at all redshifts 
+            '''
+            self.redshifts = np.arange(0.1, 2.1, 0.1) 
+            self.mchars = np.repeat(10.525, len(self.redshifts)) - 2 * log10(hubble)
+            self.amplitudes = (np.repeat(0.0083, len(self.redshifts))* hubble ** 3)
+            self.slopes = np.repeat(-1.155, len(self.redshifts))
+            self.make_splines()
+            self.initialize_redshift(redshift)
+
         elif source == 'fontana':
             '''
             Fontana et al 2006. 0.4 < z < 4 from GOODS-MUSIC. Salpeter IMF.

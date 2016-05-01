@@ -10,7 +10,9 @@ import os.path
 import sham_hack as sham
 from util.util import code_dir
 #from treepm import subhalo_io 
-#from utilities import utility as wetzel_util
+import subhalo_io_hack as subhalo_io
+from utilities import utility as wetzel_util
+import util.util as Util
 
 class CentralSubhalos(object): 
     def __init__(self, **kwargs): 
@@ -179,7 +181,6 @@ class CentralSubhalos(object):
 
         return None
 
-
 class Subhalos(CentralSubhalos): 
     def __init__(self, **kwargs): 
         ''' Class that describes the Subhalo Catalogs generated from 
@@ -202,6 +203,15 @@ class Subhalos(CentralSubhalos):
             self._file_spec(**spec_kwargs), 
             '.hdf5']) 
         return subsham_file 
+    
+    def _file_spec(self, **spec_kwargs): 
+        ''' file specifier string that describes the key choices of parameters in the file
+        '''
+        spec_str = ''.join([
+            '.ancestor', str(spec_kwargs['nsnap_ancestor']), 
+            '.scatter', str(spec_kwargs['scatter']),
+            '.', spec_kwargs['source']])
+        return spec_str 
 
     def build_catalogs(self, snapshots=range(1,21), scatter = 0.0, source='li-drory-march', nsnap_ancestor=20): 
         '''
@@ -297,12 +307,13 @@ class Subhalos(CentralSubhalos):
 
 
 if __name__=='__main__': 
-    for nsnap_ancestor in [15]: 
-        for scat in [0.1, 0.3]: 
-            subh = Subhalos() 
-            subh.build_catalogs(
-                    snapshots=range(1, nsnap_ancestor+1), 
-                    scatter=scat, 
-                    source='li-march', 
-                    nsnap_ancestor=nsnap_ancestor)
+    for nsnap_ancestor in [32]: 
+        for scat in [0.0, 0.2]: 
+            subh = SatelliteSubhalos() 
+            #subh.build_catalogs(
+            #        snapshots=range(1, nsnap_ancestor+1), 
+            #        scatter=scat, 
+            #        source='li-march', 
+            #        nsnap_ancestor=nsnap_ancestor)
+            subh.build_catalogs(scatter=scat, source='li-march')
             del subh

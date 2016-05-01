@@ -328,9 +328,6 @@ def ABC(T, eps_input, Npart=1000, prior_name='try0', observables=['ssfr'], abcru
     prior_min, prior_max = PriorRange(prior_name)
     prior = abcpmc.TophatPrior(prior_min, prior_max)    # ABCPMC prior object
 
-    ## Read in ABC run file
-    #sfinherit_kwargs, abcrun_flag = ReadABCrun(abcrun, restart=restart)
-
     def Simz(tt):       # Simulator (forward model) 
         gv_slope = tt[0]
         gv_offset = tt[1]
@@ -660,11 +657,11 @@ class PlotABC(object):
 
 
 if __name__=="__main__": 
-    #for tf in [7]:
-    #    ppp = PlotABC(tf, abcrun='multirhofqz_newprior', prior_name='updated')
-    #    ppp.Corner()
+    for tf in [4, 5, 6, 7]:
+        ppp = PlotABC(tf, abcrun='multifq_wideprior', prior_name='updated')
+        ppp.Corner()
 
-    for tf in [7]: 
-        ppp = PlotABC(tf, abcrun='multirhofqz_newprior')
-        ppp.Ssfr()
-        ppp.QAplot(nsnap_descendant=[1, 6])
+    #for tf in [0, 1, 2, 3, 4, 5]: 
+    #    ppp = PlotABC(tf, abcrun=)
+    #    ppp.Ssfr()
+    #    ppp.QAplot(nsnap_descendant=[1, 6])

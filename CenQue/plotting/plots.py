@@ -91,7 +91,6 @@ class PlotSSFR(Plots):
         
         # loop through mass bin 
         for i_mass, panel_mass in enumerate(self.panel_mass_bins):       
-        
             # plot configuration
             if 'label' in kwargs:   # label 
                 hist_label = kwargs['label']
@@ -149,11 +148,11 @@ class PlotSSFR(Plots):
 
         return None   
 
-    def GroupCat(self, Mrcut=18, **kwargs): 
+    def GroupCat(self, Mrcut=18, position='central', **kwargs): 
         ''' Plot sSFR distribution for Group Catalog data
         '''
-        groupcat = GroupCat(Mrcut=Mrcut, position='central')
-        ssfr_bin_mid, ssfr_hist =groupcat.Ssfr()
+        groupcat = GroupCat(Mrcut=Mrcut, position=position)
+        ssfr_bin_mid, ssfr_hist = groupcat.Ssfr()
 
         # loop through each panel 
         for i_mass, panel_mass in enumerate(self.panel_mass_bins):       
@@ -737,6 +736,7 @@ class PlotSMF(Plots):
         
         self.sub.legend(loc='upper right', frameon=False)
         return None
+
 
 def QAplot(descendant, sfinh_kwargs, fig_name=None, **kwargs):
     ''' Given galpop object and the SF Inheritance parametes, 

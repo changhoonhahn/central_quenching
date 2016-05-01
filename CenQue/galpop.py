@@ -8,6 +8,7 @@ Author(s): ChangHoon Hahn
 
 '''
 import numpy as np
+import inspect
 import random
 import h5py
 import time
@@ -41,6 +42,10 @@ from central_subhalo import CentralSubhalos
 
 # -- plotting --
 from plotting import plots 
+
+class CGPopDict(object): 
+    def __init__(self): 
+        pass 
 
 class CGPop(object): 
     def __init__(self, **kwargs): 
@@ -311,6 +316,20 @@ class CGPop(object):
         self.sfr_class[:] = ''
 
         return None
+    
+    def _Jettison(self): 
+        ''' Jettison everything except  and only keep the class variables. This is for 
+        saving purposes and not at all recommended.
+        '''
+        cgpop_dict = CGPopDict()
+
+        isarr = lambda x: isinstance(x, np.ndarray) 
+        for methodpair in inspect.getmembers(self, predicate=isarr): 
+            method = methodpair[0]
+        
+            setattr(cgpop_dict, method, getattr(self, method) )
+
+        return cgpop_dict 
 
     # -------------------------
     # Galaxy properties  

@@ -358,12 +358,11 @@ def FitObservedSFMS(observable, Mfid=10.5, slope=None, mass_range=None, **kwargs
         bestfit = mpfit.mpfit(util.mpfit_line_fixedslope, p0, functkw=fa, quiet=True) 
     return bestfit.params
 
-
 def ObservedSSFR(observable, **kwargs): 
     ''' Calculate the observed SSFR function relation for either
     Jeremy's group catalog or the SDSS+PRIMUS sample. 
     '''
-    if observable == 'groupcat': 
+    if 'groupcat' in observable: 
         if 'Mrcut' not in kwargs.keys(): 
             raise ValueError('Mrcut kwarg needs to be specified') 
         if 'position' not in kwargs.keys(): 
@@ -454,7 +453,7 @@ def FitObservedSSFR_Peaks(observable='groupcat', sfq='star-forming', Mrcut=18, p
     ''' Fit the (M*, SFR) positions of the SSFR distribution SF peak to a
     SFR(M*) linear parameterization. This is only for the SDSS group catalog.  
     '''
-    if observable != 'groupcat': 
+    if 'groupcat' not in observable: 
         raise ValueError
 
     SSFRpeak = ObservedSSFR_Peaks(observable, sfq=sfq, Mrcut=Mrcut, position=position)

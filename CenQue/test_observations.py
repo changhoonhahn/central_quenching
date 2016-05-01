@@ -120,11 +120,11 @@ def PlotObservedSSFR(observable, isedfit=False, Peak=False):
     '''
     '''
     prettyplot()
-    if Peak and observable != 'groupcat': 
+    if Peak and 'groupcat' not in observable: 
         raise ValeuError
 
     mass_bins = [[9.7, 10.1], [10.1, 10.5], [10.5, 10.9], [10.9, 11.3]]
-    if observable == 'groupcat': 
+    if 'groupcat' in observable: 
         zbins = [0.03]    
     elif observable == 'sdssprimus': 
         zbins = [0.1, 0.3, 0.5, 0.7, 0.9]
@@ -137,14 +137,20 @@ def PlotObservedSSFR(observable, isedfit=False, Peak=False):
         subs = [fig.add_subplot(2, 2, i_mass+1) for i_mass in xrange(4)]  
 
         # preset kwargs for group and SDSS+PRIMUS catalogs
-        if observable == 'groupcat':
-            obs_str = 'Group Catalog'
+        if 'groupcat' in observable:
+            if 'sat' in observable: 
+                obs_str = 'Group Catalog Satellites'
+                censat = 'satellite'
+            elif 'cen' in observable: 
+                obs_str = 'Group Catalog Centrals' 
+                censat = 'central'
             file_flag = observable
+
             if not isedfit: 
-                kwargs = {'Mrcut': 18, 'position': 'central'}
+                kwargs = {'Mrcut': 18, 'position': censat}
                 file_flag += ''
             else: 
-                kwargs = {'Mrcut': 18, 'position': 'central', 'isedfit': True}
+                kwargs = {'Mrcut': 18, 'position': censat, 'isedfit': True}
                 obs_str += ' iSEDfit'
                 file_flag += 'isedfit'
         else: 
@@ -248,12 +254,13 @@ def PlotLee2015_SFMS_zdep():
 
     
 if __name__=="__main__": 
-    PlotLee2015_SFMS_zdep()
+    #PlotLee2015_SFMS_zdep()
 
-    #PlotObservedSSFR('groupcat', isedfit=False, Peak=True)
+    [BuildGroupCat(Mrcut=Mr, position='satellite') for Mr in [18, 19, 20]]
+    PlotObservedSSFR('groupcat_cen', isedfit=False, Peak=True)
+    PlotObservedSSFR('groupcat_sat', isedfit=False, Peak=True)
 
     #GroupCat_iSEDfitMatch(Mrcut=18, position='central')
-    #[BuildGroupCat(Mrcut=Mr, position='central') for Mr in [18, 19, 20]]
     #PlotObservedSSFR(isedfit=False)
     #print PlotObservedSFMS(isedfit=True,
     #        sfms_prop={'name': 'linear', 'mslope': 0.55, 'zslope': 1.1}

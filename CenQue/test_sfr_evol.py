@@ -78,7 +78,6 @@ def ModelSFMS(observable='sdssprimus'):
         sfms_plot.save_fig(fig_file)
         plt.close()
 
-
 if __name__=='__main__': 
     Plot_Fq_timedelay(lit='wetzelsmooth')
     #ModelSFMS(observable='sdssprimus')

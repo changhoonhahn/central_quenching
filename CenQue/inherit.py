@@ -1,4 +1,6 @@
+import os 
 import time
+import pickle 
 import numpy as np
 from scipy import interpolate
 
@@ -68,7 +70,7 @@ class Inherit(object):
         self.gv = gv
         self._InitProps()
         self._UnpackProps() # unpack dictionaries 
-
+        
         # Read in Lineage object and import necessary GalPop objects
         self._Read_Lineage()
         
@@ -84,8 +86,13 @@ class Inherit(object):
     def __call__(self):  
         '''
         '''
+        self.descendant_dict['ancestor'] = self.ancestor
+        for key in self.descendant_dict.keys(): 
+            cgpop_obj = self.descendant_dict[key]
+            self.descendant_dict[key] = cgpop_obj._Jettison() 
+
         return self.descendant_dict
-    
+
     def _StarformingEvol(self): 
         ''' Evolve the star-forming galaxy population. This involves evolving their 
         stellar mass and star formation rates while quenching some of them to match 
@@ -497,3 +504,129 @@ class Inherit(object):
         self.fudge_prop = self.evol_prop['fudge']
         self.dutycycle_prop = self.evol_prop['sfr']['dutycycle']   # SF dutycycle properties 
         return None
+
+    def _Jettison(self): 
+        ''' Inherit class is usually very massive. Jettison needless data 
+        '''
+        return None 
+
+
+class ABCInherit(object):  
+    def __init__(self, t, abcrun=None, prior_name=None): 
+        ''' A wrapper class for Inherit results with ABC best-fit parameters
+        '''
+        if abcrun is None: 
+            raise ValueError('specify abcrun') 
+        if prior_name is None: 
+            raise ValueError('specify prior_name') 
+
+        self.t = t
+        self.abcrun= abcrun
+        self.prior_name = prior_name 
+    
+        # Read in the theta values of the ABC run with 'prior_name' priors 
+        # at time step t
+        theta_file = ''.join([Util.code_dir(), 
+            'dat/pmc_abc/', 
+            'CenQue_theta_t', str(self.t), '_', self.abcrun, '.dat']) 
+        w_file = ''.join([Util.code_dir(), 
+            'dat/pmc_abc/', 
+            'CenQue_w_t', str(t), '_', abcrun, '.dat']) 
+        self.theta = np.loadtxt(theta_file)      # theta values 
+        self.w = np.loadtxt(w_file)              # w values 
+
+        self.med_theta = [np.median(self.theta[:,i]) for i in range(len(self.theta[0]))]
+
+        self.sim_kwargs = self._ABCrun_kwargs() 
+    
+    def _ABCrun_kwargs(self): 
+        '''
+        '''
+        gv_slope, gv_offset, fudge_slope, fudge_offset, tau_slope, tau_offset = self.med_theta
+
+        sfinherit_kwargs = self._ReadABCrun()
+        sim_kwargs = sfinherit_kwargs.copy()
+        sim_kwargs['sfr_prop']['gv'] = {
+                'slope': gv_slope, 'fidmass': 10.5, 'offset': gv_offset
+                }
+        sim_kwargs['evol_prop']['fudge'] = {
+                'slope': fudge_slope, 'fidmass': 10.5, 'offset': fudge_offset
+                }
+        sim_kwargs['evol_prop']['tau'] = {
+                'name': 'line', 'slope': tau_slope, 'fid_mass': 11.1, 'yint': tau_offset
+                }
+        
+        return sim_kwargs
+
+    def PickleFile(self, snapshots): 
+        ''' Name of the pickle file where the inherited snapshots are saved  
+        '''
+        if isinstance(snapshots, float): 
+            snapshots = [snapshots] 
+        elif isinstance(snapshots, list): 
+            pass
+        elif isinstance(snapshots, np.ndarray): 
+            pass 
+        elif isinstance(snapshots, str): 
+            if snapshots == 'all': 
+                snapshots = range(1, self.sim_kwargs['nsnap_ancestor']) 
+            else: 
+                raise ValueError
+        else: 
+            raise ValueError
+        self.snapshots = snapshots
+
+        if snapshots == range(1, self.sim_kwargs['nsnap_ancestor']): 
+            snap_str = '_all' 
+        else: 
+            snap_str = '_'.join([str(snap) for snap in self.snapshots])
+        
+        abcinh_file = ''.join([Util.code_dir(), 'dat/pmc_abc/pickle/', 
+            'Inherit', 
+            '.snapshots', snap_str, 
+            '.ancestor', str(self.sim_kwargs['nsnap_ancestor']), 
+            '.abcrun_', self.abcrun, '.p']) 
+        return abcinh_file  
+
+    def PickleDump(self, snapshots, clobber=False):  
+        ''' Run Inherit for the snapshots and save to pickle file 
+        '''
+        pickle_file = self.PickleFile(snapshots) 
+
+        if os.path.isfile(pickle_file) and not clobber: 
+            raise ValueError("Already exists. Specify clobber=True, if you want to overwrite") 
+
+        inh = Inherit(self.snapshots, 
+                nsnap_ancestor=self.sim_kwargs['nsnap_ancestor'],
+                subhalo_prop=self.sim_kwargs['subhalo_prop'], 
+                sfr_prop=self.sim_kwargs['sfr_prop'], 
+                evol_prop=self.sim_kwargs['evol_prop'])
+
+        inh_dict = inh() 
+        pickle.dump(inh_dict, open(pickle_file, 'wb'))
+        return inh_dict
+
+    def PickleLoad(self, snapshots, clobber=False): 
+        ''' Load the precomputed Inherit saved to pickel file 
+        '''
+        pickle_file = self.PickleFile(snapshots) 
+        if not os.path.isfile(pickle_file) or clobber: 
+            inh = Inherit(self.snapshots, 
+                    nsnap_ancestor=self.sim_kwargs['nsnap_ancestor'],
+                    subhalo_prop=self.sim_kwargs['subhalo_prop'], 
+                    sfr_prop=self.sim_kwargs['sfr_prop'], 
+                    evol_prop=self.sim_kwargs['evol_prop'])
+
+            inh_dict = inh() 
+            pickle.dump(inh_dict, open(pickle_file, 'wb'))
+        else: 
+            inh_dict = pickle.load(open(pickle_file, 'rb'))
+
+        return inh_dict
+
+    def _ReadABCrun(self): 
+        ''' Read file that specifies all the choices of parameters and ABC settings.
+        '''
+        abcrun_file = ''.join([Util.code_dir(), 
+            'dat/pmc_abc/run/', 'abcrun_', self.abcrun, '.p']) 
+        return pickle.load(open(abcrun_file, 'rb'))
