@@ -89,7 +89,7 @@ class Inherit(object):
         self.descendant_dict['ancestor'] = self.ancestor
         for key in self.descendant_dict.keys(): 
             cgpop_obj = self.descendant_dict[key]
-            self.descendant_dict[key] = cgpop_obj._Jettison() 
+            #self.descendant_dict[key] = cgpop_obj._Jettison() 
 
         return self.descendant_dict
 
@@ -156,7 +156,7 @@ class Inherit(object):
 
         qf = Fq()
         Fq_anal = qf.model
-        M_bins = np.arange(6.0, 13., 0.5) 
+        M_bins = np.arange(5.5, 13., 0.5) 
         M_mid = 0.5 * (M_bins[:-1] + M_bins[1:]) 
 
         q_Mshams = self.MshamEvol[allwill[q_ancestor],:].copy() 
