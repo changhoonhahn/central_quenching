@@ -2,6 +2,7 @@
 ABC test runs for specific purposes 
 Make sure everything is documented precisely 
 '''
+from abcee import ABC
 
 # Test the SMF evolution's impact on the quenching parameter constraints 
 obvs_list = ['ssfr', 'fqz_multi'] 

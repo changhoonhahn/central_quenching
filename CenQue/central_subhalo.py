@@ -7,9 +7,9 @@ import numpy as np
 import os.path
 
 # --- Local --- 
-import sham_hack as sham
 from util.util import code_dir
 #from treepm import subhalo_io 
+#import sham_hack as sham
 #import subhalo_io_hack as subhalo_io
 #from utilities import utility as wetzel_util
 import util.util as Util
