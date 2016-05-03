@@ -242,7 +242,7 @@ class PlotFq(Plots):
         self.fig = plt.figure(figsize=[10,10])
         self.subs = self.fig.add_subplot(1,1,1)
 
-    def plot(self, mass=None, sfr=None, z=None, FQdist=None, **mkwargs):
+    def plot(self, mass=None, sfr=None, z=None, FQdist=None, sfms_prop=None, **mkwargs):
         ''' Plot the quiescent fraction as a function of stellar mass. 
         The quiescent fraction is calculated based on an evolving sSFR(M*,z) cut. 
 
@@ -256,7 +256,7 @@ class PlotFq(Plots):
             if sfr is None or z is None: 
                 raise ValueError
             fq_obj = Fq()
-            masses, fq = fq_obj.Calculate(mass=mass, sfr=sfr, z=z) 
+            masses, fq = fq_obj.Calculate(mass=mass, sfr=sfr, z=z, sfms_prop=sfms_prop) 
         else:
             masses, fq = FQdist
 

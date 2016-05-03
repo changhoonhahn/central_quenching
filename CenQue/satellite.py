@@ -27,6 +27,7 @@ from observations import GroupCat
 #from treepm import subhalo_io 
 import subhalo_io_hack as subhalo_io
 from utilities import utility as wetzel_util
+from plotting.plots import PlotFq
 from plotting.plots import PlotSSFR
 
 import matplotlib.pyplot as plt 
@@ -636,27 +637,47 @@ def EvolveSatSFR(sg_obj):
 
 
 def PlotEvolvedSat(sg_obj): 
-    '''
+    ''' Plot stuff for the evolved satellite population 
     '''
     infall = np.where(
             (sg_obj.first_infall_mass > 0.) &
             (sg_obj.first_infall_sfr > -999.) & 
             (sg_obj.first_infall_t >  5.7))
     
+    # SSFR plot
     ssfr_plot = PlotSSFR() 
     ssfr_plot.plot(mass=sg_obj.mass[infall], ssfr=sg_obj.ssfr[infall], line_color=3)
 
     ssfr_plot.GroupCat(position='satellite') 
     ssfr_plot.set_axes() 
 
-    fig_name = ''.join(['figure/', 
+    ssfr_fig_name = ''.join(['figure/', 
         'SSFR.Satellite',
         '.ABC_posterior',
         '.', sg_obj.abcrun, 
         '.', sg_obj.prior_name, '_prior', 
         '.png'])
-    ssfr_plot.save_fig(fig_name)
+    ssfr_plot.save_fig(ssfr_fig_name)
     plt.close()
+
+    # Quiescent fraction plot  
+    fq_plot = PlotFq()
+    fq_plot.plot(mass=sg_obj.mass[infall], sfr=sg_obj.sfr[infall], z=sg_obj.zsnap, line_color='r',
+            sfms_prop=sg_obj.sfms_prop, label='SHAM Sat. Simulation')
+    grpcat = GroupCat(Mrcut=18, position='satellite')
+    grpcat.Read()
+    fq_plot.plot(mass=grpcat.mass, sfr=grpcat.sfr, z=np.median(grpcat.z), line_color='k', line_style='--',
+            sfms_prop=sg_obj.sfms_prop, label='Satellite Group Catalog')
+    fq_plot.set_axes()
+    fq_fig_name = ''.join(['figure/', 
+        'Fq.Satellite',
+        '.ABC_posterior',
+        '.', sg_obj.abcrun, 
+        '.', sg_obj.prior_name, '_prior', 
+        '.png'])
+    fq_plot.save_fig(fq_fig_name)
+    plt.close() 
+
     return None 
 
 
