@@ -143,7 +143,7 @@ class SMFClass:
             '''
             Li & White at all redshifts 
             '''
-            self.redshifts = np.arange(0.1, 2.1, 0.1) 
+            self.redshifts = np.arange(0.1, 4.03, 0.1) 
             self.mchars = np.repeat(10.525, len(self.redshifts)) - 2 * log10(hubble)
             self.amplitudes = (np.repeat(0.0083, len(self.redshifts))* hubble ** 3)
             self.slopes = np.repeat(-1.155, len(self.redshifts))

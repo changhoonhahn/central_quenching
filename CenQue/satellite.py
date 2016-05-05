@@ -1184,13 +1184,13 @@ if __name__=='__main__':
     #    subh = SatelliteSubhalos() 
     #    subh.build_catalogs(scatter=scat, source='li-march')
     #    del subh
-    #ABC(20, [100.], Npart=200, cen_tf=7, cen_prior_name='updated', cen_abcrun='multifq_wideprior')
-    #PlotABC_tQdelay(19, cen_abcrun='multifq_wideprior')
+    #ABC(20, [100.], Npart=200, cen_tf=6, cen_prior_name='updated', cen_abcrun='multifq_wideprior_nosmfevo')
+    PlotABC_tQdelay(12, cen_abcrun='multifq_wideprior_nosmfevo')
     #PlotABC_InfallCondition(10, cen_abcrun='multifq_wideprior', cen_prior_name='updated')
 
-    #PlotABC_EvolvedSat(19, cen_abcrun='multifq_wideprior', cen_prior_name='updated')
-    Plot_tRapid()
-    #PlotABC_Corner(19, cen_abcrun='multifq_wideprior')
+    PlotABC_EvolvedSat(12, cen_abcrun='multifq_wideprior_nosmfevo', cen_prior_name='updated')
+    #Plot_tRapid()
+    PlotABC_Corner(12, cen_abcrun='multifq_wideprior_nosmfevo')
 
     #cen_assigned_sat_file = ''.join(['/data1/hahn/pmc_abc/pickle/', 
     #    'satellite.cenassign.multifq_wideprior_ABC.updated_prior.p'])

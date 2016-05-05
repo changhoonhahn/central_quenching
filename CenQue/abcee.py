@@ -659,10 +659,14 @@ class PlotABC(object):
 
 
 if __name__=="__main__": 
-    for tf in [0, 1]:
-        ppp = PlotABC(tf, abcrun='multifq_wideprior_extremesmfevo', prior_name='updated')
-        ppp.Corner()
-
+    #for tf in [4,5]:
+    #    ppp = PlotABC(tf, abcrun='multifq_wideprior_nosmfevo', prior_name='updated')
+    #    ppp.Corner()
+    
+    for run in ['multifq_wideprior_nosmfevo', 'multifq_wideprior']:
+        ppp = PlotABC(5, abcrun=run)
+        ppp.Ssfr()
+        ppp.QAplot(nsnap_descendant=[1, 6])
     #for tf in [0, 1, 2, 3, 4, 5]: 
     #    ppp = PlotABC(tf, abcrun=)
     #    ppp.Ssfr()
