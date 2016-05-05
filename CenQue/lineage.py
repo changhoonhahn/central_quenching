@@ -375,7 +375,7 @@ if __name__=="__main__":
         for scat in [0.0, 0.2]:
             start_time = time.time()
             bloodline = Lineage(nsnap_ancestor=nsnap, 
-                    subhalo_prop={'scatter': scat, 'source': 'constant-li'}, clobber=True)
+                    subhalo_prop={'scatter': scat, 'source': 'li-march-extreme'}, clobber=True)
             bloodline.Descend(clobber=True) 
             bloodline.Write()
             print 'lineage construction and write out takes ', (time.time() - start_time)/60.0

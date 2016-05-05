@@ -65,6 +65,7 @@ class CGPop(object):
         self.snap_index = None
         self.pos = None     # position 
         self.halo_mass = None 
+        self.halo_mass_max = None 
         self.sham_mass = None
 
         # star-formation properties
@@ -140,11 +141,11 @@ class CGPop(object):
         self.data_columns = self.get_datacol() 
         for col in centsub.data_columns: 
             if col == 'halo.m.max': 
-                newcol = 'halo_mass'
+                newcol = 'halo_mass_max'
             elif col == 'index': 
                 newcol = 'snap_index'
             elif col == 'halo.m': 
-                continue 
+                newcol = 'halo_mass'
             else: 
                 newcol = col
             setattr(self, newcol, getattr(centsub, col))
@@ -280,8 +281,8 @@ class CGPop(object):
         ''' Get the list of data columns available in the class object
         '''
         # all possible data columns
-        all_data = ['mass', 'halo_mass', 'parent', 'child', 'ilk', 'snap_index', 
-                'pos', 'gal_type', 'sfr', 'ssfr']
+        all_data = ['mass', 'halo_mass', 'halo_mass_max', 'parent', 'child', 'ilk', 
+                'snap_index', 'pos', 'gal_type', 'sfr', 'ssfr']
 
         datacol = [] 
         for datum in all_data: 

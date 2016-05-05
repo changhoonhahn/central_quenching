@@ -659,8 +659,8 @@ class PlotABC(object):
 
 
 if __name__=="__main__": 
-    for tf in [4, 5, 6, 7]:
-        ppp = PlotABC(tf, abcrun='multifq_wideprior', prior_name='updated')
+    for tf in [0, 1]:
+        ppp = PlotABC(tf, abcrun='multifq_wideprior_extremesmfevo', prior_name='updated')
         ppp.Corner()
 
     #for tf in [0, 1, 2, 3, 4, 5]: 
