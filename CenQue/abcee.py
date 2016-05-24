@@ -63,8 +63,6 @@ def SimSummary(observables=['ssfr'], **sim_kwargs):
     '''
     obvs = []
 
-    if 'ssfr' not in observables: 
-        raise ValueError
     if 'fqz03' in observables and 'fqz_multi' in observables: 
         raise ValueError
 
@@ -83,8 +81,9 @@ def SimSummary(observables=['ssfr'], **sim_kwargs):
 
     # SSFR 
     des1 = des_dict['1']
-    bins, dist = des1.Ssfr()
-    obvs.append([np.array(bins), np.array(dist)])
+    if 'ssfr' in observables: 
+        bins, dist = des1.Ssfr()
+        obvs.append([np.array(bins), np.array(dist)])
 
     if 'fqz03' in observables:  # fQ(nsnap = 6) 
         des6 = des_dict['6']
@@ -146,6 +145,9 @@ def PriorRange(name):
         # explore more of the parameter space. 
         prior_min = [0.0, -0.4, -5., 0.5, -1.5, 0.01]
         prior_max = [2.0, 0.6, 0.0, 2.5, 0.5, 1.5]
+    elif name == 'satellite':   # theta does not include taus
+        prior_min = [0.0, -0.4, -5., 0.5]
+        prior_max = [2.0, 0.6, 0.0, 2.5]
     else: 
         raise NotImplementedError
 
@@ -198,6 +200,28 @@ def RhoSSFR_Fq(simum, datum):
         simum_fq = simum[1][i_fq+1]
         rho_fq += np.sum((datum_fq - simum_fq)**2)
     return [rho_ssfr, rho_fq]
+
+def RhoFq(simum, datum):
+    ''' Distance metric that compares the L2 Norm of quiescent fraction at different 
+    redhsifts    
+    Parameters
+    ----------
+    datum : list
+        List [bins, dist] where bins is a np.ndarray of the SSFR bin values and 
+        dist is a np.ndarray that specifies the SSFR distribution of the group catalog.
+    model : list 
+        List [bins, dist] where bins is a np.ndarray of the SSFR bin values and 
+        dist is a np.ndarray that specifies the SSFR distribution of the simulation.
+
+    '''
+    # rho_fq
+    n_fq = len(datum)-1 
+    rho_fq = 0.
+    for i_fq in range(n_fq):
+        datum_fq = datum[i_fq+1]
+        simum_fq = simum[i_fq+1]
+        rho_fq += np.sum((datum_fq - simum_fq)**2)
+    return rho_fq
 
 def MakeABCrun(abcrun=None, nsnap_start=15, subhalo=None, fq=None, sfms=None, dutycycle=None, mass_evol=None, 
         Niter=None, Npart=None, prior_name=None, eps_val=None, restart=False): 
@@ -398,7 +422,7 @@ def ABC(T, eps_input, Npart=1000, prior_name='try0', observables=['ssfr'], abcru
     for pool in abcpmc_sampler.sample(prior, eps, pool=init_pool):
         print '----------------------------------------'
         print 'eps ', pool.eps
-        new_eps_str = '\t'+str(pool.eps)+'\n'
+        new_eps_str = str(pool.eps)+'\t'+str(pool.ratio)+'\n'
         if eps_str != new_eps_str:  # if eps is different, open fiel and append 
             f = open(eps_file, "a")
             eps_str = new_eps_str
@@ -411,6 +435,134 @@ def ABC(T, eps_input, Npart=1000, prior_name='try0', observables=['ssfr'], abcru
         # write theta, weights, and distances to file 
         np.savetxt(theta_file(pool.t), pool.thetas, 
             header='gv_slope, gv_offset, fudge_slope, fudge_offset, tau_slope, tau_offset')
+        np.savetxt(w_file(pool.t), pool.ws)
+        np.savetxt(dist_file(pool.t), pool.dists)
+    
+        # update epsilon based on median thresholding 
+        if len(observables) == 1: 
+            eps.eps = np.median(pool.dists)
+        else:
+            #print pool.dists
+            print np.median(np.atleast_2d(pool.dists), axis = 0)
+            eps.eps = np.median(np.atleast_2d(pool.dists), axis = 0)
+        print '----------------------------------------'
+        pools.append(pool)
+
+    return pools 
+
+
+def SatelliteABC(T, eps_input, Npart=1000, prior_name='try0', observables=['fqz_multi'], abcrun=None, 
+        restart=False, t_restart=None, eps_restart=None, **sim_kwargs):
+    ''' ABC-PMC  
+
+    Parameters
+    ----------
+    T : (int) 
+        Number of iterations
+
+    eps_input : (float)
+        Starting epsilon threshold value 
+
+    N_part : (int)
+        Number of particles
+
+    prior_name : (string)
+        String that specifies what prior to use.
+
+    abcrun : (string)
+        String that specifies abc run information 
+    '''
+    if isinstance(eps_input, list):
+        if len(eps_input) != len(observables): 
+            raise ValueError
+    if len(observables) > 1 and isinstance(eps_input, float): 
+        raise ValueError
+
+    # output abc run details
+    sfinherit_kwargs, abcrun_flag = MakeABCrun(
+            abcrun=abcrun, Niter=T, Npart=Npart, prior_name=prior_name, 
+            eps_val=eps_input, restart=restart, **sim_kwargs) 
+
+    # Data 
+    data_sum = DataSummary(observables=observables)
+    # Priors
+    prior_min, prior_max = PriorRange(prior_name)
+    prior = abcpmc.TophatPrior(prior_min, prior_max)    # ABCPMC prior object
+
+    def Simz(tt):       # Simulator (forward model) 
+        gv_slope = tt[0]
+        gv_offset = tt[1]
+        fudge_slope = tt[2]
+        fudge_offset = tt[3]
+
+        sim_kwargs = sfinherit_kwargs.copy()
+        sim_kwargs['sfr_prop']['gv'] = {'slope': gv_slope, 'fidmass': 10.5, 'offset': gv_offset}
+        sim_kwargs['evol_prop']['fudge'] = {'slope': fudge_slope, 'fidmass': 10.5, 'offset': fudge_offset}
+        sim_kwargs['evol_prop']['tau'] = {'name': 'satellite'}
+
+        return SimSummary(observables=observables, **sim_kwargs)
+
+    theta_file = lambda pewl: ''.join([code_dir(), 
+        'dat/pmc_abc/', 'CenQue_theta_t', str(pewl), '_', abcrun_flag, '.satellite.dat']) 
+    w_file = lambda pewl: ''.join([code_dir(), 
+        'dat/pmc_abc/', 'CenQue_w_t', str(pewl), '_', abcrun_flag, '.satellite.dat']) 
+    dist_file = lambda pewl: ''.join([code_dir(), 
+        'dat/pmc_abc/', 'CenQue_dist_t', str(pewl), '_', abcrun_flag, '.satellite.dat']) 
+    eps_file = ''.join([code_dir(), 
+        'dat/pmc_abc/epsilon_', abcrun_flag, '.satellite.dat'])
+
+    distfn = RhoFq
+   
+    if restart:
+        if t_restart is None: 
+            raise ValueError
+
+        last_thetas = np.loadtxt(theta_file(t_restart))
+        last_ws = np.loadtxt(w_file(t_restart))
+        last_dist = np.loadtxt(dist_file(t_restart))
+
+        init_pool = abcpmc.PoolSpec(t_restart, None, None, last_thetas, last_dist, last_ws)
+    else: 
+        init_pool = None 
+
+    eps = abcpmc.ConstEps(T, eps_input)
+    try:
+        mpi_pool = mpi_util.MpiPool()
+        abcpmc_sampler = abcpmc.Sampler(
+                N=Npart,                # N_particles
+                Y=data_sum,             # data
+                postfn=Simz,            # simulator 
+                dist=distfn,           # distance function  
+                pool=mpi_pool)  
+    except AttributeError: 
+        abcpmc_sampler = abcpmc.Sampler(
+                N=Npart,                # N_particles
+                Y=data_sum,             # data
+                postfn=Simz,            # simulator 
+                dist=distfn)           # distance function  
+    abcpmc_sampler.particle_proposal_cls = abcpmc.ParticleProposal
+
+    pools = []
+    if init_pool is None: 
+        f = open(eps_file, "w")
+        f.close()
+    eps_str = ''
+    for pool in abcpmc_sampler.sample(prior, eps, pool=init_pool):
+        print '----------------------------------------'
+        print 'eps ', pool.eps
+        new_eps_str = '\t'+str(pool.eps)+'\n'
+        if eps_str != new_eps_str:  # if eps is different, open fiel and append 
+            f = open(eps_file, "a")
+            eps_str = new_eps_str
+            f.write(eps_str)
+            f.close()
+
+        print("T:{0},ratio: {1:>.4f}".format(pool.t, pool.ratio))
+        print eps(pool.t)
+
+        # write theta, weights, and distances to file 
+        np.savetxt(theta_file(pool.t), pool.thetas, 
+            header='gv_slope, gv_offset, fudge_slope, fudge_offset')
         np.savetxt(w_file(pool.t), pool.ws)
         np.savetxt(dist_file(pool.t), pool.dists)
     

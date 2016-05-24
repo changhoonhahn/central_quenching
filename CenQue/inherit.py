@@ -470,7 +470,8 @@ class Inherit(object):
 
         if self.evol_prop is None: 
             mass_prop = {'name': 'sham'} 
-            dutycycle_prop = {'name': 'newamp_squarewave', 'freq_range': [2.*np.pi, 20.*np.pi], 'sigma': 0.3}
+            #dutycycle_prop = {'name': 'newamp_squarewave', 'freq_range': [2.*np.pi, 20.*np.pi], 'sigma': 0.3}
+            dutcycle_prop = {'name': 'notperiodic'} 
 
             if self.tau == 'satellite': 
                 tau_dict = {'name': 'satellite'} 
