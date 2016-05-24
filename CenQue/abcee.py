@@ -550,7 +550,7 @@ def SatelliteABC(T, eps_input, Npart=1000, prior_name='try0', observables=['fqz_
     for pool in abcpmc_sampler.sample(prior, eps, pool=init_pool):
         print '----------------------------------------'
         print 'eps ', pool.eps
-        new_eps_str = '\t'+str(pool.eps)+'\n'
+        new_eps_str = str(pool.eps)+'\t'+str(pool.ratio)+'\n'
         if eps_str != new_eps_str:  # if eps is different, open fiel and append 
             f = open(eps_file, "a")
             eps_str = new_eps_str
