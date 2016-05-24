@@ -6,6 +6,7 @@ warnings.filterwarnings('ignore')
 
 from gal_prop import Fq 
 from gal_prop import SMF
+from abcee import PlotABC
 from inherit import Inherit
 from lineage import Lineage
 from util.util import code_dir
@@ -207,17 +208,55 @@ def DescendantSSFR(nsnap_descendants, nsnap_ancestor=15, gv=None, tau=None, fudg
         plt.close()
     return None
 
-if __name__=='__main__': 
-    DescendantQAplot([1], nsnap_ancestor=15, 
-            gv=[0.3, 0.3], tau=[-0.72827483846612151, 0.57825125514919362], fudge=[-1.25, 1.75])
-    DescendantSSFR([1], nsnap_ancestor=15, 
-            gv=[0.3, 0.3], tau=[-0.72827483846612151, 0.57825125514919362], fudge=[-1.25, 1.75])
-    DescendantQAplot([5], nsnap_ancestor=15, 
-            gv=[0.3, 0.3], tau=[-0.72827483846612151, 0.57825125514919362], fudge=[-1.25, 1.75])
-    DescendantSSFR([5], nsnap_ancestor=15, 
-            gv=[0.3, 0.3], tau=[-0.72827483846612151, 0.57825125514919362], fudge=[-1.25, 1.75])
+
+def dutycycle_profile(): 
+    ''' Profile how long simulations take with versus without SF duty cycle 
+    '''
     
-    DescendantQAplot([1, 5], nsnap_ancestor=15, 
-            gv=[0.3, 0.3], tau=[-0.72827483846612151, 0.57825125514919362], fudge=[-1.25, 1.75])
-    DescendantSSFR([1, 5], nsnap_ancestor=15, 
-            gv=[0.3, 0.3], tau=[-0.72827483846612151, 0.57825125514919362], fudge=[-1.25, 1.75])
+    duty_list = [
+            {'name': 'notperiodic'}, 
+            {'freq_range': [6.283185307179586, 62.83185307179586], 'name': 'newamp_squarewave', 'sigma': 0.3}]
+
+    abc_plot = PlotABC(7, abcrun='multifq_wideprior', prior_name='updated')    
+    med_theta = abc_plot.med_theta
+    
+    for duty_dict in duty_list: 
+        start_time = time.time() 
+
+        gv_slope, gv_offset, fudge_slope, fudge_offset, tau_slope, tau_offset = med_theta 
+        inh = Inherit([1,3,6], 
+                nsnap_ancestor=15,
+                subhalo_prop={'scatter': 0.2, 'source': 'li-march'}, 
+                sfr_prop={
+                    'fq': {'name': 'wetzel'}, 
+                    'sfms': {'name': 'linear', 'zslope': 1.14}, 
+                    'gv': {'slope': gv_slope, 'fidmass': 10.5, 'offset': gv_offset}
+                    }, 
+                evol_prop={
+                    'mass': {'name': 'sham'}, 
+                    'sfr': {'dutycycle': duty_dict},
+                    'type': 'simult', 
+                    'fudge': {'slope': fudge_slope, 'fidmass': 10.5, 'offset': fudge_offset},
+                    'tau': {'name': 'line', 'slope': tau_slope, 'fid_mass': 11.1, 'yint': tau_offset}
+                    }
+                )
+        des_dict = inh() 
+        print duty_dict['name'], ' takes ',  time.time() - start_time, ' seconds'
+
+
+
+if __name__=='__main__': 
+    dutycycle_profile()
+    #DescendantQAplot([1], nsnap_ancestor=15, 
+    #        gv=[0.3, 0.3], tau=[-0.72827483846612151, 0.57825125514919362], fudge=[-1.25, 1.75])
+    #DescendantSSFR([1], nsnap_ancestor=15, 
+    #        gv=[0.3, 0.3], tau=[-0.72827483846612151, 0.57825125514919362], fudge=[-1.25, 1.75])
+    #DescendantQAplot([5], nsnap_ancestor=15, 
+    #        gv=[0.3, 0.3], tau=[-0.72827483846612151, 0.57825125514919362], fudge=[-1.25, 1.75])
+    #DescendantSSFR([5], nsnap_ancestor=15, 
+    #        gv=[0.3, 0.3], tau=[-0.72827483846612151, 0.57825125514919362], fudge=[-1.25, 1.75])
+    #
+    #DescendantQAplot([1, 5], nsnap_ancestor=15, 
+    #        gv=[0.3, 0.3], tau=[-0.72827483846612151, 0.57825125514919362], fudge=[-1.25, 1.75])
+    #DescendantSSFR([1, 5], nsnap_ancestor=15, 
+    #        gv=[0.3, 0.3], tau=[-0.72827483846612151, 0.57825125514919362], fudge=[-1.25, 1.75])
