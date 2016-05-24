@@ -485,7 +485,7 @@ class PlotABC(object):
         self._thetas(self.theta, truths=self.med_theta, plot_range=self.prior_range, 
                 parameters=params, 
                 fig_name=fig_name)
-        return None
+        return fig_name
 
     def _thetas(self, theta, w=None, truths=None, plot_range=None, 
             parameters=['slope_gv', 'offset_gv', 'slope_fudge', 'offset_fudge', 'slope_tau', 'offset_tau'], 
@@ -500,9 +500,9 @@ class PlotABC(object):
             if par == 'offset_gv': 
                 par_labels.append(r'$\delta_\mathtt{gv}$')
             if par == 'slope_fudge': 
-                par_labels.append(r'$\mathtt{A_{fudge}}$')
+                par_labels.append(r'$\mathtt{A_{P_Q}}$')
             if par == 'offset_fudge': 
-                par_labels.append(r'$\delta_\mathtt{fudge}$')
+                par_labels.append(r'$\delta_\mathtt{P_Q}$')
             if par == 'slope_tau': 
                 par_labels.append(r'$\mathtt{A}_\tau$')
             if par == 'offset_tau': 
@@ -514,7 +514,7 @@ class PlotABC(object):
                     theta,
                     weights=w.flatten(),
                     truths=truths,
-                    truth_color='#ee6a50',
+                    truth_color='k', #'#ee6a50',
                     labels=par_labels,
                     label_kwargs={'fontsize': 25},
                     range=plot_range,
@@ -524,25 +524,25 @@ class PlotABC(object):
                     plot_datapoints=True,
                     fill_contours=True,
                     levels=[0.68, 0.95],
-                    color='b',
+                    color='#ee6a50',
                     bins=20,
                     smooth=1.0)
         else: 
-            # weighted theta
+            # unweighted theta
             fig = corner.corner(
                     theta,
                     truths=truths,
-                    truth_color='#ee6a50',
+                    truth_color='k',
                     labels=par_labels,
-                    label_kwargs={'fontsize': 25},
+                    label_kwargs={'fontsize': 30},
                     range=plot_range,
                     quantiles=[0.16,0.5,0.84],
                     show_titles=True,
-                    title_args={"fontsize": 12},
+                    title_args={"fontsize": 15},
                     plot_datapoints=True,
                     fill_contours=True,
                     levels=[0.68, 0.95],
-                    color='b',
+                    color='#ee6a50',
                     bins=20,
                     smooth=1.0)
 
@@ -659,14 +659,14 @@ class PlotABC(object):
 
 
 if __name__=="__main__": 
-    #for tf in [4,5]:
-    #    ppp = PlotABC(tf, abcrun='multifq_wideprior_nosmfevo', prior_name='updated')
-    #    ppp.Corner()
+    for tf in [7]: #range(1,9):
+        ppp = PlotABC(tf, abcrun='multifq_wideprior', prior_name='updated')
+        ppp.Corner()
     
-    for run in ['multifq_wideprior_nosmfevo', 'multifq_wideprior']:
-        ppp = PlotABC(5, abcrun=run)
-        ppp.Ssfr()
-        ppp.QAplot(nsnap_descendant=[1, 6])
+    #for run in ['multifq_wideprior_nosmfevo', 'multifq_wideprior_extremesmfevo']:
+    #    ppp = PlotABC(8, abcrun=run)
+    #    ppp.Ssfr()
+    #    ppp.QAplot(nsnap_descendant=[1, 6])
     #for tf in [0, 1, 2, 3, 4, 5]: 
     #    ppp = PlotABC(tf, abcrun=)
     #    ppp.Ssfr()

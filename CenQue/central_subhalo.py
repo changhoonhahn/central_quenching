@@ -232,11 +232,16 @@ class Subhalos(CentralSubhalos):
                 250, 
                 zis = self.snapshots
                 ) 
+    
+        if source in ('cool_ages', 'blanton'): 
+            m_kind = 'mag.r'
+        else: 
+            m_kind = 'm.star'
 
         # assign M* to subhalos using SHAM
         sham.assign(
                 sub, 
-                'm.star', 
+                m_kind, 
                 scat = self.scatter, 
                 dis_mf = 0.0, 
                 source = self.source, 
@@ -253,6 +258,8 @@ class Subhalos(CentralSubhalos):
             mstar     = (sub[i_snap]['m.star'])     # M* of subhalo
             pos       = (sub[i_snap]['pos'])        # position of subhalo
             ilk       = (sub[i_snap]['ilk'])        # classification flag in case we want to consider centrals and virtual centrals separately 
+            if source in ('cool_ages', 'blanton'): 
+                mag_r = (sub[i_snap]['mag.r']) 
 
             # keep track of child indices for subhalo
             if i_snap == np.min(self.snapshots):     
@@ -287,6 +294,8 @@ class Subhalos(CentralSubhalos):
             grp.create_dataset('parent', data=parent)
             grp.create_dataset('halo.m', data=mhalo)
             grp.create_dataset('halo.m.max', data=mhalo_max)
+            if source in ('blanton', 'cool_ages'):
+                grp.create_dataset('mag_r', data=mag_r)
 
             if i_snap == nsnap_ancestor:     # ancestor index of subhalo
                 ancestor = np.repeat(-999, len(mhalo))
@@ -307,13 +316,20 @@ class Subhalos(CentralSubhalos):
 
 
 if __name__=='__main__': 
-    for nsnap_ancestor in [32]: 
-        for scat in [0.0, 0.2]: 
-            subh = SatelliteSubhalos() 
+    for nsnap_ancestor in [11]: 
+        for scat in [0.2]:#np.arange(0.2, 0.31, 0.01): 
+            #subh = SatelliteSubhalos() 
             #subh.build_catalogs(
             #        snapshots=range(1, nsnap_ancestor+1), 
             #        scatter=scat, 
             #        source='li-march', 
             #        nsnap_ancestor=nsnap_ancestor)
-            subh.build_catalogs(scatter=scat, source='li-march')
+            #subh.build_catalogs(scatter=scat, source='li-march')
+
+            subh = Subhalos() 
+            subh.build_catalogs(
+                    snapshots=range(1, nsnap_ancestor+1), 
+                    scatter=scat, 
+                    source='cool_ages', 
+                    nsnap_ancestor=nsnap_ancestor)
             del subh

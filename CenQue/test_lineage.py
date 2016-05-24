@@ -31,26 +31,26 @@ def LineageSMF(nsnap_ancestor, descendants=None,
     if descendants is None: 
         descendants = range(1, nsnap_ancestor)
     bloodline = Lineage(nsnap_ancestor=nsnap_ancestor, subhalo_prop=subhalo_prop)
-    bloodline.Read(descendants, sfr_prop=sfr_prop) 
+    bloodline.Read(descendants) 
     
     smf_plot = plots.PlotSMF()
     # plot ancestor against the analytic SMF 
     ancestor = getattr(bloodline, 'ancestor')
-    smf_plot.cenque(ancestor)   # SMF of lineage ancestor
-    smf_plot.analytic(
-            ancestor.zsnap, 
-            source=ancestor.subhalo_prop['source'], 
-            line_style='-', lw=1,
-            label='All Subhalos')
+    #smf_plot.cenque(ancestor)   # SMF of lineage ancestor
+    #smf_plot.analytic(
+    #        ancestor.zsnap, 
+    #        source=ancestor.subhalo_prop['source'], 
+    #        line_style='-', lw=1,
+    #        label='All Subhalos')
 
-    smf = SMF()
-    subh = CentralSubhalos()
-    subh.Read(
-            nsnap_ancestor, 
-            scatter=ancestor.subhalo_prop['scatter'], 
-            source=ancestor.subhalo_prop['source'])
-    subh_mass, subh_phi = smf.centralsubhalos(subh)
-    smf_plot.sub.plot(subh_mass, subh_phi, lw=4, ls='--', c='gray', label='Central Subhalos')
+    #smf = SMF()
+    #subh = CentralSubhalos()
+    #subh.Read(
+    #        nsnap_ancestor, 
+    #        scatter=ancestor.subhalo_prop['scatter'], 
+    #        source=ancestor.subhalo_prop['source'])
+    #subh_mass, subh_phi = smf.centralsubhalos(subh)
+    #smf_plot.sub.plot(subh_mass, subh_phi, lw=4, ls='--', c='gray', label='Central Subhalos')
 
     for isnap in descendants: 
         descendant = getattr(bloodline, 'descendant_snapshot'+str(isnap))
@@ -60,18 +60,18 @@ def LineageSMF(nsnap_ancestor, descendants=None,
                 isnap, 
                 scatter=descendant.subhalo_prop['scatter'], 
                 source=descendant.subhalo_prop['source'])
-        d_mass, d_phi = smf_plot.cenque(descendant)
-        subh_mass, subh_phi = smf.centralsubhalos(subh)
+        subh_mass, subh_phi = smf.Obj(subh)
         smf_plot.sub.plot(subh_mass, subh_phi, lw=4, ls='--', c='gray')
         #print (subh_phi - d_phi)/d_phi
 
-        smf_plot.analytic(
-                descendant.zsnap, 
-                source=descendant.subhalo_prop['source'], 
-                line_style='-', lw=1,
-                label=None)
+        #smf_plot.analytic(
+        #        descendant.zsnap, 
+        #        source=descendant.subhalo_prop['source'], 
+        #        line_style='-', lw=1,
+        #        label=None)
 
     smf_plot.set_axes()
+    plt.show()
     smf_plot_file = ''.join([
         'figure/test/', 
         'LineageSMF', 
@@ -192,10 +192,10 @@ def LineageFinalDescendantSMF(nsnap_ancestor,
 
 
 if __name__=='__main__': 
-    #LineageSMF(10, descendants = [1, 5],
-    #        subhalo_prop = {'scatter': 0.0, 'source': 'li-march'}, 
-    #        sfr_prop = { 'fq': {'name': 'wetzelsmooth'}, 'sfr': {'name': 'average'}}
-    #        )
+    LineageSMF(15, descendants = [1],
+            subhalo_prop = {'scatter': 0.0, 'source': 'li-march'}, 
+            sfr_prop = { 'fq': {'name': 'wetzelsmooth'}, 'sfr': {'name': 'average'}}
+            )
     #LineageFinalDescendantSMF(20, 
     #        subhalo_prop={'scatter': 0.0, 'source': 'li-march'}, 
     #        sfr_prop={'fq': {'name': 'wetzelsmooth'}, 'sfr': {'name': 'average'}})

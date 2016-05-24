@@ -555,6 +555,9 @@ def EvolveSatSFR(sg_in, tqdelay_dict=None):
     
     # initalize
     sg_obj = SGPop()
+    sg_obj.ilk = sg_in.ilk.copy()
+    sg_obj.pos = sg_in.pos.copy()
+    sg_obj.snap_index = sg_in.snap_index.copy()
     sg_obj.zsnap = sg_in.zsnap.copy() 
     sg_obj.t_cosmic = sg_in.t_cosmic.copy() 
     sg_obj.sfms_prop = sg_in.sfms_prop.copy()
@@ -569,6 +572,9 @@ def EvolveSatSFR(sg_in, tqdelay_dict=None):
     sg_obj.first_infall_t = sg_in.first_infall_t.copy()  
     sg_obj.first_infall_sfr = sg_in.first_infall_sfr.copy()  
     sg_obj.first_infall_mass = sg_in.first_infall_mass.copy()  
+    sg_obj.t_qstart = np.repeat(-999., len(sg_obj.mass))
+    sg_obj.z_qstart = np.repeat(-999., len(sg_obj.mass))
+    sg_obj.q_ssfr = np.repeat(-999., len(sg_obj.mass))
 
     # First classify the galaxies into SF, Q, and Qing
     # this is so that t_Q,start = t_inf for Qing galaxies, 
@@ -577,7 +583,6 @@ def EvolveSatSFR(sg_in, tqdelay_dict=None):
     infall = np.where(
             (sg_obj.first_infall_mass > 0.) &
             (sg_obj.first_infall_sfr > -999.))
-    #print len(infall[0]), ' infall galaxies'
 
     fq_obj = Fq()  
     sfq_class = fq_obj.Classify(
@@ -585,41 +590,34 @@ def EvolveSatSFR(sg_in, tqdelay_dict=None):
             sg_obj.first_infall_sfr[infall], 
             sg_obj.first_infall_z[infall], 
             sg_obj.sfms_prop)
+     
+    sf_infall = (infall[0])[np.where(sfq_class == 'star-forming')]  # starforming @ infall
+    q_infall = (infall[0])[np.where(sfq_class == 'quiescent')]      # quiescent @ infall
+
+    ssfr_final = sfr_evol.AverageLogSSFR_q_peak(sg_obj.mass[infall]) + \
+            sfr_evol.ScatterLogSSFR_q_peak(sg_obj.mass[infall]) * np.random.randn(len(infall[0]))
     
-    sf_infall = (infall[0])[np.where(sfq_class == 'star-forming')] 
-    q_infall = (infall[0])[np.where(sfq_class == 'quiescent')]
+    # sub-divide the quiescent @ infall population to those that are 
+    # quenching @ infall + quiescent @ infall based on simple SSFR cut
+    q_mass_infall = sg_obj.first_infall_mass[q_infall]
+    q_sfr_infall = sg_obj.first_infall_sfr[q_infall]
+    q_ssfr_infall = q_sfr_infall - q_mass_infall
 
-    q_mass = sg_obj.first_infall_mass[q_infall]
-    q_sfr = sg_obj.first_infall_sfr[q_infall]
-    q_ssfr = q_sfr - q_mass 
+    q_cut_SSFR = sfr_evol.AverageLogSSFR_q_peak(q_mass_infall) + \
+            1.5 * sfr_evol.ScatterLogSSFR_q_peak(q_mass_infall)
+    
+    qing_infall = q_infall[np.where(q_ssfr_infall > q_cut_SSFR)]   # quenching 
+    qq_infall = q_infall[np.where(q_ssfr_infall <= q_cut_SSFR)]    # quenched
 
-    q_cut_SSFR = sfr_evol.AverageLogSSFR_q_peak(q_mass) + \
-            1.5 * sfr_evol.ScatterLogSSFR_q_peak(q_mass)
-
-    qing_infall = q_infall[np.where(q_ssfr > q_cut_SSFR)]   # quenching 
-    qq_infall = q_infall[np.where(q_ssfr <= q_cut_SSFR)]    # quenched
-
-    # Quiescent @ infall 
-    ''' The SSFR is preserved from infall, so effectively their 
-    SFR decreases
-    '''
-    #print len(qq_infall), ' quiescent galaxies' 
+    # Quiescent @ infall-----
+    # The SSFR is preserved from infall, so effectively their SFR decreases
     sg_obj.ssfr[qq_infall] = sg_obj.first_infall_sfr[qq_infall] - \
             sg_obj.first_infall_mass[qq_infall]
     sg_obj.sfr[qq_infall] = sg_obj.mass[qq_infall] + sg_obj.ssfr[qq_infall]
-    
-    #print (sg_obj.mass[qq_infall])[np.where(sg_obj.ssfr[qq_infall] > -11.)]
-    #plt.hist(sg_obj.ssfr[qq_infall], bins=20)
-    #plt.show() 
 
-    sg_obj.t_qstart = np.repeat(-999., len(sg_obj.mass))
-    sg_obj.z_qstart = np.repeat(-999., len(sg_obj.mass))
-    sg_obj.q_ssfr = np.repeat(-999., len(sg_obj.mass))
-
-    # Quenching @ infall  
-    ''' Quenching satellite galaxies skip the delay phase and immediately 
-    start quenching when the simulation begins. 
-    '''
+    # Quenching @ infall-----
+    # Quenching satellite galaxies skip the delay phase and immediately 
+    # start quenching when the simulation begins. 
     sg_obj.t_qstart[qing_infall] = sg_obj.first_infall_t[qing_infall]
     sg_obj.z_qstart[qing_infall] = sg_obj.first_infall_z[qing_infall]
     sg_obj.q_ssfr[qing_infall] = sfr_evol.AverageLogSSFR_q_peak(sg_obj.mass[qing_infall]) + \
@@ -640,8 +638,8 @@ def EvolveSatSFR(sg_in, tqdelay_dict=None):
     sg_obj.ssfr[qing_infall] = sg_obj.sfr[qing_infall] - sg_obj.mass[qing_infall]
     
     # deal with over quenching 
-    overquenched = np.where(sg_obj.ssfr[qing_infall] < sg_obj.q_ssfr[qing_infall])
-    sg_obj.ssfr[qing_infall[overquenched]] = sg_obj.q_ssfr[qing_infall[overquenched]]
+    #overquenched = np.where(sg_obj.ssfr[qing_infall] < sg_obj.q_ssfr[qing_infall])
+    #sg_obj.ssfr[qing_infall[overquenched]] = sg_obj.q_ssfr[qing_infall[overquenched]]
     
     # Star-forming @ infall 
     if tqdelay_dict['name'] == 'hacked': 
@@ -678,8 +676,8 @@ def EvolveSatSFR(sg_in, tqdelay_dict=None):
             dlogSFR_MS_M + dlogSFR_MS_z + dlogSFR_Q
     sg_obj.ssfr[sf_infall_q] = sg_obj.sfr[sf_infall_q] - sg_obj.mass[sf_infall_q]
     # deal with over quenching 
-    overquenched = np.where(sg_obj.ssfr[sf_infall_q] < sg_obj.q_ssfr[sf_infall_q])
-    sg_obj.ssfr[sf_infall_q[overquenched]] = sg_obj.q_ssfr[sf_infall_q[overquenched]]
+    #overquenched = np.where(sg_obj.ssfr[sf_infall_q] < sg_obj.q_ssfr[sf_infall_q])
+    #sg_obj.ssfr[sf_infall_q[overquenched]] = sg_obj.q_ssfr[sf_infall_q[overquenched]]
 
     # SF galaxies that do NOT quench
     dlogSFR_MS_M = 0.53 * (sg_obj.mass[sf_infall_noq] - sg_obj.first_infall_mass[sf_infall_noq]) 
@@ -689,6 +687,12 @@ def EvolveSatSFR(sg_in, tqdelay_dict=None):
     sg_obj.sfr[sf_infall_noq] = sg_obj.first_infall_sfr[sf_infall_noq] + \
             dlogSFR_MS_M + dlogSFR_MS_z
     sg_obj.ssfr[sf_infall_noq] = sg_obj.sfr[sf_infall_noq] - sg_obj.mass[sf_infall_noq]
+
+
+    # deal with overquenching all at once
+    overquench = np.where(sg_obj.ssfr[infall] < ssfr_final)
+    sg_obj.ssfr[infall[0][overquench]] = ssfr_final[overquench] 
+    sg_obj.sfr[infall[0][overquench]] = ssfr_final[overquench] + sg_obj.mass[infall[0][overquench]]
 
     return sg_obj 
 
@@ -1185,15 +1189,17 @@ if __name__=='__main__':
     #    subh.build_catalogs(scatter=scat, source='li-march')
     #    del subh
     #ABC(20, [100.], Npart=200, cen_tf=6, cen_prior_name='updated', cen_abcrun='multifq_wideprior_nosmfevo')
-    PlotABC_tQdelay(12, cen_abcrun='multifq_wideprior_nosmfevo')
+    #PlotABC_tQdelay(12, cen_abcrun='multifq_wideprior_nosmfevo')
     #PlotABC_InfallCondition(10, cen_abcrun='multifq_wideprior', cen_prior_name='updated')
 
-    PlotABC_EvolvedSat(12, cen_abcrun='multifq_wideprior_nosmfevo', cen_prior_name='updated')
+    #PlotABC_EvolvedSat(12, cen_abcrun='multifq_wideprior_nosmfevo', cen_prior_name='updated')
     #Plot_tRapid()
-    PlotABC_Corner(12, cen_abcrun='multifq_wideprior_nosmfevo')
+    #PlotABC_Corner(12, cen_abcrun='multifq_wideprior_nosmfevo')
 
-    #cen_assigned_sat_file = ''.join(['/data1/hahn/pmc_abc/pickle/', 
-    #    'satellite.cenassign.multifq_wideprior_ABC.updated_prior.p'])
+    cen_assigned_sat_file = ''.join(['/data1/hahn/pmc_abc/pickle/', 
+        'satellite.cenassign.multifq_wideprior_ABC.updated_prior.p'])
+    sat_test_tmp = AssignCenSFR(7, abcrun='multifq_wideprior', prior_name='updated')
+    pickle.dump(sat_test_tmp, open(cen_assigned_sat_file, 'wb'))
     #sat_cen = pickle.load(open(cen_assigned_sat_file, 'rb'))
     #evol_sat = EvolveSatSFR(sat_cen, tqdelay_dict={'name': 'hacked'})
     #PlotEvolvedSat(evol_sat)

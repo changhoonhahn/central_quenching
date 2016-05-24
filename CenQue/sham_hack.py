@@ -32,6 +32,8 @@ def assign(sub, m_kind='m.star', scat=0, dis_mf=0.007, source='', sham_prop='m.m
         zis = [0]
     subz = sub[zis[0]]
     vol = subz.info['box.length'] ** 3
+    print 'Box Length', subz.info['box.length']
+    print 'Box Hubble', subz.Cosmo['hubble']
     zis = ut.array.arrayize(zis)
     if m_kind == 'm.star':
         if not source:
@@ -41,9 +43,15 @@ def assign(sub, m_kind='m.star', scat=0, dis_mf=0.007, source='', sham_prop='m.m
             redshift = 0.1
         MF = SMFClass(source, redshift, scat, subz.Cosmo['hubble'])
     elif m_kind == 'mag.r':
-        if not source:
-            source = 'blanton'
-        MF = LFClass(source, scat, subz.Cosmo['hubble'])
+        if source == 'cool_ages':
+            redshift = subz.snap['z']
+            if redshift < 0.1:
+                redshift = 0.1
+            MF = LFClass(source, scat, subz.Cosmo['hubble'], redshift)
+        else:
+            if not source:
+                source = 'blanton'
+            MF = LFClass(source, scat, subz.Cosmo['hubble'])
     else:
         raise ValueError('not recognize m_kind = %s' % m_kind)
     for zi in zis:
@@ -54,6 +62,12 @@ def assign(sub, m_kind='m.star', scat=0, dis_mf=0.007, source='', sham_prop='m.m
             if z < 0.1:
                 z = 0.1
             MF.initialize_redshift(z)
+        elif m_kind == 'mag.r':
+            if source == 'cool_ages':
+                z = subz.snap['z']
+                if z < 0.1:
+                    z = 0.1
+                MF.initialize_redshift(z)
         # maximum number of objects in volume to assign given SMF/LF threshold
         num_max = int(round(MF.numden(MF.mmin) * vol))
         sis = ut.array.elements(subz[sham_prop], [0.001, Inf])
@@ -62,7 +76,11 @@ def assign(sub, m_kind='m.star', scat=0, dis_mf=0.007, source='', sham_prop='m.m
         siis_sort = np.argsort(subz[sham_prop][sis]).astype(sis.dtype)[::-1][:num_max]
         num_sums = ut.array.arange_length(num_max) + 1
         if scat:
-            scats = np.random.normal(np.zeros(num_max), MF.scat).astype(np.float32)
+            if m_kind == 'm.star': 
+                scats = np.random.normal(np.zeros(num_max), MF.scat).astype(np.float32)
+            elif m_kind == 'mag.r': 
+                scats = np.random.normal(np.zeros(num_max), 2.5 * MF.scat).astype(np.float32)
+            #print MF.m_scat(num_sums / vol) + scats
             subz[m_kind][sis[siis_sort]] = MF.m_scat(num_sums / vol) + scats
         else:
             subz[m_kind][sis[siis_sort]] = MF.m(num_sums / vol)
@@ -419,10 +437,13 @@ class LFClass(SMFClass):
 
     Import spline querying functions from SMFClass.
     '''
-    def __init__(self, source='blanton', scat=0, hubble=0.7):
+    def __init__(self, source='blanton', scat=0, hubble=0.7, redshift=0.1):
         '''
         Import source, log-normal scatter.
         '''
+        self.source = source
+        self.scat = scat
+        self.hubble = hubble
         if source == 'norberg':
             # Norberg et al 2002: 2dF r-band at z ~ 0.1.
             self.m_char = -19.66
@@ -438,9 +459,19 @@ class LFClass(SMFClass):
             self.m_char = -20.9    # Hansen et al 09 catalog has -20.8
             self.amplitude = 1.02e-2 * hubble ** 3    # Mpc ^ -3
             self.slope = -1.21
+        elif source == 'cool_ages': 
+            # Cool et al 2012: AGES.
+            self.redshifts = np.array([0.1, 0.2, 0.3, 0.4, 0.5, 0.65])
+            self.mchars = np.array([-20.58, -20.81, -20.81, -20.99, -21.29, -21.38]) 
+            self.amplitudes = (np.array([1.59e-2, 1.52e-2, 1.24e-2, 1.44e-2, 1.08e-2, 1.05e-2]) * hubble ** 3)    # Mpc ^ -3
+            self.slopes = np.repeat(-1.05, len(self.redshifts)) 
+            self.make_splines()
+            self.initialize_redshift(redshift)
         else:
             raise ValueError('not recognize source = %s in LFClass' % source)
-        self.make_numden_m_spline(scat)
+
+        if source != 'cool_ages': 
+            self.make_numden_m_spline(scat, redshift=None)
 
     def dndm(self, mag):
         '''
@@ -448,7 +479,7 @@ class LFClass(SMFClass):
 
         Import (positive) magnitude.
         '''
-        mag = -mag
+        mag *= -1.
         return (np.log(10) / 2.5 * self.amplitude *
                 10 ** ((self.slope + 1) / 2.5 * (self.m_char - mag)) *
                 np.exp(-10 ** ((self.m_char - mag) / 2.5)))
@@ -460,26 +491,51 @@ class LFClass(SMFClass):
         Import (positive) magnitude range.
         '''
         return integrate.quad(self.dndm, m_min, m_max)[0]
+    
+    def initialize_redshift(self, redshift=0.1):
+        '''
+        Make spline to get mass from number density.
 
-    def make_numden_m_spline(self, scat=0):
+        Import redshift.
+        Find SMF fit parameters at redshift, correcting amplitude by * log(10) & slope
+        by + 1 to make dndm call faster.
+        '''
+        if redshift < self.redshifts.min() - 1e-5:# or redshift > self.redshifts.max() + 1e-5:
+            raise ValueError('z = %.2f out of range for %s' % (redshift, self.source))
+        self.redshift = redshift
+        self.m_char = interpolate.splev(redshift, self.mchar_z_spl, ext=0)
+        self.amplitude = interpolate.splev(redshift, self.amplitude_z_spl, ext=0) 
+        self.slope = interpolate.splev(redshift, self.slope_z_spl, ext=0)
+        self.make_numden_m_spline(scat = self.scat, redshift = self.redshift)
+
+    def make_numden_m_spline(self, scat=0, redshift=0.1):
         '''
         Make splines to relate d(num-den)/d(mag) & num-den(> mag) to mag.
 
         Import scatter [dex].
         '''
-        self.scat = 2.5 * scat    # convert scatter in log(lum) to scatter in magnitude
+        try: 
+            if redshift != self.redshift:
+                self.initialize_redshift(redshift)
+        except AttributeError:
+            pass 
+        if scat != self.scat:
+            self.scat = scat    # convert scatter in log(lum) to scatter in magnitude
+        mag_scat = 2.5 * self.scat
         deconvol_iter_num = 20
         dmag = 0.01
-        dmag_scat_lo = 2 * self.scat    # extend fit for b.c.'s of deconvolute
-        dmag_scat_hi = 1 * self.scat
+        dmag_scat_lo = 2 * mag_scat    # extend fit for b.c.'s of deconvolute
+        dmag_scat_hi = 1 * mag_scat
         self.mmin = 17.0
         self.mmax = 23.3
         mags = np.arange(self.mmin - dmag_scat_lo, self.mmax + dmag_scat_hi, dmag, np.float32)
         numdens = np.zeros(mags.size)
         dndms = np.zeros(mags.size)
         for mi in xrange(len(mags)):
-            numdens[mi] = self.numden(mags[mi])
+            numdens[mi] = np.abs(self.numden(mags[mi]))
             dndms[mi] = self.dndm(mags[mi])
+        #print 'numden ', numdens[:10]
+        #print mags[:10]
         # make no scatter splines
         self.log_numden_m_spl = interpolate.splrep(mags, log10(numdens))
         self.dndm_m_spl = interpolate.splrep(mags, dndms)
@@ -487,7 +543,7 @@ class LFClass(SMFClass):
         # make scatter splines
         if self.scat:
             # deconvolve observed lf assuming scatter to find unscattered one
-            dndms_scat = ut.math.deconvolute(dndms, self.scat, dmag, deconvol_iter_num)
+            dndms_scat = ut.math.deconvolute(dndms, mag_scat, dmag, deconvol_iter_num)
             # chop off boundaries, unreliable
             mags = mags[dmag_scat_lo / dmag:-dmag_scat_hi / dmag]
             dndms_scat = dndms_scat[dmag_scat_lo / dmag:-dmag_scat_hi / dmag]
@@ -495,10 +551,15 @@ class LFClass(SMFClass):
             self.dndm_m_scat_spl = interpolate.splrep(mags, dndms_scat)
             numdens_scat = np.zeros(mags.size)
             for mi in xrange(mags.size):
-                numdens_scat[mi] = interpolate.splint(mags[mi], max(mags), self.dndm_m_scat_spl)
+                numdens_scat[mi] = np.abs(interpolate.splint(mags[mi], mags.max(), self.dndm_m_scat_spl))
                 numdens_scat[mi] += 1e-9 * (1 - mi * 0.001)
             self.log_numden_m_scat_spl = interpolate.splrep(mags, log10(numdens_scat))
             self.m_log_numden_scat_spl = interpolate.splrep(log10(numdens_scat)[::-1], mags[::-1])
+    
+
+
+
+
 
 
 #===================================================================================================
