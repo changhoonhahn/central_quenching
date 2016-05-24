@@ -700,6 +700,7 @@ class PlotSMF(Plots):
             line_width = 3
         smf = SMF()
         mass, phi = smf.analytic(redshift, source=source) 
+        print phi[np.where((mass > 7.0) & (mass < 7.5))]
         
         self.sub.plot(mass, phi, 
                 c=line_color, ls=line_style, lw=line_width,

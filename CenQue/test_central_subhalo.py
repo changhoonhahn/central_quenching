@@ -7,13 +7,14 @@ The CentralSubhalos and Subhalos class objects in particular.
 import h5py
 import numpy as np
 import os.path
-from smf import SMF
+from gal_prop import SMF
+from sham_hack import LFClass
 
 # local ---- 
 from central_subhalo import Subhalos
 from central_subhalo import CentralSubhalos
-from util.cenque_utility import get_z_nsnap
-from util.cenque_utility import intersection_index
+from util.util import get_z_nsnap
+from util.util import intersection_index
 
 # Plotting
 import matplotlib.pyplot as plt
@@ -52,7 +53,7 @@ def SubhaloSMF(type, scatter=0.0, source='li-drory-march',
 
         subh.Read(i_snap, scatter=scatter, source=source, nsnap_ancestor=nsnap_ancestor)
         
-        subh_mass, subh_phi = smf.centralsubhalos(subh)
+        subh_mass, subh_phi = smf.Obj(subh, dlogm=0.1, LF=False)
         sub.plot(subh_mass, subh_phi, lw=4, c=pretty_colors[i_snap % 19], alpha=0.5) 
 
         analytic_mass, analytic_phi = smf.analytic(get_z_nsnap(i_snap), source=source) 
@@ -69,6 +70,7 @@ def SubhaloSMF(type, scatter=0.0, source='li-drory-march',
         subhalo_str = 'central_subhalo' 
     else: 
         raise ValueError
+    plt.show()
     fig_file = ''.join(['figure/test/'
         'SubhaloSMF', 
         '.', subhalo_str, 
@@ -77,6 +79,106 @@ def SubhaloSMF(type, scatter=0.0, source='li-drory-march',
         '.', source, 
         '.png']) 
     fig.savefig(fig_file, bbox_inches='tight')
+    plt.close()
+
+def SubhaloLF(scatter=0.0, source='cool_ages', 
+        nsnap_ancestor=20 ): 
+    ''' Test the Subhalos/CentralSubhalos imported from TreePM by 
+    comparing their measured SMFs to the analytic SMFs 
+
+    Parameters
+    ----------
+    scatter : float
+        Float that specifies the scatter in the SMHM relation, which 
+        affects the SHAM masses
+    source : string
+        String that specifies which SMF is used for SHAM
+    '''
+    prettyplot()
+    pretty_colors = prettycolors()
+
+    fig = plt.figure(figsize=(10,10))
+    sub = fig.add_subplot(111)
+    for i_snap in [11, 7, 4, 1]:
+        smf = SMF()
+        subh = Subhalos()
+
+        subh.Read(i_snap, scatter=scatter, source=source, nsnap_ancestor=nsnap_ancestor)
+        subh.mag_r *= -1.
+        mass, phi = smf.Obj(subh, dlogm=0.1, m_arr=np.arange(-24.0, -16., 0.1), LF=True)
+
+        sub.plot(mass, phi, lw=2, ls='-', c=pretty_colors[i_snap % 19])
+
+        analytic_mass, analytic_phi = smf.analytic(get_z_nsnap(i_snap), source=source) 
+        sub.plot(analytic_mass, analytic_phi, lw=4, ls='--', c=pretty_colors[i_snap % 19], 
+                label=r"$ z = "+str(round(get_z_nsnap(i_snap),2))+"$") 
+
+    sub.set_yscale('log')
+    sub.set_ylim([10**-7, 10**-1])
+    sub.set_xlim([-24.5, -17.8])
+    sub.legend(loc='upper right')
+    fig_file = ''.join(['figure/test/'
+        'SubhaloLF', 
+        '.scatter', str(round(scatter,2)), 
+        '.ancestor', str(nsnap_ancestor),
+        '.', source, 
+        '.png']) 
+    fig.savefig(fig_file, bbox_inches='tight')
+    plt.close()
+
+def Subhalo_MhaloMag(scatter=0.0, source='cool_ages', 
+        nsnap_ancestor=20 ): 
+    ''' Test the Subhalos/CentralSubhalos imported from TreePM by 
+    comparing their measured SMFs to the analytic SMFs 
+
+    Parameters
+    ----------
+    scatter : float
+        Float that specifies the scatter in the SMHM relation, which 
+        affects the SHAM masses
+    source : string
+        String that specifies which SMF is used for SHAM
+    '''
+    prettyplot()
+    pretty_colors = prettycolors()
+
+    fig = plt.figure(figsize=(10,10))
+    sub = fig.add_subplot(111)
+    for i_snap in [7, 4, 1]:
+
+        mu_mag = []
+        sig_mag = [] 
+
+        subh = Subhalos()
+
+        subh.Read(i_snap, scatter=scatter, source=source, nsnap_ancestor=nsnap_ancestor)
+        subh.mag_r *= -1.
+        
+        m_halo = getattr(subh, 'halo.m.max') 
+        for m_low in np.arange(10., 15.5, 0.1): 
+            m_bin = np.where((m_halo > m_low) & (m_halo <= m_low+0.1))
+
+            mu_mag.append(np.mean(subh.mag_r[m_bin]))
+            sig_mag.append(np.std(subh.mag_r[m_bin]))
+    
+        #sub.errorbar(np.arange(10.05, 15.55, 0.1), mu_mag, yerr=sig_mag, c=pretty_colors[i_snap])
+        sub.fill_between(np.arange(10.05, 15.55, 0.1), 
+                np.array(mu_mag) - np.array(sig_mag), 
+                np.array(mu_mag) + np.array(sig_mag), 
+                color=pretty_colors[i_snap], alpha=0.75, 
+                label=r"$ z = "+str(round(get_z_nsnap(i_snap),2))+"$") 
+    sub.set_xlim([10, 15.5])
+    sub.set_ylim([-17.8, -23.])
+    sub.set_ylabel('$\mathtt{M}_\mathtt{halo}^\mathtt{peak}$', fontsize=25)
+    sub.set_ylabel('Magnitude', fontsize=25)
+    sub.legend(loc='lower right')
+    fig_file = ''.join(['figure/test/'
+        'Subhalo_Mhalo_Mag', 
+        '.scatter', str(round(scatter,2)), 
+        '.ancestor', str(nsnap_ancestor),
+        '.', source, 
+        '.png']) 
+    fig.savefig(fig_file, bbox_inches='tight') 
     plt.close()
 
 def DescendantSubhaloSMF(type, nsnap_ancestor=20, scatter=0.0, source='li-drory-march', 
@@ -319,14 +421,21 @@ def test_ancestors_without_descendant(nsnap_ancestor = 20, scatter = 0.0, source
 
 
 if __name__=='__main__': 
-    for scat in [0.0, 0.2]: 
-        for type in ['all', 'central']: 
-            #SubhaloSMF(type, scatter=scat, source='li-march', nsnap_ancestor=20)
-            #SubhaloSMF(type, scatter=scat, source='li-march', nsnap_ancestor=15)
-            #SubhaloSMF(type, scatter=scat, source='li-march', nsnap_ancestor=10)
-            #DescendantSubhaloSMF(type, nsnap_ancestor=20, scatter=scat, source='li-march')
-            #DescendantSubhaloSMF(type, nsnap_ancestor=15, scatter=scat, source='li-march')
-            #DescendantSubhaloSMF(type, nsnap_ancestor=10, scatter=scat, source='li-march')
-            OrphanSubhaloSMF(type, nsnap_ancestor=20, scatter=scat, source='li-march')
-            OrphanSubhaloSMF(type, nsnap_ancestor=15, scatter=scat, source='li-march')
-            OrphanSubhaloSMF(type, nsnap_ancestor=10, scatter=scat, source='li-march')
+    #SubhaloSMF('all', scatter=0.2, source='li-march', 
+    #        nsnap_ancestor=15)
+    #SubhaloLF(scatter=0.0, source='cool_ages', nsnap_ancestor=11)
+    for scat in [0.0]: #[0.2, 0.3, 0.4]: 
+        SubhaloLF(scatter=scat, source='cool_ages', nsnap_ancestor=11)
+        Subhalo_MhaloMag(scatter=scat, source='cool_ages', nsnap_ancestor=11)
+
+    #for scat in [0.0, 0.2]: 
+    #    for type in ['all', 'central']: 
+    #        #SubhaloSMF(type, scatter=scat, source='li-march', nsnap_ancestor=20)
+    #        #SubhaloSMF(type, scatter=scat, source='li-march', nsnap_ancestor=15)
+    #        #SubhaloSMF(type, scatter=scat, source='li-march', nsnap_ancestor=10)
+    #        #DescendantSubhaloSMF(type, nsnap_ancestor=20, scatter=scat, source='li-march')
+    #        #DescendantSubhaloSMF(type, nsnap_ancestor=15, scatter=scat, source='li-march')
+    #        #DescendantSubhaloSMF(type, nsnap_ancestor=10, scatter=scat, source='li-march')
+    #        OrphanSubhaloSMF(type, nsnap_ancestor=20, scatter=scat, source='li-march')
+    #        OrphanSubhaloSMF(type, nsnap_ancestor=15, scatter=scat, source='li-march')
+    #        OrphanSubhaloSMF(type, nsnap_ancestor=10, scatter=scat, source='li-march')

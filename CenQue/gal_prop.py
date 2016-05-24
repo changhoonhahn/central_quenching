@@ -13,6 +13,7 @@ from scipy.interpolate import interp1d
 from sfr_evol import AverageLogSFR_sfms
 
 # TreePM
+from sham_hack import LFClass 
 from sham_hack import SMFClass 
 
 
@@ -275,7 +276,7 @@ class SMF(object):
         self.mass = None
         self.phi = None
 
-    def Obj(self, obj, dlogm=None, box=None, h=0.7):
+    def Obj(self, obj, dlogm=None, box=None, m_arr=None, h=0.7, LF=False):
         ''' Calculate the SMF for any Class Object with attributes
         mass 
 
@@ -288,7 +289,10 @@ class SMF(object):
         box : 
             Box length (default is 250 Mpc/h)
         '''
-        return self._smf(obj.mass, dlogm=dlogm, box=box, h=h)
+        if not LF: 
+            return self._smf(obj.mass, dlogm=dlogm, box=box, m_arr=m_arr, h=h)
+        else: 
+            return self._smf(obj.mag_r, dlogm=dlogm, box=box, m_arr=m_arr, h=h)
 
     def analytic(self, redshift, dlogm='', source='li-drory-march'): 
         ''' Analytic SMF for a given redshift. 
@@ -300,18 +304,25 @@ class SMF(object):
         '''
         if not dlogm: 
             dlogm = 0.1
-        m_arr = np.arange(6.0, 12.1, dlogm)
 
         if redshift < 0.1:
             redshift = 0.1
-
-        MF = SMFClass(source=source, redshift=redshift)
+    
+        if source in ('cool_ages', 'blanton'): 
+            m_arr = np.arange(-24., -16., dlogm)
+            MF = LFClass(source=source, redshift=redshift) 
+        else: 
+            m_arr = np.arange(6.0, 12.1, dlogm)
+            MF = SMFClass(source=source, redshift=redshift)
         
         mass, phi = [], [] 
         for mi in m_arr: 
-            mass.append(mi + 0.5 * dlogm)
-            phi.append(MF.numden(mi, mi+dlogm)/dlogm)
-
+            if source in ('cool_ages', 'blanton'): 
+                mass.append(mi - 0.5 * dlogm)
+                phi.append(MF.numden(-mi, -mi+dlogm)/dlogm) 
+            else: 
+                mass.append(mi + 0.5 * dlogm)
+                phi.append(MF.numden(mi, mi+dlogm)/dlogm) 
         #print 'Analytic ', np.sum(np.array(phi))
         return np.array(mass), np.array(phi)
 
@@ -328,15 +339,13 @@ class SMF(object):
             m_arr = np.arange(0.0, 12.1, dlogm)
 
         vol = box ** 3  # box volume
-            
         mass, phi = [], [] 
         for mi in m_arr: 
             mass_bin = np.where(
                     (masses > mi) & 
                     (masses <= mi+dlogm)
                     )
-
-            ngal_bin = len(masses[mass_bin])
+            ngal_bin = np.float(len(masses[mass_bin]))
             
             mass.append(mi + 0.5 * dlogm)
             phi.append(np.float(ngal_bin)/vol/dlogm * h**3) 

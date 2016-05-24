@@ -5,6 +5,7 @@ Utility functions for Central Quenching project
 Author(s): ChangHoon Hahn
 
 '''
+import subprocess
 import numpy as np
 import pyfits as fits
 import matplotlib.pyplot as plt
@@ -326,3 +327,16 @@ def mpfit_line_fixedslope(p, slope=0.56, fjac=None, x=None, y=None, err=None):
     model = line_fixedslope(x, p, slope=slope) 
     status = 0 
     return([status, (y-model)/err]) 
+
+def png2pdf(png_filename): 
+    ''' Convert png file to pdf 
+    '''
+    pdf_filename = png_filename.replace('.png', '.pdf')
+
+    convert_cmd = ' '.join(['convert', png_filename, pdf_filename])
+    
+    subprocess.call(convert_cmd.split())
+    return None 
+
+
+

@@ -254,11 +254,14 @@ def PlotLee2015_SFMS_zdep():
 
     
 if __name__=="__main__": 
+    grpcat = GroupCat(Mrcut=18, position='central')
+    grpcat.Read()
+    print np.min(grpcat.z), np.max(grpcat.z)
     #PlotLee2015_SFMS_zdep()
 
-    [BuildGroupCat(Mrcut=Mr, position='satellite') for Mr in [18, 19, 20]]
-    PlotObservedSSFR('groupcat_cen', isedfit=False, Peak=True)
-    PlotObservedSSFR('groupcat_sat', isedfit=False, Peak=True)
+    #[BuildGroupCat(Mrcut=Mr, position='satellite') for Mr in [18, 19, 20]]
+    #PlotObservedSSFR('groupcat_cen', isedfit=False, Peak=True)
+    #PlotObservedSSFR('groupcat_sat', isedfit=False, Peak=True)
 
     #GroupCat_iSEDfitMatch(Mrcut=18, position='central')
     #PlotObservedSSFR(isedfit=False)

@@ -24,13 +24,19 @@ from abcee import ReadABCrun
 from inherit import ABCInherit
 from observations import GroupCat
 
+import abcpmc
+from abcpmc import mpi_util
+
 #from treepm import subhalo_io 
 import subhalo_io_hack as subhalo_io
 from utilities import utility as wetzel_util
 from plotting.plots import PlotFq
 from plotting.plots import PlotSSFR
 
+import corner
 import matplotlib.pyplot as plt 
+from ChangTools.plotting import prettyplot
+from ChangTools.plotting import prettycolors 
 
 
 class SatelliteSubhalos(object): 
@@ -507,15 +513,68 @@ def AssignCenSFR(tf, abcrun=None, prior_name=None):
             rand_i = np.random.uniform(size=len(infall_massbin[0]))
             sg_obj.first_infall_sfr[infall_massbin] = cdf_interp(rand_i) + \
                     sg_obj.first_infall_mass[infall_massbin]
+
+    # assign SFR to galaxies that fell in before nsnap = 15
+    old_infall = np.where(
+            (sg_obj.first_infall_nsnap >= abcinh.sim_kwargs['nsnap_ancestor']) &
+            (sg_obj.first_infall_mass > 0.))[0]
+    
+    Pq = np.random.uniform(size=len(old_infall))
+    qfrac = Fq() 
+    fq_oldinfall = qfrac.model(sg_obj.first_infall_mass[old_infall], sg_obj.first_infall_z[old_infall], lit='wetzel')
+
+    # star-forming
+    sfing = np.where(Pq > fq_oldinfall) 
+    sig_sfms = sfr_evol.ScatterLogSFR_sfms(
+            sg_obj.first_infall_mass[old_infall[sfing]], 
+            sg_obj.first_infall_z[old_infall[sfing]], 
+            sfms_prop=sg_obj.sfms_prop)
+    mu_sfms = sfr_evol.AverageLogSFR_sfms(
+            sg_obj.first_infall_mass[old_infall[sfing]], 
+            sg_obj.first_infall_z[old_infall[sfing]], 
+            sfms_prop=sg_obj.sfms_prop)
+    sg_obj.first_infall_sfr[old_infall[sfing]] = mu_sfms + np.random.randn(len(sfing[0])) * sig_sfms
+
+    # quiescent
+    qed = np.where(Pq <= fq_oldinfall) 
+    mu_ssfr_q = sfr_evol.AverageLogSSFR_q_peak(sg_obj.first_infall_mass[old_infall[qed]])
+    sig_ssfr_q = sfr_evol.ScatterLogSSFR_q_peak(sg_obj.first_infall_mass[old_infall[qed]])
+
+    ssfr_q = mu_ssfr_q + np.random.randn(len(qed[0])) * sig_ssfr_q 
+
+    sg_obj.first_infall_sfr[old_infall[qed]] = ssfr_q + sg_obj.first_infall_mass[old_infall[qed]]
+
     return sg_obj
 
 
-def EvolveSatSFR(sg_obj): 
+def EvolveSatSFR(sg_in, tqdelay_dict=None): 
     ''' Evolve the infalling SFR assigned based on central galaxy SFRs
     '''
-    # initial SFR, SSFR
-    sg_obj.sfr = np.repeat(-999., len(sg_obj.mass))
+    if tqdelay_dict == None: 
+        raise ValueError
+    
+    # initalize
+    sg_obj = SGPop()
+    sg_obj.ilk = sg_in.ilk.copy()
+    sg_obj.pos = sg_in.pos.copy()
+    sg_obj.snap_index = sg_in.snap_index.copy()
+    sg_obj.zsnap = sg_in.zsnap.copy() 
+    sg_obj.t_cosmic = sg_in.t_cosmic.copy() 
+    sg_obj.sfms_prop = sg_in.sfms_prop.copy()
+    sg_obj.abcrun = sg_in.abcrun
+    sg_obj.prior_name = sg_in.prior_name
+    sg_obj.mass = sg_in.mass.copy()  
+    sg_obj.sfr =  np.repeat(-999., len(sg_obj.mass))
     sg_obj.ssfr = np.repeat(-999., len(sg_obj.mass))
+    sg_obj.halo_mass = sg_in.halo_mass.copy()
+    sg_obj.first_infall_nsnap = sg_in.first_infall_nsnap.copy()
+    sg_obj.first_infall_z = sg_in.first_infall_z.copy()  
+    sg_obj.first_infall_t = sg_in.first_infall_t.copy()  
+    sg_obj.first_infall_sfr = sg_in.first_infall_sfr.copy()  
+    sg_obj.first_infall_mass = sg_in.first_infall_mass.copy()  
+    sg_obj.t_qstart = np.repeat(-999., len(sg_obj.mass))
+    sg_obj.z_qstart = np.repeat(-999., len(sg_obj.mass))
+    sg_obj.q_ssfr = np.repeat(-999., len(sg_obj.mass))
 
     # First classify the galaxies into SF, Q, and Qing
     # this is so that t_Q,start = t_inf for Qing galaxies, 
@@ -523,9 +582,7 @@ def EvolveSatSFR(sg_obj):
     # SF galaxies are affected by the delay time 
     infall = np.where(
             (sg_obj.first_infall_mass > 0.) &
-            (sg_obj.first_infall_sfr > -999.) & 
-            (sg_obj.first_infall_t >  5.7))
-    print len(infall[0]), ' infall galaxies'
+            (sg_obj.first_infall_sfr > -999.))
 
     fq_obj = Fq()  
     sfq_class = fq_obj.Classify(
@@ -533,41 +590,34 @@ def EvolveSatSFR(sg_obj):
             sg_obj.first_infall_sfr[infall], 
             sg_obj.first_infall_z[infall], 
             sg_obj.sfms_prop)
+     
+    sf_infall = (infall[0])[np.where(sfq_class == 'star-forming')]  # starforming @ infall
+    q_infall = (infall[0])[np.where(sfq_class == 'quiescent')]      # quiescent @ infall
+
+    ssfr_final = sfr_evol.AverageLogSSFR_q_peak(sg_obj.mass[infall]) + \
+            sfr_evol.ScatterLogSSFR_q_peak(sg_obj.mass[infall]) * np.random.randn(len(infall[0]))
     
-    sf_infall = (infall[0])[np.where(sfq_class == 'star-forming')] 
-    q_infall = (infall[0])[np.where(sfq_class == 'quiescent')]
+    # sub-divide the quiescent @ infall population to those that are 
+    # quenching @ infall + quiescent @ infall based on simple SSFR cut
+    q_mass_infall = sg_obj.first_infall_mass[q_infall]
+    q_sfr_infall = sg_obj.first_infall_sfr[q_infall]
+    q_ssfr_infall = q_sfr_infall - q_mass_infall
 
-    q_mass = sg_obj.first_infall_mass[q_infall]
-    q_sfr = sg_obj.first_infall_sfr[q_infall]
-    q_ssfr = q_sfr - q_mass 
+    q_cut_SSFR = sfr_evol.AverageLogSSFR_q_peak(q_mass_infall) + \
+            1.5 * sfr_evol.ScatterLogSSFR_q_peak(q_mass_infall)
+    
+    qing_infall = q_infall[np.where(q_ssfr_infall > q_cut_SSFR)]   # quenching 
+    qq_infall = q_infall[np.where(q_ssfr_infall <= q_cut_SSFR)]    # quenched
 
-    q_cut_SSFR = sfr_evol.AverageLogSSFR_q_peak(q_mass) + \
-            1.5 * sfr_evol.ScatterLogSSFR_q_peak(q_mass)
-
-    qing_infall = q_infall[np.where(q_ssfr > q_cut_SSFR)]   # quenching 
-    qq_infall = q_infall[np.where(q_ssfr <= q_cut_SSFR)]    # quenched
-
-    # Quiescent @ infall 
-    ''' The SSFR is preserved from infall, so effectively their 
-    SFR decreases
-    '''
-    print len(qq_infall), ' quiescent galaxies' 
+    # Quiescent @ infall-----
+    # The SSFR is preserved from infall, so effectively their SFR decreases
     sg_obj.ssfr[qq_infall] = sg_obj.first_infall_sfr[qq_infall] - \
             sg_obj.first_infall_mass[qq_infall]
     sg_obj.sfr[qq_infall] = sg_obj.mass[qq_infall] + sg_obj.ssfr[qq_infall]
-    
-    #print (sg_obj.mass[qq_infall])[np.where(sg_obj.ssfr[qq_infall] > -11.)]
-    #plt.hist(sg_obj.ssfr[qq_infall], bins=20)
-    #plt.show() 
 
-    sg_obj.t_qstart = np.repeat(-999., len(sg_obj.mass))
-    sg_obj.z_qstart = np.repeat(-999., len(sg_obj.mass))
-    sg_obj.q_ssfr = np.repeat(-999., len(sg_obj.mass))
-
-    # Quenching @ infall  
-    ''' Quenching satellite galaxies skip the delay phase and immediately 
-    start quenching when the simulation begins. 
-    '''
+    # Quenching @ infall-----
+    # Quenching satellite galaxies skip the delay phase and immediately 
+    # start quenching when the simulation begins. 
     sg_obj.t_qstart[qing_infall] = sg_obj.first_infall_t[qing_infall]
     sg_obj.z_qstart[qing_infall] = sg_obj.first_infall_z[qing_infall]
     sg_obj.q_ssfr[qing_infall] = sfr_evol.AverageLogSSFR_q_peak(sg_obj.mass[qing_infall]) + \
@@ -588,11 +638,16 @@ def EvolveSatSFR(sg_obj):
     sg_obj.ssfr[qing_infall] = sg_obj.sfr[qing_infall] - sg_obj.mass[qing_infall]
     
     # deal with over quenching 
-    overquenched = np.where(sg_obj.ssfr[qing_infall] < sg_obj.q_ssfr[qing_infall])
-    sg_obj.ssfr[qing_infall[overquenched]] = sg_obj.q_ssfr[qing_infall[overquenched]]
+    #overquenched = np.where(sg_obj.ssfr[qing_infall] < sg_obj.q_ssfr[qing_infall])
+    #sg_obj.ssfr[qing_infall[overquenched]] = sg_obj.q_ssfr[qing_infall[overquenched]]
     
     # Star-forming @ infall 
-    sg_obj.t_qstart[sf_infall] = sg_obj.first_infall_t[sf_infall] + tDelay(sg_obj.mass[sf_infall]) 
+    if tqdelay_dict['name'] == 'hacked': 
+        sg_obj.t_qstart[sf_infall] = sg_obj.first_infall_t[sf_infall] + \
+                tDelay(sg_obj.mass[sf_infall], **tqdelay_dict) 
+    else: 
+        sg_obj.t_qstart[sf_infall] = sg_obj.first_infall_t[sf_infall] + \
+                tDelay(sg_obj.first_infall_mass[sf_infall], **tqdelay_dict) 
     # if t_qstart > t_cosmic, then it does not quenching during the simualtion 
     sf_q = np.where(sg_obj.t_qstart[sf_infall] < sg_obj.t_cosmic) 
     sf_noq = np.where(sg_obj.t_qstart[sf_infall] >= sg_obj.t_cosmic) 
@@ -621,9 +676,8 @@ def EvolveSatSFR(sg_obj):
             dlogSFR_MS_M + dlogSFR_MS_z + dlogSFR_Q
     sg_obj.ssfr[sf_infall_q] = sg_obj.sfr[sf_infall_q] - sg_obj.mass[sf_infall_q]
     # deal with over quenching 
-    overquenched = np.where(sg_obj.ssfr[sf_infall_q] < sg_obj.q_ssfr[sf_infall_q])
-    sg_obj.ssfr[sf_infall_q[overquenched]] = sg_obj.q_ssfr[sf_infall_q[overquenched]]
-
+    #overquenched = np.where(sg_obj.ssfr[sf_infall_q] < sg_obj.q_ssfr[sf_infall_q])
+    #sg_obj.ssfr[sf_infall_q[overquenched]] = sg_obj.q_ssfr[sf_infall_q[overquenched]]
 
     # SF galaxies that do NOT quench
     dlogSFR_MS_M = 0.53 * (sg_obj.mass[sf_infall_noq] - sg_obj.first_infall_mass[sf_infall_noq]) 
@@ -633,16 +687,24 @@ def EvolveSatSFR(sg_obj):
     sg_obj.sfr[sf_infall_noq] = sg_obj.first_infall_sfr[sf_infall_noq] + \
             dlogSFR_MS_M + dlogSFR_MS_z
     sg_obj.ssfr[sf_infall_noq] = sg_obj.sfr[sf_infall_noq] - sg_obj.mass[sf_infall_noq]
+
+
+    # deal with overquenching all at once
+    overquench = np.where(sg_obj.ssfr[infall] < ssfr_final)
+    sg_obj.ssfr[infall[0][overquench]] = ssfr_final[overquench] 
+    sg_obj.sfr[infall[0][overquench]] = ssfr_final[overquench] + sg_obj.mass[infall[0][overquench]]
+
     return sg_obj 
 
 
 def PlotEvolvedSat(sg_obj): 
     ''' Plot stuff for the evolved satellite population 
     '''
-    infall = np.where(
-            (sg_obj.first_infall_mass > 0.) &
-            (sg_obj.first_infall_sfr > -999.) & 
-            (sg_obj.first_infall_t >  5.7))
+    #infall = np.where(
+    #        (sg_obj.first_infall_mass > 0.) &
+    #        (sg_obj.first_infall_sfr > -999.) & 
+    #        (sg_obj.first_infall_t >  5.7))
+    infall = np.arange(len(sg_obj.first_infall_mass))
     
     # SSFR plot
     ssfr_plot = PlotSSFR() 
@@ -681,32 +743,443 @@ def PlotEvolvedSat(sg_obj):
     return None 
 
 
-def tDelay(Mstars): 
+def tDelay(Mstars, **tqdelay_dict): 
     ''' Hacked parameterizatiion of t_delay in Wetzel plot
     '''
-    m_arr = np.array([6.51782e9, 1.13089e10, 2.18647e10, 3.90733e10, 6.74621e10, 1.08724e11, 1.56475e11])
-    t_del = np.array([3.30321e0 , 3.30102e0 , 3.19772e0 , 2.91165e0 , 2.14061e0 , 1.27830e0 , 2.15064e-1])
+    if tqdelay_dict['name'] == 'hacked': 
+        m_arr = np.array([6.59215e+9, 1.14512e+10, 2.21628e+10, 3.96133e+10, 6.82792e+10, 1.09802e+11, 1.57529e+11])
+        t_del = np.array([3.48711e+0, 3.48546e+0, 3.40789e+0, 3.19310e+0, 2.61415e+0, 1.96669e+0, 1.16836e+0])
 
-    func = interp1d(np.log10(m_arr), t_del, kind='linear')
-    
+        func = interp1d(np.log10(m_arr), t_del, kind='linear')
+        
+        within = np.where(
+                (Mstars >= np.log10(m_arr.min())) & 
+                (Mstars <= np.log10(m_arr.max())))
+        
+        output = np.zeros(len(Mstars))
+        output[within] = func(Mstars[within])
+
+        m_arr = np.log10(m_arr)
+        
+        greater = np.where(Mstars > m_arr.max()) 
+        output[greater] = (t_del[-1] - t_del[-2])/(m_arr[-1] - m_arr[-2]) * (Mstars[greater] - m_arr[-1]) + t_del[-1]
+
+        less = np.where(Mstars < m_arr.min()) 
+        output[less] = (t_del[0] - t_del[1])/(m_arr[0] - m_arr[1]) * (Mstars[less] - m_arr[0]) + t_del[0]
+
+        neg = np.where(output < 0.) 
+        output[neg] = 0.
+
+    elif tqdelay_dict['name'] == 'explin': 
+         
+        output = -1.*10.**(tqdelay_dict['m'] + Mstars) + tqdelay_dict['b'] 
+        
+        neg = np.where(output < 0.) 
+        output[neg] = 0.
+
+    return output
+
+
+def tRapid(Mstars): 
+    '''
+    '''
+    m_arr = np.array([6.37119e+9, 1.05173e+10, 1.54219e+10, 2.55939e+10, 3.98025e+10, 6.06088e+10, 9.95227e+10, 1.57374e+11])
+    t_rap = np.array([8.04511e-1, 7.06767e-1, 6.69173e-1, 5.48872e-1, 3.23308e-1, 2.85714e-1, 2.25564e-1, 1.80451e-1]) 
+    func = interp1d(np.log10(m_arr), t_rap, kind='linear')
     within = np.where(
             (Mstars >= np.log10(m_arr.min())) & 
             (Mstars <= np.log10(m_arr.max())))
-    
     output = np.zeros(len(Mstars))
     output[within] = func(Mstars[within])
-    
-    greater = np.where(Mstars > np.log10(m_arr.max())) 
-    output[greater] = (t_del[-1] - t_del[-2])/(m_arr[-1] - m_arr[-2]) * (Mstars[greater] - m_arr[-1]) + t_del[-1]
+        
+    m_arr = np.log10(m_arr)
+        
+    greater = np.where(Mstars > m_arr.max()) 
+    output[greater] = (t_rap[-1] - t_rap[-2])/(m_arr[-1] - m_arr[-2]) * (Mstars[greater] - m_arr[-1]) + t_rap[-1]
 
-    less = np.where(Mstars < np.log10(m_arr.min())) 
-    output[less] = (t_del[0] - t_del[1])/(m_arr[0] - m_arr[1]) * (Mstars[less] - m_arr[0]) + t_del[0]
+    less = np.where(Mstars < m_arr.min()) 
+    output[less] = (t_rap[0] - t_rap[1])/(m_arr[0] - m_arr[1]) * (Mstars[less] - m_arr[0]) + t_rap[0]
 
     neg = np.where(output < 0.) 
     output[neg] = 0.
 
     return output
 
+
+def Plot_tRapid(): 
+    '''
+    '''
+    prettyplot()
+    pretty_colors = prettycolors()
+    fig = plt.figure(1)
+    sub = fig.add_subplot(111)
+
+    m_val = np.array([6.37119e+9, 1.05173e+10, 1.54219e+10, 2.55939e+10, 3.98025e+10, 6.06088e+10, 9.95227e+10, 1.57374e+11])
+    t_rap = np.array([8.04511e-1, 7.06767e-1, 6.69173e-1, 5.48872e-1, 3.23308e-1, 2.85714e-1, 2.25564e-1, 1.80451e-1]) 
+    sub.scatter(m_val, t_rap, c='k', s=16)
+
+    m_arr = np.arange(9.5, 12.0, 0.1) 
+    sub.plot(10**m_arr, tRapid(m_arr), c=pretty_colors[1])
+    sub.plot(10**m_arr, sfr_evol.getTauQ(m_arr, tau_prop={'name':'satellite'}), c=pretty_colors[3])
+    
+    # x-axis
+    sub.set_xscale('log') 
+    sub.set_xlim([5*10**9, 2*10**11.]) 
+    # y-axis
+    sub.set_ylim([0.0, 4.0])
+    sub.set_ylabel(r'$\mathtt{t_{Q, rapid}}$', fontsize=25) 
+
+    plt.show()
+    plt.close()
+    return None
+
+
+
+def ABC(T, eps_input, Npart=1000, cen_tf=None, cen_prior_name=None, cen_abcrun=None):
+    ''' ABC-PMC implementation. 
+
+    Parameters
+    ----------
+    T : (int) 
+        Number of iterations
+
+    eps_input : (float)
+        Starting epsilon threshold value 
+
+    N_part : (int)
+        Number of particles
+
+    prior_name : (string)
+        String that specifies what prior to use.
+
+    abcrun : (string)
+        String that specifies abc run information 
+    '''
+    abcinh = ABCInherit(cen_tf, abcrun=cen_abcrun, prior_name=cen_prior_name) 
+
+    # Data (Group Catalog Satellite fQ)
+    grpcat = GroupCat(Mrcut=18, position='satellite')
+    grpcat.Read()
+    qfrac = Fq() 
+    m_bin = np.array([9.7, 10.1, 10.5, 10.9, 11.3])
+    M_mid = 0.5 * (m_bin[:-1] + m_bin[1:]) 
+
+    sfq = qfrac.Classify(grpcat.mass, grpcat.sfr, np.median(grpcat.z), 
+            sfms_prop=abcinh.sim_kwargs['sfr_prop']['sfms'])
+    ngal, dum = np.histogram(grpcat.mass, bins=m_bin)
+    ngal_q, dum = np.histogram(grpcat.mass[sfq == 'quiescent'], bins=m_bin)
+    data_sum = [M_mid, ngal_q.astype('float')/ngal.astype('float')]
+    
+    # Simulator 
+    cen_assigned_sat_file = ''.join(['/data1/hahn/pmc_abc/pickle/', 
+        'satellite', '.cenassign', '.', cen_abcrun, '_ABC', '.', cen_prior_name, '_prior', '.p'])
+    
+    if not os.path.isfile(cen_assigned_sat_file): 
+        sat_cen = AssignCenSFR(cen_tf, abcrun=cen_abcrun, prior_name=cen_prior_name)
+        pickle.dump(sat_cen, open(cen_assigned_sat_file, 'wb'))
+    else: 
+        sat_cen = pickle.load(open(cen_assigned_sat_file, 'rb'))
+
+    def Simz(tt):       # Simulator (forward model) 
+        tqdel_dict = {'name': 'explin', 'm': tt[0] , 'b': tt[1]}
+
+        sat_evol = EvolveSatSFR(sat_cen, tqdelay_dict=tqdel_dict)
+
+        sfq_sim = qfrac.Classify(sat_evol.mass, sat_evol.sfr, sat_evol.zsnap, 
+                sfms_prop=sat_evol.sfms_prop)
+        ngal_sim, dum = np.histogram(sat_evol.mass, bins=m_bin)
+        ngal_q_sim, dum = np.histogram(sat_evol.mass[sfq_sim == 'quiescent'], bins=m_bin)
+        sim_sum = [M_mid, ngal_q_sim.astype('float')/ngal_sim.astype('float')]
+        return sim_sum
+
+    # Priors
+    prior_min = [-11.75, 2.]
+    prior_max = [-10.25, 4.]
+    prior = abcpmc.TophatPrior(prior_min, prior_max)    # ABCPMC prior object
+
+    def rho(simum, datum):  
+        datum_dist = datum[1]
+        simum_dist = simum[1]
+        drho = np.sum((datum_dist - simum_dist)**2)
+        return drho
+    
+    abcrun_flag = cen_abcrun + '_central'
+
+    theta_file = lambda pewl: ''.join([code_dir(), 
+        'dat/pmc_abc/', 'Satellite.tQdelay.theta_t', str(pewl), '_', abcrun_flag, '.dat']) 
+    w_file = lambda pewl: ''.join([code_dir(), 
+        'dat/pmc_abc/', 'Satellite.tQdelay.w_t', str(pewl), '_', abcrun_flag, '.dat']) 
+    dist_file = lambda pewl: ''.join([code_dir(), 
+        'dat/pmc_abc/', 'Satellite.tQdelay.dist_t', str(pewl), '_', abcrun_flag, '.dat']) 
+    eps_file = ''.join([code_dir(), 
+        'dat/pmc_abc/Satellite.tQdelay.epsilon_', abcrun_flag, '.dat'])
+   
+    eps = abcpmc.ConstEps(T, eps_input)
+    try:
+        mpi_pool = mpi_util.MpiPool()
+        abcpmc_sampler = abcpmc.Sampler(
+                N=Npart,                # N_particles
+                Y=data_sum,             # data
+                postfn=Simz,            # simulator 
+                dist=rho,           # distance function  
+                pool=mpi_pool)  
+    except AttributeError: 
+        abcpmc_sampler = abcpmc.Sampler(
+                N=Npart,                # N_particles
+                Y=data_sum,             # data
+                postfn=Simz,            # simulator 
+                dist=rho)           # distance function  
+    abcpmc_sampler.particle_proposal_cls = abcpmc.ParticleProposal
+
+    pools = []
+    f = open(eps_file, "w")
+    f.close()
+    eps_str = ''
+    for pool in abcpmc_sampler.sample(prior, eps, pool=None):
+        print '----------------------------------------'
+        print 'eps ', pool.eps
+        new_eps_str = '\t'+str(pool.eps)+'\n'
+        if eps_str != new_eps_str:  # if eps is different, open fiel and append 
+            f = open(eps_file, "a")
+            eps_str = new_eps_str
+            f.write(eps_str)
+            f.close()
+
+        print("T:{0},ratio: {1:>.4f}".format(pool.t, pool.ratio))
+        print eps(pool.t)
+
+        # write theta, weights, and distances to file 
+        np.savetxt(theta_file(pool.t), pool.thetas, 
+            header='tQdelay_slope, tQdelay_offset')
+        np.savetxt(w_file(pool.t), pool.ws)
+        np.savetxt(dist_file(pool.t), pool.dists)
+    
+        # update epsilon based on median thresholding 
+        eps.eps = np.median(pool.dists)
+        pools.append(pool)
+
+    return pools 
+
+
+def PlotABC_Corner(tf, cen_abcrun=None):
+    '''
+    '''
+    abcrun_flag = cen_abcrun + '_central'
+    theta_file = lambda pewl: ''.join([code_dir(), 
+        'dat/pmc_abc/', 'Satellite.tQdelay.theta_t', str(pewl), '_', abcrun_flag, '.dat']) 
+   
+    theta = np.loadtxt(theta_file(tf)) 
+    med_theta = [np.median(theta[:,i]) for i in range(len(theta[0]))]
+
+    params = [ 'tqdelay_slope', 'tqdelay_offset']
+
+
+    prior_min = [-11.75, 2.]
+    prior_max = [-10.25, 4.]
+    #prior_min = [-12.0, 3.]
+    #prior_max = [-11.0, 5.]
+    prior_range = [(prior_min[i], prior_max[i]) for i in range(len(prior_min))]
+
+    fig = corner.corner(
+            theta,
+            truths=med_theta,
+            truth_color='#ee6a50',
+            labels=['$t_{Q,\;delay}$ Slope', '$t_{Q,\;delay}$ offset'],
+            label_kwargs={'fontsize': 15},
+            range=prior_range,
+            quantiles=[0.16,0.5,0.84],
+            show_titles=True,
+            title_args={"fontsize": 12},
+            plot_datapoints=True,
+            fill_contours=True,
+            levels=[0.68, 0.95],
+            color='b',
+            bins=20,
+            smooth=1.0)
+    
+    fig_file = ''.join(['figure/',
+        'Satellite',
+        '.Corner',
+        '.tQdelayABC',
+        '.', cen_abcrun, '_central.png'])
+    fig.savefig(fig_file, bbox_inches='tight') 
+    plt.close()
+    return None 
+
+
+def PlotABC_tQdelay(tf, cen_abcrun=None): 
+    '''
+    '''
+    abcrun_flag = cen_abcrun + '_central'
+    theta_file = lambda pewl: ''.join([code_dir(), 
+        'dat/pmc_abc/', 'Satellite.tQdelay.theta_t', str(pewl), '_', abcrun_flag, '.dat']) 
+   
+    theta = np.loadtxt(theta_file(tf)) 
+
+    m_arr = np.arange(7.5, 12.0, 0.1) 
+    tdels = [] 
+    for i in xrange(len(theta)): 
+        i_tqdelay_dict = {'name': 'explin', 'm': theta[i][0], 'b': theta[i][1]}
+        tdels.append(tDelay(m_arr, **i_tqdelay_dict))
+    
+    tdels = np.array(tdels)
+    a, b, c, d, e = np.percentile(tdels, [2.5, 16, 50, 84, 97.5], axis=0)
+
+    prettyplot()
+    pretty_colors = prettycolors()
+    fig = plt.figure(figsize=(7,7))
+    sub = fig.add_subplot(111)
+
+    mstar = np.array([1.56781e+11, 1.01089e+11, 6.27548e+10, 3.98107e+10, 2.49831e+10, 1.57633e+10, 9.89223e+9, 6.37831e+9])
+    tqdel_high = np.array([1.36456e+0 , 2.53148e+0 , 3.06686e+0 , 3.52693e+0 , 3.62625e+0 , 3.99574e+0, 3.99915e+0 ,3.99915e+0])
+    tqdel_low = np.array([8.15728e-1, 1.98257e+0, 2.29240e+0, 2.82772e+0, 2.99466e+0, 2.72548e+0, 2.99016e+0, 2.68333e+0])
+    sub.fill_between(mstar, tqdel_low, tqdel_high, color=pretty_colors[0], edgecolor="none", label='Roughly Wetzel+(2013)')
+
+    #sub.plot(10**m_arr, tDelay(m_arr, **abc_tqdelay_dict), c=pretty_colors[3], label='ABC Best-fit')
+    
+    sub.fill_between(10**m_arr, a, e, color=pretty_colors[3], alpha=0.5, edgecolor="none", 
+            label='ABC Best-fit')
+    sub.fill_between(10**m_arr, b, d, color=pretty_colors[3], alpha=1., edgecolor="none")
+    sub.plot(10**m_arr, tDelay(m_arr, **{'name': 'hacked'}))
+
+    sub.set_ylim([0.0, 4.0])
+    sub.set_ylabel(r'$\mathtt{t_{Q, delay}}$', fontsize=25) 
+    sub.set_xlim([5*10**9, 2*10**11.]) 
+    sub.set_xscale("log") 
+    sub.set_xlabel(r'$\mathtt{M}_*$', fontsize=25) 
+    sub.legend(loc='lower left') 
+    
+    fig.savefig('figure/sallite_tqdelay_'+cen_abcrun+'.png', bbox_inches='tight') 
+    return None
+
+
+def PlotABC_EvolvedSat(tf, cen_tf=7, cen_abcrun=None, cen_prior_name=None): 
+    ''' Plot stuff for the evolved satellite population 
+    '''
+    # Simulator 
+    cen_assigned_sat_file = ''.join(['/data1/hahn/pmc_abc/pickle/', 
+        'satellite', '.cenassign', 
+        '.', cen_abcrun, '_ABC', 
+        '.', cen_prior_name, '_prior', '.p'])
+    if not os.path.isfile(cen_assigned_sat_file): 
+        sat_cen = AssignCenSFR(cen_tf, abcrun=cen_abcrun, prior_name=cen_prior_name)
+        pickle.dump(sat_cen, open(cen_assigned_sat_file, 'wb'))
+    else: 
+        sat_cen = pickle.load(open(cen_assigned_sat_file, 'rb'))
+
+    abcrun_flag = cen_abcrun + '_central'
+    theta_file = lambda pewl: ''.join([code_dir(), 
+        'dat/pmc_abc/', 'Satellite.tQdelay.theta_t', str(pewl), '_', abcrun_flag, '.dat']) 
+   
+    theta = np.loadtxt(theta_file(tf)) 
+    med_theta = [np.median(theta[:,i]) for i in range(len(theta[0]))]
+
+    abc_tqdelay_dict = {'name': 'explin', 'm': med_theta[0], 'b': med_theta[1]}
+    sg_obj = EvolveSatSFR(sat_cen, tqdelay_dict=abc_tqdelay_dict)
+
+    #infall = np.arange(len(sg_obj.first_infall_mass)) 
+
+    infall = np.where(
+            (sg_obj.first_infall_mass > 0.) &
+            (sg_obj.first_infall_sfr > -999.))# & (sg_obj.first_infall_t >  5.7))
+    print len(sg_obj.first_infall_mass)
+    print len(infall[0]) 
+    
+    # SSFR plot
+    ssfr_plot = PlotSSFR() 
+    ssfr_plot.plot(mass=sg_obj.mass[infall], ssfr=sg_obj.ssfr[infall], line_color=3)
+
+    ssfr_plot.GroupCat(position='satellite') 
+    ssfr_plot.set_axes() 
+
+    ssfr_fig_name = ''.join(['figure/', 
+        'SSFR.Satellite', 
+        '.tQdelayABC',
+        '.', sg_obj.abcrun, '.', sg_obj.prior_name, '_prior', 
+        '.png'])
+    ssfr_plot.save_fig(ssfr_fig_name)
+    plt.close()
+
+    # Quiescent fraction plot  
+    fq_plot = PlotFq()
+    fq_plot.plot(mass=sg_obj.mass[infall], sfr=sg_obj.sfr[infall], z=sg_obj.zsnap, line_color='r',
+            sfms_prop=sg_obj.sfms_prop, label='SHAM Sat. Simulation')
+    grpcat = GroupCat(Mrcut=18, position='satellite')
+    grpcat.Read()
+    fq_plot.plot(mass=grpcat.mass, sfr=grpcat.sfr, z=np.median(grpcat.z), line_color='k', line_style='--',
+            sfms_prop=sg_obj.sfms_prop, label='Satellite Group Catalog')
+    fq_plot.set_axes()
+    fq_fig_name = ''.join(['figure/', 
+        'Fq.Satellite',
+        '.tQdelayABC',
+        '.', sg_obj.abcrun, '.', sg_obj.prior_name, '_prior', 
+        '.png'])
+    fq_plot.save_fig(fq_fig_name)
+    plt.close() 
+
+    return None 
+
+
+
+def PlotABC_InfallCondition(tf, cen_tf=7, cen_abcrun=None, cen_prior_name=None): 
+    ''' 
+    '''
+    # Simulator 
+    cen_assigned_sat_file = ''.join(['/data1/hahn/pmc_abc/pickle/', 
+        'satellite', '.cenassign', 
+        '.', cen_abcrun, '_ABC', 
+        '.', cen_prior_name, '_prior', '.p'])
+    if not os.path.isfile(cen_assigned_sat_file): 
+        sat_cen = AssignCenSFR(cen_tf, abcrun=cen_abcrun, prior_name=cen_prior_name)
+        pickle.dump(sat_cen, open(cen_assigned_sat_file, 'wb'))
+    else: 
+        sat_cen = pickle.load(open(cen_assigned_sat_file, 'rb'))
+
+    abcrun_flag = cen_abcrun + '_central'
+    theta_file = lambda pewl: ''.join([code_dir(), 
+        'dat/pmc_abc/', 'Satellite.tQdelay.theta_t', str(pewl), '_', abcrun_flag, '.dat']) 
+   
+    theta = np.loadtxt(theta_file(tf)) 
+    med_theta = [np.median(theta[:,i]) for i in range(len(theta[0]))]
+
+    abc_tqdelay_dict = {'name': 'explin', 'm': med_theta[0], 'b': med_theta[1]}
+    sg_obj = EvolveSatSFR(sat_cen, tqdelay_dict=abc_tqdelay_dict)
+
+    #infall = np.where(
+    #        (sg_obj.first_infall_mass > 0.) &
+    #        (sg_obj.first_infall_sfr > -999.) & (sg_obj.first_infall_t >  5.7))
+    infallmass0 = np.where(sg_obj.first_infall_mass == 0.) 
+    infallmassG0 = np.where(sg_obj.first_infall_mass > 0.) 
+
+    infall_nosfr = np.where(sg_obj.first_infall_sfr == -999.) 
+    infall_longago = np.where(sg_obj.first_infall_t < 5.7) 
+
+    print sg_obj.mass[infall_longago].min(), sg_obj.mass[infall_longago].max()
+    print sg_obj.sfr[infall_longago].min(), sg_obj.sfr[infall_longago].max()
+    print sg_obj.first_infall_sfr[infall_longago].min(), sg_obj.first_infall_sfr[infall_longago].max()
+
+    
+    m_arr = np.arange(9.5, 11.6, 0.1) 
+    m_mid = 0.5 * (m_arr[:-1] + m_arr[1:])
+    
+    n_all, dum = np.histogram(sg_obj.mass, bins=m_arr)
+    n_mass0, dum = np.histogram(sg_obj.mass[infallmass0], bins=m_arr)
+    n_nosfr, dum = np.histogram(sg_obj.mass[infall_nosfr], bins=m_arr)
+    n_longago, dum = np.histogram(sg_obj.mass[infall_longago], bins=m_arr)
+
+    plt.plot(m_mid, n_mass0.astype('float')/n_all.astype('float')) 
+    plt.plot(m_mid, n_nosfr.astype('float')/n_all.astype('float')) 
+    plt.plot(m_mid, n_longago.astype('float')/n_all.astype('float')) 
+    plt.show() 
+    plt.close()
+
+    ssfr_plot = PlotSSFR() 
+    ssfr_plot.plot(mass=sg_obj.mass[infallmassG0], ssfr=sg_obj.ssfr[infallmassG0], line_color=5)
+    ssfr_plot.plot(mass=sg_obj.mass, ssfr=sg_obj.ssfr, line_color='k', line_style='--')
+    ssfr_plot.set_axes() 
+
+    plt.show()
+    return None 
 
 
 
@@ -715,9 +1188,24 @@ if __name__=='__main__':
     #    subh = SatelliteSubhalos() 
     #    subh.build_catalogs(scatter=scat, source='li-march')
     #    del subh
+    #ABC(20, [100.], Npart=200, cen_tf=6, cen_prior_name='updated', cen_abcrun='multifq_wideprior_nosmfevo')
+    #PlotABC_tQdelay(12, cen_abcrun='multifq_wideprior_nosmfevo')
+    #PlotABC_InfallCondition(10, cen_abcrun='multifq_wideprior', cen_prior_name='updated')
 
+    #PlotABC_EvolvedSat(12, cen_abcrun='multifq_wideprior_nosmfevo', cen_prior_name='updated')
+    #Plot_tRapid()
+    #PlotABC_Corner(12, cen_abcrun='multifq_wideprior_nosmfevo')
+
+    cen_assigned_sat_file = ''.join(['/data1/hahn/pmc_abc/pickle/', 
+        'satellite.cenassign.multifq_wideprior_ABC.updated_prior.p'])
     sat_test_tmp = AssignCenSFR(7, abcrun='multifq_wideprior', prior_name='updated')
+    pickle.dump(sat_test_tmp, open(cen_assigned_sat_file, 'wb'))
+    #sat_cen = pickle.load(open(cen_assigned_sat_file, 'rb'))
+    #evol_sat = EvolveSatSFR(sat_cen, tqdelay_dict={'name': 'hacked'})
+    #PlotEvolvedSat(evol_sat)
+
+    #sat_test_tmp = AssignCenSFR(7, abcrun='multifq_wideprior', prior_name='updated')
     #pickle.dump(sat_test_tmp, open('/data1/hahn/pmc_abc/pickle/sat_test_tmp.p', 'wb'))
     #sat_test_tmp = pickle.load(open('/data1/hahn/pmc_abc/pickle/sat_test_tmp.p', 'rb'))
-    evol_sat = EvolveSatSFR(sat_test_tmp)
-    PlotEvolvedSat(evol_sat)
+    #evol_sat = EvolveSatSFR(sat_test_tmp)
+    #PlotEvolvedSat(evol_sat)

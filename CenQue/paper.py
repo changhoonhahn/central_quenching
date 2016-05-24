@@ -328,11 +328,11 @@ def fig_SSFRevol(t, abcrun, prior_name='try0'):
     
     for i_snap in nsnaps[::-1]: 
         bin_mid, ssfr_dist = des_dict[str(i_snap)].Ssfr()
-        label = r"$\mathtt{z="+str(round(des_dict[str(i_snap)].zsnap,1))+"}$"
+        label = r"$\mathtt{\;\;"+str(round(des_dict[str(i_snap)].zsnap,1))+"}$"
 
         sub.plot(bin_mid[1], ssfr_dist[1], c=pretty_colors[i_snap], lw=2, ls='-', label=label)
 
-        sub.text(-10.75, 1.4, r"$\mathtt{log\;M_* = [-10.1, 10.5]}$", fontsize=20)
+        sub.text(-10.75, 1.4, r"$\mathtt{log\;M_* = [10.1, 10.5]}$", fontsize=20)
 
     sub.set_xlim([-13.0, -8.0])
     sub.set_xlabel(r'$\mathtt{log \; SSFR \;[yr^{-1}]}$', fontsize=25) 
@@ -356,8 +356,11 @@ def fig_ABC_posterior(tf, abcrun=None, prior_name='try0'):
         '.', abcrun, 
         '.', prior_name, '_prior', 
         '.png'])
-    ppp.Corner(filename=fig_file)
+    fig_file = ppp.Corner(filename=fig_file)
     plt.close() 
+
+    Util.png2pdf(fig_file)
+    return None 
 
 
 def fig_SSFR_ABC_post(tf, abcrun=None, prior_name='try0'): 
@@ -448,8 +451,8 @@ def fig_SSFR_ABC_post(tf, abcrun=None, prior_name='try0'):
     fig.savefig(fig_file, bbox_inches='tight', dpi=150)
 
     #ppp.Ssfr(filename=fig_file)
-
     plt.close() 
+    Util.png2pdf(fig_file) 
     return None
 
 
@@ -460,7 +463,8 @@ def fig_tau_ABC_post(tf, abcrun=None, prior_name='try0'):
     ppp = PlotABC(tf, abcrun=abcrun, prior_name=prior_name)
     gv_slope, gv_offset, fudge_slope, fudge_offset, tau_slope, tau_offset = ppp.med_theta
 
-    tau_dict = {'name': 'line', 'slope': tau_slope, 'fid_mass': 11.1, 'yint': tau_offset}
+    med_tau_dict = {'name': 'line', 'slope': tau_slope, 'fid_mass': 11.1, 'yint': tau_offset}
+
 
     prettyplot() 
     pretty_colors = prettycolors() 
@@ -468,17 +472,45 @@ def fig_tau_ABC_post(tf, abcrun=None, prior_name='try0'):
     sub = fig.add_subplot(111)
 
     m_arr = np.arange(8.5, 12.5, 0.25)
+    tauq_list = [] 
+    for ii in range(len(ppp.theta)): 
+        tau_dict_i = {'name': 'line', 'slope': (ppp.theta[ii])[-2], 'fid_mass': 11.1, 'yint': (ppp.theta[ii])[-1]}
+        sub.plot(10**m_arr, sfr_evol.getTauQ(m_arr, tau_prop=tau_dict_i), 
+                c=pretty_colors[8], lw=0.4, alpha=0.1)
+        tauq_list.append(sfr_evol.getTauQ(m_arr, tau_prop=tau_dict_i))
+    tauq_list = np.array(tauq_list)
+    #a, b, c, d, e = np.percentile(tauq_list, [2.5, 16, 50, 84, 97.5], axis=0)
+    #b, c, d = np.percentile(tauq_list, [16, 50, 84], axis=0)
+    yerr = np.std(tauq_list, axis=0)
     
-    sub.semilogx(10**m_arr, sfr_evol.getTauQ(m_arr, tau_prop=tau_dict), 
-            c=pretty_colors[3], lw=3, label='Centrals (Hahn+2016)')
-    sub.semilogx(10**m_arr, sfr_evol.getTauQ(m_arr, tau_prop={'name': 'satellite'}), 
-            c='k', ls='--', lw=3, label='Satellite (Wetzel+2014)')
+    #for ii in np.random.choice(range(len(ppp.theta)), 100):
+    #    tau_dict_i = {'name': 'line', 'slope': (ppp.theta[ii])[-2], 'fid_mass': 11.1, 'yint': (ppp.theta[ii])[-1]}
+    #    sub.plot(10**m_arr, sfr_evol.getTauQ(m_arr, tau_prop=tau_dict_i), 
+    #            c=pretty_colors[8], lw=0.5, alpha=0.2)
+
+    sub.errorbar(10**m_arr, sfr_evol.getTauQ(m_arr, tau_prop=med_tau_dict), 
+            yerr=yerr, c=pretty_colors[7], fmt='o', lw=2, label='Centrals (Hahn+2016)')
+
+    #sub.errorbar(10**m_arr, sfr_evol.getTauQ(m_arr, tau_prop=med_tau_dict), 
+    #        c='k', lw=3, label='Centrals (Hahn+2016)')
+    satplot, = sub.plot(10**m_arr, sfr_evol.getTauQ(m_arr, tau_prop={'name': 'satellite'}), 
+            c='k', ls='--', lw=3, label='Satellites (Wetzel+2014)')
     sub.set_xlabel(r"$\mathtt{log(M_*\;[M_\odot])}$", fontsize=25)
+    sub.set_xscale('log') 
     sub.set_xlim([10**9.5, 10**11.5])
 
+    sub.set_ylim([0.0, 1.7])
     sub.set_yticks([0.0, 0.25, 0.5, 0.75, 1.0, 1.25, 1.5])
     sub.set_ylabel(r"$\tau_\mathtt{Q}\;[\mathtt{Gyr}]$", fontsize=25)
-    sub.legend(loc='upper right', prop={'size': 25}, handletextpad=0.5)
+    # get handles
+    handles, labels = sub.get_legend_handles_labels()
+    # remove the errorbars
+    for i_h, h in enumerate(handles): 
+        try:
+            handles[i_h] = h[0]
+        except TypeError: 
+            pass
+    sub.legend(handles, labels, loc='upper right', numpoints=1, prop={'size': 20}, handletextpad=0.5, markerscale=3)
     
     fig_file = ''.join(['figure/paper/',
         'tau.ABC_posterior',
@@ -487,11 +519,13 @@ def fig_tau_ABC_post(tf, abcrun=None, prior_name='try0'):
         '.png'])
     fig.savefig(fig_file, bbox_inches='tight', dpi=150)
     plt.close()
+    Util.png2pdf(fig_file)
     return None 
 
 
 def non_decreasing(L):
     return all(x<=y for x, y in zip(L, L[1:]))
+
 
 def keep_non_descreasing(L): 
     out = [L[0]]
@@ -503,10 +537,12 @@ def keep_non_descreasing(L):
             indices.append(i_ll)
     return out, indices
 
+
 if __name__=='__main__': 
     #fig_SSFRevol(7, 'multirho_inh', prior_name='try0')
-    fig_SFRassign(7, 'multirho_inh', prior_name='try0')
+    #fig_SFRassign(7, 'multirho_inh', prior_name='try0')
     #figSFH_demo(7, 'multirho_inh', prior_name='try0')
-    #fig_ABC_posterior(7, abcrun='multirho_inh', prior_name='try0')
-    #fig_SSFR_ABC_post(7, abcrun='multirho_inh', prior_name='try0')
-    #fig_tau_ABC_post(7, abcrun='multirho_inh', prior_name='try0')
+    #fig_ABC_posterior(7, abcrun='multifq_wideprior', prior_name='updated')
+    fig_SSFR_ABC_post(7, abcrun='multifq_wideprior', prior_name='updated')
+    #fig_tau_ABC_post(7, abcrun='multifq_wideprior', prior_name='updated')
+

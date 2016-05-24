@@ -583,6 +583,7 @@ class ABCInherit(object):
         
         abcinh_file = ''.join([Util.code_dir(), 'dat/pmc_abc/pickle/', 
             'Inherit', 
+            '.t', str(self.t), 
             '.snapshots', snap_str, 
             '.ancestor', str(self.sim_kwargs['nsnap_ancestor']), 
             '.abcrun_', self.abcrun, '.p']) 
