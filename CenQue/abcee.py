@@ -276,7 +276,7 @@ def MakeABCrun(abcrun=None, nsnap_start=15, subhalo=None, fq=None, sfms=None, du
     # SF dutycycle properties
     f.write('# SF Dutycycle Properties \n') 
     if dutycycle is None:   
-        dutycycle = {'name': 'nonperiodic'}
+        dutycycle = {'name': 'notperiodic'}
         #dutycycle = {'name': 'newamp_squarewave', 'freq_range': [2.*np.pi, 20.*np.pi], 'sigma': 0.3}
     f.write(''.join(['name = ', dutycycle['name'], '\n']))
     if dutycycle['name'] == 'newamp_squarewave': 
