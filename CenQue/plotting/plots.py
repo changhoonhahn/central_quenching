@@ -891,11 +891,11 @@ def QAplot(descendant, sfinh_kwargs, fig_name=None, **kwargs):
                     #sub_i.plot(10**mass_bin, i_tau_m, color='r', alpha=0.1, lw=2) 
                     i_tau_ms[:,i_tau] = i_tau_m
             
-            sig_tau = np.zeros(len(mass_bin))
-            for im in range(len(mass_bin)):
-                sig_tau[im] = np.std(i_tau_ms[im,:])
-            
-            sub_i.errorbar(10**mass_bin, tau_m, yerr=sig_tau, color='r', lw=4) 
+                sig_tau = np.zeros(len(mass_bin))
+                for im in range(len(mass_bin)):
+                    sig_tau[im] = np.std(i_tau_ms[im,:])
+                
+                sub_i.errorbar(10**mass_bin, tau_m, yerr=sig_tau, color='r', lw=4) 
 
             # satellite quenching fraction for comparison 
             tau_sat = getTauQ(mass_bin, tau_prop={'name': 'satellite'}) 

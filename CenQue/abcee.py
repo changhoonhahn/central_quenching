@@ -591,11 +591,19 @@ class PlotABC(object):
 
         self.t = t 
         self.abcrun = abcrun
-
-        theta_file = ''.join([
-            code_dir(), 'dat/pmc_abc/', 'CenQue_theta_t', str(t), '_', abcrun, '.dat']) 
-        w_file = ''.join([
-            code_dir(), 'dat/pmc_abc/', 'CenQue_w_t', str(t), '_', abcrun, '.dat']) 
+    
+        if prior_name != 'satellite': 
+            theta_file = ''.join([
+                code_dir(), 'dat/pmc_abc/', 'CenQue_theta_t', str(t), '_', abcrun, '.dat']) 
+            w_file = ''.join([
+                code_dir(), 'dat/pmc_abc/', 'CenQue_w_t', str(t), '_', abcrun, '.dat']) 
+            self.satellite_run = False 
+        else: 
+            theta_file = ''.join([
+                code_dir(), 'dat/pmc_abc/', 'CenQue_theta_t', str(t), '_', abcrun, '.satellite.dat']) 
+            w_file = ''.join([
+                code_dir(), 'dat/pmc_abc/', 'CenQue_w_t', str(t), '_', abcrun, '.satellite.dat']) 
+            self.satellite_run = True 
         self.theta = np.loadtxt(theta_file)      # theta values 
         self.w = np.loadtxt(w_file)              # w values 
         
@@ -612,14 +620,23 @@ class PlotABC(object):
         ranges are the prior ranges. The median of the parameters are marked in the plots.
         '''
         # list of parameters
-        params = [
-                'slope_gv', 
-                'offset_gv', 
-                'slope_fudge', 
-                'offset_fudge', 
-                'slope_tau', 
-                'offset_tau'
-                ]
+        if not self.satellite_run:
+            params = [
+                    'slope_gv', 
+                    'offset_gv', 
+                    'slope_fudge', 
+                    'offset_fudge', 
+                    'slope_tau', 
+                    'offset_tau'
+                    ]
+        else: 
+            params = [
+                    'slope_gv', 
+                    'offset_gv', 
+                    'slope_fudge', 
+                    'offset_fudge'
+                    ]
+
         if filename is None: 
             fig_name = ''.join([code_dir(), 
                 'figure/', 'abc_step', str(self.t), '_', self.abcrun, '_weighted.png']) 
@@ -718,12 +735,18 @@ class PlotABC(object):
             i_subs = np.random.choice(N_theta, size=20)
 
             for i_sub in i_subs: 
-                gv_slope, gv_offset, fudge_slope, fudge_offset, tau_slope, tau_offset = self.theta[i_sub]
+                if not self.satellite_run: 
+                    gv_slope, gv_offset, fudge_slope, fudge_offset, tau_slope, tau_offset = self.theta[i_sub]
+                else: 
+                    gv_slope, gv_offset, fudge_slope, fudge_offset = self.theta[i_sub]
 
                 sim_kwargs = sfinherit_kwargs.copy()
                 sim_kwargs['sfr_prop']['gv'] = {'slope': gv_slope, 'fidmass': 10.5, 'offset': gv_offset}
                 sim_kwargs['evol_prop']['fudge'] = {'slope': fudge_slope, 'fidmass': 10.5, 'offset': fudge_offset}
-                sim_kwargs['evol_prop']['tau'] = {'name': 'line', 'slope': tau_slope, 'fid_mass': 11.1, 'yint': tau_offset}
+                if not self.satellite_run: 
+                    sim_kwargs['evol_prop']['tau'] = {'name': 'line', 'slope': tau_slope, 'fid_mass': 11.1, 'yint': tau_offset}
+                else: 
+                    sim_kwargs['evol_prop']['tau'] = {'name': 'satellite'}
 
                 inh = Inherit([1], 
                         nsnap_ancestor=sim_kwargs['nsnap_ancestor'],
@@ -741,13 +764,17 @@ class PlotABC(object):
         gv_offset = self.med_theta[1]
         fudge_slope = self.med_theta[2]
         fudge_offset = self.med_theta[3]
-        tau_slope = self.med_theta[4]
-        tau_offset = self.med_theta[5]
+        if not self.satellite_run: 
+            tau_slope = self.med_theta[4]
+            tau_offset = self.med_theta[5]
 
         sim_kwargs = sfinherit_kwargs.copy()
         sim_kwargs['sfr_prop']['gv'] = {'slope': gv_slope, 'fidmass': 10.5, 'offset': gv_offset}
         sim_kwargs['evol_prop']['fudge'] = {'slope': fudge_slope, 'fidmass': 10.5, 'offset': fudge_offset}
-        sim_kwargs['evol_prop']['tau'] = {'name': 'line', 'slope': tau_slope, 'fid_mass': 11.1, 'yint': tau_offset}
+        if not self.satellite_run: 
+            sim_kwargs['evol_prop']['tau'] = {'name': 'line', 'slope': tau_slope, 'fid_mass': 11.1, 'yint': tau_offset}
+        else: 
+            sim_kwargs['evol_prop']['tau'] = {'name': 'satellite'}
 
         inh = Inherit([1], 
                 nsnap_ancestor=sim_kwargs['nsnap_ancestor'],
@@ -779,20 +806,24 @@ class PlotABC(object):
         gv_offset = self.med_theta[1]
         fudge_slope = self.med_theta[2]
         fudge_offset = self.med_theta[3]
-        tau_slope = self.med_theta[4]
-        tau_offset = self.med_theta[5]
+        if not self.satellite_run: 
+            tau_slope = self.med_theta[4]
+            tau_offset = self.med_theta[5]
         
-        # tau slopes and offsets of random particles 
-        tau_slopes = self.theta[:,4]
-        tau_offsets = self.theta[:,5]
+            # tau slopes and offsets of random particles 
+            tau_slopes = self.theta[:,4]
+            tau_offsets = self.theta[:,5]
 
         sim_kwargs = sfinherit_kwargs.copy()
         sim_kwargs['sfr_prop']['gv'] = {
                 'slope': gv_slope, 'fidmass': 10.5, 'offset': gv_offset}
         sim_kwargs['evol_prop']['fudge'] = {
                 'slope': fudge_slope, 'fidmass': 10.5, 'offset': fudge_offset}
-        sim_kwargs['evol_prop']['tau'] = {
-                'name': 'line', 'slope': tau_slope, 'fid_mass': 11.1, 'yint': tau_offset}
+        if not self.satellite_run: 
+            sim_kwargs['evol_prop']['tau'] = {
+                    'name': 'line', 'slope': tau_slope, 'fid_mass': 11.1, 'yint': tau_offset}
+        else: 
+            sim_kwargs['evol_prop']['tau'] = {'name': 'satellite'}
         
         inh = Inherit(nsnap_descendant, 
                 nsnap_ancestor=sim_kwargs['nsnap_ancestor'],
@@ -805,7 +836,7 @@ class PlotABC(object):
                 'figure/QAPlot',
                 '.nsnap', str(nd), 
                  '.abc_step', str(self.t), '_', self.abcrun, '.png']) 
-            QAplot(des_dict[str(nd)], sim_kwargs, fig_name=fig_name, taus=[tau_slopes, tau_offsets])
+            QAplot(des_dict[str(nd)], sim_kwargs, fig_name=fig_name)#, taus=[tau_slopes, tau_offsets])
 
         return None 
 
@@ -813,14 +844,14 @@ class PlotABC(object):
 
 
 if __name__=="__main__": 
-    for tf in [7]: #range(1,9):
-        ppp = PlotABC(tf, abcrun='multifq_wideprior', prior_name='updated')
+    for tf in [13]: #range(1,11):
+        ppp = PlotABC(tf, abcrun='rhofq_tausat', prior_name='satellite')
         ppp.Corner()
+        ppp.Ssfr()
+        ppp.QAplot(nsnap_descendant=[1, 6])
     
     #for run in ['multifq_wideprior_nosmfevo', 'multifq_wideprior_extremesmfevo']:
     #    ppp = PlotABC(8, abcrun=run)
-    #    ppp.Ssfr()
-    #    ppp.QAplot(nsnap_descendant=[1, 6])
     #for tf in [0, 1, 2, 3, 4, 5]: 
     #    ppp = PlotABC(tf, abcrun=)
     #    ppp.Ssfr()

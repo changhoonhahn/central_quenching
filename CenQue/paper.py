@@ -455,6 +455,99 @@ def fig_SSFR_ABC_post(tf, abcrun=None, prior_name='try0'):
     Util.png2pdf(fig_file) 
     return None
 
+def fig_SSFR_tau_satellite(tf, abcrun='rhofq_tausat', prior_name='satellite'): 
+    ''' The SSFR distribution from the median of the ABC posterior when using the 
+    satellite quenching timescale model. 
+    '''
+    figdata_file = ''.join(['/data1/hahn/paper/',  
+        'SSFR.ABC_posterior', '.', abcrun, '.', prior_name, '_prior', '.p'])
+    if not os.path.isfile(figdata_file):
+        # model 
+        ppp = PlotABC(tf, abcrun=abcrun, prior_name=prior_name)
+        gv_slope, gv_offset, fudge_slope, fudge_offset = ppp.med_theta
+
+        sfinherit_kwargs, abcrun_flag = ReadABCrun(abcrun)
+        sim_kwargs = sfinherit_kwargs.copy()
+        sim_kwargs['sfr_prop']['gv'] = {'slope': gv_slope, 'fidmass': 10.5, 'offset': gv_offset}
+        sim_kwargs['evol_prop']['fudge'] = {'slope': fudge_slope, 'fidmass': 10.5, 'offset': fudge_offset}
+        sim_kwargs['evol_prop']['tau'] = {'name': 'satellite'}
+        inh = Inherit([1], 
+                nsnap_ancestor=sim_kwargs['nsnap_ancestor'],
+                subhalo_prop=sim_kwargs['subhalo_prop'], 
+                sfr_prop=sim_kwargs['sfr_prop'], 
+                evol_prop=sim_kwargs['evol_prop'])
+        des_dict = inh() 
+        descendant = des_dict['1'] 
+        model_bin_mid, model_ssfr_dist = descendant.Ssfr()
+        pickle.dump([model_bin_mid, model_ssfr_dist], open(figdata_file, 'wb'))
+    else: 
+        model_bin_mid, model_ssfr_dist = pickle.load(open(figdata_file, 'rb')) 
+
+    # group catalog
+    groupcat = GroupCat(Mrcut=18, position='central')
+    sdss_bin_mid, sdss_ssfr_dist = groupcat.Ssfr()
+
+    prettyplot() 
+    pretty_colors = prettycolors() 
+    fig = plt.figure(figsize=(20, 6))
+
+    panel_mass_bins = [[9.7, 10.1], [10.1, 10.5], [10.5, 10.9], [10.9, 11.3]]
+    for i_m, mass_bin in enumerate(panel_mass_bins): 
+        sub = fig.add_subplot(1, 4, i_m+1)
+
+        if i_m == 3:  
+            model_label = r'$\tau_\mathtt{Q}^\mathtt{sat}$'
+            sdss_label = 'SDSS Centrals'
+        else: 
+            sdss_label = None 
+            model_label = None
+
+        sub.plot(model_bin_mid[i_m], model_ssfr_dist[i_m], 
+                lw=3, ls='-', c=pretty_colors[7], label=model_label)
+
+        sub.plot(sdss_bin_mid[i_m], sdss_ssfr_dist[i_m], 
+                lw=2, ls='--', c='k', label=sdss_label)
+
+        massbin_str = ''.join([ 
+            r'$\mathtt{log \; M_{*} = [', 
+            str(mass_bin[0]), ',\;', 
+            str(mass_bin[1]), ']}$'
+            ])
+        sub.text(-12., 1.6, massbin_str, fontsize=20)
+    
+        # x-axis
+        if i_m == 3:
+            sub.set_xticks([-13, -12, -11, -10, -9])
+        else: 
+            sub.set_xticks([-13, -12, -11, -10])
+        sub.set_xlim([-13., -9.])
+        sub.set_xlabel(r'$\mathtt{log \; SSFR \;[yr^{-1}]}$', fontsize=25) 
+        # y-axis 
+        sub.set_ylim([0.0, 1.8])
+        sub.set_yticks([0.0, 0.5, 1.0, 1.5])
+        if i_m == 0: 
+            sub.set_ylabel(r'$\mathtt{P(log \; SSFR)}$', fontsize=25) 
+        else: 
+            sub.set_yticklabels([])
+        
+        ax = plt.gca()
+        leg = sub.legend(bbox_to_anchor=(-8.5, 1.75), loc='upper right', prop={'size': 20}, borderpad=2, 
+                bbox_transform=ax.transData, handletextpad=0.5)
+        
+    fig.subplots_adjust(wspace=0.0, hspace=0.0)
+
+    fig_file = ''.join(['figure/paper/',
+        'SSFR.ABC_posterior',
+        '.', abcrun, 
+        '.', prior_name, '_prior', 
+        '.png'])
+    fig.savefig(fig_file, bbox_inches='tight', dpi=150)
+
+    #ppp.Ssfr(filename=fig_file)
+    plt.close() 
+    Util.png2pdf(fig_file) 
+    return None
+
 
 def fig_tau_ABC_post(tf, abcrun=None, prior_name='try0'): 
     ''' The SSFR distribution from the median value of the ABC posterior
@@ -543,6 +636,7 @@ if __name__=='__main__':
     #fig_SFRassign(7, 'multirho_inh', prior_name='try0')
     #figSFH_demo(7, 'multirho_inh', prior_name='try0')
     #fig_ABC_posterior(7, abcrun='multifq_wideprior', prior_name='updated')
-    fig_SSFR_ABC_post(7, abcrun='multifq_wideprior', prior_name='updated')
+    #fig_SSFR_ABC_post(7, abcrun='multifq_wideprior', prior_name='updated')
     #fig_tau_ABC_post(7, abcrun='multifq_wideprior', prior_name='updated')
+    fig_SSFR_tau_satellite(12, abcrun='rhofq_tausat', prior_name='satellite')
 

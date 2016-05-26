@@ -82,6 +82,91 @@ def PlotFq_t(lit='wetzelsmooth'):
 
     return None
 
+
+def PlotFq_comp(lit=['wetzel', 'wetzel_alternate']): 
+    ''' Compare the quiescent function evolution for different analytic prescriptions 
+    '''
+    prettyplot()
+    pretty_colors = prettycolors()
+    
+    M_arr = np.arange(9.0, 12.2, 0.2)
+    z_arr = np.arange(0.0, 1.2, 0.2)
+    
+    prettyplot() 
+    pretty_colors = prettycolors() 
+    fig = plt.figure(figsize=(15,5))
+    
+    qf = gp.Fq()
+    for il, l in enumerate(lit): 
+        sub = fig.add_subplot(1,len(lit),il+1) 
+        
+        for iz, z in enumerate(z_arr): 
+            if iz == 0: 
+                label = l.title()
+            else: 
+                label = None
+            fq_M = qf.model(M_arr, z, lit=l)  
+            sub.plot(M_arr, fq_M, c=pretty_colors[iz], lw=3, label=label)
+    
+        sub.set_xlim([9.0, 12.]) 
+        sub.set_xlabel(r'$\mathtt{M_{*}}$', fontsize=25)
+
+        sub.set_ylim([0., 1.])
+        if il == 0: 
+            sub.set_ylabel(r'$\mathtt{f_Q}$', fontsize=25) 
+        else: 
+            sub.set_yticklabels([]) 
+        sub.legend(loc='upper left') 
+    plt.show() 
+    #fig_file = ''.join(['figure/test/', 'fq_t.', lit, '.png'])
+    #fig.savefig(fig_file, bbox_inches='tight') 
+    plt.close()
+
+    return None
+
+
+def PlotFq_WetzelComp(): 
+    ''' Compare the quiescent function evolution for different analytic prescriptions 
+    of Wetzel et al. (2013)
+    '''
+    lit = ['wetzel', 'wetzel_alternate'] 
+    
+    M_arr = np.arange(9.0, 12.2, 0.2)
+    z_arr = np.arange(0.0, 1.2, 0.2)
+    
+    prettyplot() 
+    pretty_colors = prettycolors() 
+    fig = plt.figure()
+    sub = fig.add_subplot(111) 
+
+    qf = gp.Fq()
+    for il, l in enumerate(lit): 
+        if il == 0: 
+            ls = '-'
+        elif il == 1: 
+            ls = '--'
+
+        for iz, z in enumerate(z_arr): 
+            if iz == 0: 
+                label = l.title()
+            else: 
+                label = None
+            fq_M = qf.model(M_arr, z, lit=l)  
+            sub.plot(M_arr, fq_M, c=pretty_colors[iz], lw=3, ls=ls, label=label)
+    
+    sub.set_xlim([9.0, 12.]) 
+    sub.set_xlabel(r'$\mathtt{M_{*}}$', fontsize=25)
+
+    sub.set_ylim([0., 1.])
+    sub.set_ylabel(r'$\mathtt{f_Q}$', fontsize=25) 
+    sub.legend(loc='upper left') 
+    fig_file = ''.join(['figure/test/', 'Fq_Wetzel_Comparison.png'])
+    fig.savefig(fig_file, bbox_inches='tight') 
+    plt.close()
+
+    return None
+
+
 def Plot_dFqdt():  
     ''' Plot the evolution of the derivative of the quiescent fraction as a function of M* and t
     for different parameterized models of f_Q
@@ -222,8 +307,10 @@ if __name__=='__main__':
     #PlotFq_t(lit='wetzelsmooth')
     #PlotFq_t(lit='wetzel')
     #Plot_dFqdt()#lit='wetzelsmooth')
-    PlotModelSMF(source=['li-march']) 
-    PlotModelSMF(source=['li-march-extreme']) 
+    #PlotFq_comp(lit=['wetzel', 'wetzel_alternate', 'cosmosfit'])
+    PlotFq_WetzelComp()
+    #PlotModelSMF(source=['li-march']) 
+    #PlotModelSMF(source=['li-march-extreme']) 
     #PlotModelSMF(source=['constant-li']) 
     #PlotModelSMF(source=['li-drory-march'])
     #PlotModelSMF(source=['li-drory-march_sameslope'])

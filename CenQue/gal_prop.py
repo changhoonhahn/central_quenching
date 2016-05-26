@@ -176,9 +176,8 @@ class Fq(object):
             exp_sigma = [1.1972271, 1.05830526, 0.9182575] 
             exp_sig = np.interp(z_in, zbins, exp_sigma) 
             output = np.exp( ( Mstar - 12.0 )/exp_sig)
-            if Mstar > 12.0: 
-                output = 1.0
-
+            massive = np.where(Mstar > 12.0) 
+            output[massive] = 1.0
             return output
 
         elif lit == 'wetzel':       # Wetzel et al. 2013
@@ -239,6 +238,61 @@ class Fq(object):
                     output = 0.0
                 if output > 1.0: 
                     output = 1.0
+
+            return output 
+
+        elif lit == 'wetzel_alternate': 
+            fqall = lambda A, alpha, z: A*(1.+z)**alpha
+            fsat = lambda B0, B1, z: B0 + B1 * z
+            fqsat = lambda C0, C1, M: C0 + C1 * M
+
+            M_arr = np.array([9.75, 10.25, 10.75, 11.25]) 
+            
+            A_arr = np.repeat(0.227, len(M_arr)) 
+            alpha_arr = np.repeat(-2.1, len(M_arr))
+            B0_arr = np.repeat(0.33, len(M_arr))
+            B1_arr = np.repeat(-0.055, len(M_arr))
+            C0_arr = np.repeat(-3.26, len(M_arr))
+            C1_arr = np.repeat(0.38, len(M_arr))
+            
+            # mass ranges
+            w1 = np.where(M_arr < 10.0)
+            w2 = np.where((M_arr >= 10.) & (M_arr < 10.5))
+            w3 = np.where((M_arr >= 10.5) & (M_arr < 11.))
+            w4 = np.where(M_arr >= 11.)
+
+            A_arr[w1] = 0.227
+            A_arr[w2] = 0.471
+            A_arr[w3] = 0.775
+            A_arr[w4] = 0.957
+            alpha_arr[w1] = -2.1
+            alpha_arr[w2] = -2.2
+            alpha_arr[w3] = -2.0
+            alpha_arr[w4] = -1.3
+            B0_arr[w1] = 0.33
+            B0_arr[w2] = 0.30
+            B0_arr[w3] = 0.25
+            B0_arr[w4] = 0.17
+            B1_arr[w1] = -0.055 
+            B1_arr[w2] = -0.073 
+            B1_arr[w3] = -0.11 
+            B1_arr[w4] = 0.1 
+
+            
+            out_arr = (fqall(A_arr, alpha_arr, z_in) - fqsat(C0_arr, C1_arr, M_arr) * fsat(B0_arr, B1_arr, z_in)) / (1 - fsat(B0_arr, B1_arr, z_in))
+            out_arr = np.array([0.0]+list(out_arr))
+            M_arr = np.array([9.0]+list(M_arr))
+
+            interp_out = interp1d(M_arr, out_arr)
+            within = np.where((Mstar > M_arr.min()) & (Mstar < M_arr.max())) 
+            output = np.repeat(1.0, len(Mstar))
+            output[within] = interp_out(Mstar[within])
+            geha_lim = np.where(Mstar < 9.5) 
+            output[geha_lim] = 0.
+
+            massive_lim = np.where(Mstar > M_arr.max())
+            extrap = lambda mm: (out_arr[-1] - out_arr[-2])/(M_arr[-1] - M_arr[-2]) * (mm - M_arr[-1]) + out_arr[-1]
+            output[massive_lim] = extrap(Mstar[massive_lim])
 
             return output 
         else: 
