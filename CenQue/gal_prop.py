@@ -154,7 +154,47 @@ class Fq(object):
             String that specifies the model from literature 'cosmosinterp'
         '''
 
-        if lit == 'cosmosinterp': 
+        if lit == 'cosmos_tinker': 
+            qf_z0 = -6.04 + 0.63*Mstar
+            
+            try: 
+                alpha = np.repeat(-2.57, len(Mstar))
+
+                w2 = np.where((Mstar >= 10.) & (Mstar < 10.5))
+                alpha[w2] = -2.52
+                w3 = np.where((Mstar >= 10.5) & (Mstar < 11.))
+                alpha[w3] = -1.47
+                w4 = np.where((Mstar >= 11.) & (Mstar < 11.5))
+                alpha[w4] = -0.55
+                w5 = np.where(Mstar > 11.5)
+                alpha[w5] = -0.12
+            except TypeError: 
+                if Mstar < 10.0: 
+                    alpha = -2.57
+                elif (Mstar >= 10.0) & (Mstar < 10.5): 
+                    alpha = -1.47
+                elif (Mstar >= 10.5) & (Mstar < 11.0): 
+                    alpha = -0.55
+                elif (Mstar >= 11.0): # & (Mstar <= 11.5): 
+                    alpha = -0.12
+            #else: 
+            #    raise NameError('Mstar is out of range')
+
+            output = qf_z0 * ( 1.0 + z_in )**alpha 
+            try: 
+                if output.min() < 0.0: 
+                    output[np.where(output < 0.0)] = 0.0
+                if output.max() > 1.0: 
+                    output[np.where(output > 1.0)] = 1.0
+            except TypeError:  
+                if output < 0.0: 
+                    output = 0.0
+                elif output > 1.0: 
+                    output = 1.0 
+
+            return output 
+
+        elif lit == 'cosmosinterp': 
             zbins = [0.36, 0.66, 0.88] 
 
             fq_z = [] 

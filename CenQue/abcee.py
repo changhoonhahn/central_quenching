@@ -261,7 +261,8 @@ def MakeABCrun(abcrun=None, nsnap_start=15, subhalo=None, fq=None, sfms=None, du
     # Quiescent fraction properties
     f.write('# Quiescent Fraction Properties \n') 
     if fq is None:          # quiescent fraction
-        fq = {'name': 'wetzel'}
+        #fq = {'name': 'wetzel'}
+        fq = {'name': 'cosmos_tinker'} 
     f.write(''.join(['name = ', fq['name'], '\n']))
     f.write('\n')
 
@@ -664,6 +665,7 @@ class PlotABC(object):
             ):
         ''' Actually runs the corner plots for the ABC pool thetas. 
         '''
+        prettyplot()
         par_labels = [] 
         for par in parameters: 
             if par == 'slope_gv': 
@@ -844,11 +846,11 @@ class PlotABC(object):
 
 
 if __name__=="__main__": 
-    for tf in [13]: #range(1,11):
-        ppp = PlotABC(tf, abcrun='rhofq_tausat', prior_name='satellite')
+    for tf in [3]:
+        ppp = PlotABC(tf, abcrun='RHOssfrfq', prior_name='updated')
         ppp.Corner()
-        ppp.Ssfr()
-        ppp.QAplot(nsnap_descendant=[1, 6])
+        #ppp.Ssfr()
+        #ppp.QAplot(nsnap_descendant=[1, 6])
     
     #for run in ['multifq_wideprior_nosmfevo', 'multifq_wideprior_extremesmfevo']:
     #    ppp = PlotABC(8, abcrun=run)

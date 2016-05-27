@@ -11,6 +11,7 @@ import os
 import h5py
 import time 
 import numpy as np
+from scipy import interpolate
 from pydl.pydlutils.spheregroup import spherematch
 
 from util import mpfit 
@@ -20,6 +21,7 @@ from util.util import code_dir
 from gal_prop import Fq
 from gal_prop import Ssfr
 
+import matplotlib.pyplot as plt
 from ChangTools.fitstables import mrdfits 
 
 
@@ -481,7 +483,6 @@ def FitObservedSSFR_Peaks(observable='groupcat', sfq='star-forming', Mrcut=18, p
 
     return bestfit.params
 
-
 def Lee2015_SFMS_zslope(): 
     ''' Calculate the sloep of the redshift dependence of the Lee et al. (2015) SFMS parameterizations 
 
@@ -505,3 +506,102 @@ def Lee2015_SFMS_zslope():
     bestfit = mpfit.mpfit(util.mpfit_line, p0, functkw=fa, quiet=True) 
 
     return bestfit.params
+
+def FqCen_bestfit(clobber=False): 
+    ''' We parameterize the central galaxy quiescent fraction as 
+    fQ(M*, z) = fQ(M*, z = 0.) * (1+z)^(alpha(M*)). 
+
+    Here we fit for alpha
+
+    log fQ(M*,z) - log fQ(M*, z=0) = alpha(M*) * log(1+z) 
+    '''
+    # mass binnning we impose 
+    m_low = np.array([9.5, 10., 10.5, 11., 11.5]) 
+    m_high = np.array([10., 10.5, 11., 11.5, 12.0])
+    m_mid = 0.5 * (m_low + m_high) 
+
+    # SDSS 
+    fq_file = ''.join(['dat/observations/cosmos_fq/', 'fcen_red_sdss_scatter.dat']) 
+    m_sdss, fqcen_sdss, N_sdss = np.loadtxt(fq_file, unpack=True, usecols=[0,1,2])
+    
+    fqcen_sdss_rebin = [] 
+    for im, m_mid_i in enumerate(m_mid): 
+        sdss_mbin = np.where(
+                (m_sdss >= m_low[im]) & 
+                (m_sdss < m_high[im])) 
+    
+        fqcen_sdss_rebin.append(
+                np.sum(fqcen_sdss[sdss_mbin] * N_sdss[sdss_mbin].astype('float'))/np.sum(N_sdss[sdss_mbin].astype('float'))
+                )
+    fqcen_sdss_rebin = np.array(fqcen_sdss_rebin)
+    
+    fqcen_cosmos_rebin = [] 
+    fqcen_low_cosmos_rebin = [] 
+    fqcen_high_cosmos_rebin = [] 
+
+    for iz, z in enumerate([0.36, 0.66, 0.88]): 
+        fq_file = ''.join(['dat/observations/cosmos_fq/', 
+            'stats_z', str(iz+1), '.fq_cen']) 
+        
+        m_cosmos, fqcen_cosmos, fqcen_cosmos_low, fqcen_cosmos_high = np.loadtxt(fq_file, unpack=True, usecols=[0,1,2,3])
+        m_cosmos = np.log10(m_cosmos)
+
+        fqcen_interp = interpolate.interp1d(m_cosmos, fqcen_cosmos) 
+        fqcen_low_interp = interpolate.interp1d(m_cosmos, fqcen_cosmos_low) 
+        fqcen_high_interp = interpolate.interp1d(m_cosmos, fqcen_cosmos_high) 
+    
+        fqcen_cosmos_rebin.append(fqcen_interp(m_mid))
+        fqcen_low_cosmos_rebin.append(fqcen_low_interp(m_mid))
+        fqcen_high_cosmos_rebin.append(fqcen_high_interp(m_mid))
+
+    norm_fqcen_cosmos_rebin = np.array([
+            fqcen_cosmos_rebin[ii]/fqcen_sdss_rebin for ii in range(len(fqcen_cosmos_rebin))
+            ])
+    norm_fqcen_low_cosmos_rebin = np.array([
+            fqcen_low_cosmos_rebin[ii]/fqcen_sdss_rebin for ii in range(len(fqcen_cosmos_rebin))
+            ])
+    norm_fqcen_high_cosmos_rebin = np.array([
+            fqcen_high_cosmos_rebin[ii]/fqcen_sdss_rebin for ii in range(len(fqcen_cosmos_rebin))
+            ])
+
+    z_arr = np.array([0.0, 0.36, 0.66, 0.88])
+    alpha_m = [] 
+    for im, mm in enumerate(m_mid): 
+        # fit the redshift evolution with a power law for each mass bin 
+        # using mpfit with asymmetric errors from Tinker et al. (2013)'s 
+        # errors
+        p0 = [-2.] 
+        fa = {
+                'x': z_arr, 
+                'y': np.log10(np.array([1.] + list(norm_fqcen_cosmos_rebin[:,im]))), 
+                'y_low': np.log10(np.array([.999] + list(norm_fqcen_low_cosmos_rebin[:,im]))), 
+                'y_high': np.log10(np.array([1.001] + list(norm_fqcen_high_cosmos_rebin[:,im])))
+                }
+        bestfit = mpfit.mpfit(mpfit_z_powerlaw, p0, functkw=fa, quiet=True) 
+        alpha_m.append(bestfit.params[0])
+
+    output_file = ''.join([os.path.dirname(os.path.realpath(__file__)).split('CenQue')[0], 
+        'dat/fqcen_alphaM.dat']) 
+    if not os.path.isfile(output_file) or clobber:
+        np.savetxt(output_file, np.array([m_mid, alpha_m]).T, fmt=['%10.5f', '%10.5f']) 
+    
+    return [m_mid, alpha_m]
+
+
+def z_powerlaw(z, p): 
+    # just line function 
+    return p[0] * np.log10(1. + z) 
+
+def mpfit_z_powerlaw(p, fjac=None, x=None, y=None, y_low=None, y_high=None): 
+    model = z_powerlaw(x, p) 
+    status = 0 
+    
+    err_low = y - y_low  
+    err_high = y_high - y
+    
+    resid = y-model
+
+    err = err_low 
+    positive = np.where(resid >= 0) 
+    err[positive] = err_high 
+    return([status, (y-model)/err]) 

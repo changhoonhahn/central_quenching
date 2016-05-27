@@ -102,7 +102,7 @@ def PlotFq_comp(lit=['wetzel', 'wetzel_alternate']):
         
         for iz, z in enumerate(z_arr): 
             if iz == 0: 
-                label = l.title()
+                label = (l.replace('_', ' ')).title()
             else: 
                 label = None
             fq_M = qf.model(M_arr, z, lit=l)  
@@ -116,14 +116,14 @@ def PlotFq_comp(lit=['wetzel', 'wetzel_alternate']):
             sub.set_ylabel(r'$\mathtt{f_Q}$', fontsize=25) 
         else: 
             sub.set_yticklabels([]) 
+
         sub.legend(loc='upper left') 
-    plt.show() 
-    #fig_file = ''.join(['figure/test/', 'fq_t.', lit, '.png'])
-    #fig.savefig(fig_file, bbox_inches='tight') 
+    fig_file = ''.join(['figure/test/', 
+        'Fq_Comparison.', '_'.join(lit), '.png'])
+    fig.savefig(fig_file, bbox_inches='tight') 
     plt.close()
 
     return None
-
 
 def PlotFq_WetzelComp(): 
     ''' Compare the quiescent function evolution for different analytic prescriptions 
@@ -132,7 +132,8 @@ def PlotFq_WetzelComp():
     lit = ['wetzel', 'wetzel_alternate'] 
     
     M_arr = np.arange(9.0, 12.2, 0.2)
-    z_arr = np.arange(0.0, 1.2, 0.2)
+    #z_arr = np.arange(0.0, 1.2, 0.2)
+    z_arr = np.array([0.0, 0.36, 0.66, 0.88]) 
     
     prettyplot() 
     pretty_colors = prettycolors() 
@@ -153,6 +154,19 @@ def PlotFq_WetzelComp():
                 label = None
             fq_M = qf.model(M_arr, z, lit=l)  
             sub.plot(M_arr, fq_M, c=pretty_colors[iz], lw=3, ls=ls, label=label)
+
+    # Now plot Tinker et al. (2013)'s fQ^cen 
+    for iz, z in enumerate(z_arr): 
+        if z != 0.0: 
+            fq_file = ''.join(['dat/observations/cosmos_fq/', 
+                'stats_z', str(iz), '.fq_cen']) 
+            mmm, fqcen = np.loadtxt(fq_file, unpack=True, usecols=[0, 1]) 
+            mmm = np.log10(mmm)
+        else: 
+            fq_file = ''.join(['dat/observations/cosmos_fq/', 
+                'fcen_red_sdss_scatter.dat']) 
+            mmm, fqcen = np.loadtxt(fq_file, unpack=True, usecols=[0, 1]) 
+        sub.scatter(mmm, fqcen, c=pretty_colors[iz], lw=0, s=10) 
     
     sub.set_xlim([9.0, 12.]) 
     sub.set_xlabel(r'$\mathtt{M_{*}}$', fontsize=25)
@@ -165,7 +179,6 @@ def PlotFq_WetzelComp():
     plt.close()
 
     return None
-
 
 def Plot_dFqdt():  
     ''' Plot the evolution of the derivative of the quiescent fraction as a function of M* and t
@@ -307,8 +320,8 @@ if __name__=='__main__':
     #PlotFq_t(lit='wetzelsmooth')
     #PlotFq_t(lit='wetzel')
     #Plot_dFqdt()#lit='wetzelsmooth')
-    #PlotFq_comp(lit=['wetzel', 'wetzel_alternate', 'cosmosfit'])
-    PlotFq_WetzelComp()
+    PlotFq_comp(lit=['wetzel', 'wetzel_alternate', 'cosmos_tinker'])
+    #PlotFq_WetzelComp()
     #PlotModelSMF(source=['li-march']) 
     #PlotModelSMF(source=['li-march-extreme']) 
     #PlotModelSMF(source=['constant-li']) 

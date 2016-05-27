@@ -5,6 +5,7 @@ Module to test groupcat.py module
 
 '''
 import numpy as np
+from scipy import interpolate
 
 from observations import GroupCat
 from observations import PrimusSDSS
@@ -14,6 +15,7 @@ from observations import ObservedSSFR
 from observations import ObservedSSFR_Peaks
 from observations import FitObservedSSFR_Peaks
 from observations import Lee2015_SFMS_zslope
+from observations import FqCen_bestfit
 
 from sfr_evol import AverageLogSFR_sfms
 from sfr_evol import ScatterLogSFR_sfms
@@ -252,11 +254,149 @@ def PlotLee2015_SFMS_zdep():
     fig.savefig(fig_file, bbox_inches='tight') 
     return None
 
+def Plot_fQcentrals():
+    ''' Plot the quiescent fractions from Tinker et al. (2013)
+    '''
+    # mass binnning we impose 
+    m_low = np.array([9.5, 10., 10.5, 11., 11.5]) 
+    m_high = np.array([10., 10.5, 11., 11.5, 12.0])
+    m_mid = 0.5 * (m_low + m_high) 
+
+    # SDSS 
+    fq_file = ''.join(['dat/observations/cosmos_fq/', 'fcen_red_sdss_scatter.dat']) 
+    m_sdss, fqcen_sdss, N_sdss = np.loadtxt(fq_file, unpack=True, usecols=[0,1,2])
     
+    fqcen_sdss_rebin = [] 
+    for im, m_mid_i in enumerate(m_mid): 
+        sdss_mbin = np.where(
+                (m_sdss >= m_low[im]) & 
+                (m_sdss < m_high[im])) 
+    
+        fqcen_sdss_rebin.append(
+                np.sum(fqcen_sdss[sdss_mbin] * N_sdss[sdss_mbin].astype('float'))/np.sum(N_sdss[sdss_mbin].astype('float'))
+                )
+    fqcen_sdss_rebin = np.array(fqcen_sdss_rebin)
+
+    prettyplot()
+    pretty_colors = prettycolors()
+    
+    fig = plt.figure()
+    sub = fig.add_subplot(111)
+    sub.plot([9.]+list(m_mid), [0.]+list(fqcen_sdss_rebin), c='k') 
+    
+    for iz, z in enumerate([0.36, 0.66, 0.88]): 
+        fq_file = ''.join(['dat/observations/cosmos_fq/', 
+            'stats_z', str(iz+1), '.fq_cen']) 
+        
+        m_cosmos, fqcen_cosmos, fqcen_cosmos_low, fqcen_cosmos_high = np.loadtxt(fq_file, unpack=True, usecols=[0,1,2,3])
+        m_cosmos = np.log10(m_cosmos)
+
+        fqcen_interp = interpolate.interp1d(m_cosmos, fqcen_cosmos) 
+        fqcen_low_interp = interpolate.interp1d(m_cosmos, fqcen_cosmos_low) 
+        fqcen_high_interp = interpolate.interp1d(m_cosmos, fqcen_cosmos_high) 
+    
+        fqcen_cosmos_rebin = fqcen_interp(m_mid)
+        fqcen_low_cosmos_rebin = fqcen_low_interp(m_mid)
+        fqcen_high_cosmos_rebin = fqcen_high_interp(m_mid)
+
+        sub.fill_between([9.]+list(m_mid), 
+                [0.]+list(fqcen_low_cosmos_rebin), [0.]+list(fqcen_high_cosmos_rebin), 
+                color=pretty_colors[2*iz+1]) 
+    
+    sub.set_xlim([8.75, 12.0])
+    sub.set_xlabel(r'$\mathtt{M_*}$', fontsize=30) 
+    sub.set_ylim([0., 1.0])
+    sub.set_ylabel(r'$\mathtt{f_Q^{cen}}$', fontsize=30) 
+    plt.show() 
+        
+
+def Plot_fQcen_parameterized():
+    ''' Plot the bestfit parameterization of the quiescent fractions 
+    from Tinker et al. (2013)
+    '''
+    # best fit alpha(M*) values 
+    m_mid, alpha_m = FqCen_bestfit(clobber=True) 
+
+    # mass binnning we impose 
+    m_low = np.array([9.5, 10., 10.5, 11., 11.5]) 
+    m_high = np.array([10., 10.5, 11., 11.5, 12.0])
+    m_mid = 0.5 * (m_low + m_high) 
+
+    # SDSS 
+    fq_file = ''.join(['dat/observations/cosmos_fq/', 'fcen_red_sdss_scatter.dat']) 
+    m_sdss, fqcen_sdss, N_sdss = np.loadtxt(fq_file, unpack=True, usecols=[0,1,2])
+    
+    fqcen_sdss_rebin = [] 
+    for im, m_mid_i in enumerate(m_mid): 
+        sdss_mbin = np.where(
+                (m_sdss >= m_low[im]) & 
+                (m_sdss < m_high[im])) 
+    
+        fqcen_sdss_rebin.append(
+                np.sum(fqcen_sdss[sdss_mbin] * N_sdss[sdss_mbin].astype('float'))/np.sum(N_sdss[sdss_mbin].astype('float'))
+                )
+    fqcen_sdss_rebin = np.array(fqcen_sdss_rebin)
+
+    fqcen_cosmos_rebin = [] 
+    fqcen_low_cosmos_rebin = [] 
+    fqcen_high_cosmos_rebin = [] 
+    for iz, z in enumerate([0.36, 0.66, 0.88]): 
+        fq_file = ''.join(['dat/observations/cosmos_fq/', 
+            'stats_z', str(iz+1), '.fq_cen']) 
+        
+        m_cosmos, fqcen_cosmos, fqcen_cosmos_low, fqcen_cosmos_high = np.loadtxt(fq_file, unpack=True, usecols=[0,1,2,3])
+        m_cosmos = np.log10(m_cosmos)
+
+        fqcen_interp = interpolate.interp1d(m_cosmos, fqcen_cosmos) 
+        fqcen_low_interp = interpolate.interp1d(m_cosmos, fqcen_cosmos_low) 
+        fqcen_high_interp = interpolate.interp1d(m_cosmos, fqcen_cosmos_high) 
+    
+        fqcen_cosmos_rebin.append( fqcen_interp(m_mid) ) 
+        fqcen_low_cosmos_rebin.append( fqcen_low_interp(m_mid) ) 
+        fqcen_high_cosmos_rebin.append( fqcen_high_interp(m_mid) ) 
+
+    fqcen_cosmos_rebin = np.array(fqcen_cosmos_rebin) 
+    fqcen_low_cosmos_rebin = np.array(fqcen_low_cosmos_rebin)
+    fqcen_high_cosmos_rebin = np.array(fqcen_high_cosmos_rebin) 
+
+    z_arr = np.array([0.0, 0.36, 0.66, 0.88])
+    
+    prettyplot()
+    pretty_colors = prettycolors() 
+    fig = plt.figure()#figsize=(20,5)) 
+    sub = fig.add_subplot(111)#, len(m_mid), im+1) 
+    for im in range(len(m_mid)): 
+        sub.fill_between(z_arr, 
+                np.array([fqcen_sdss_rebin[im]]+list(fqcen_low_cosmos_rebin[:,im])),
+                np.array([fqcen_sdss_rebin[im]]+list(fqcen_high_cosmos_rebin[:,im])),
+                color=pretty_colors[2*im], 
+                alpha=0.5
+                )
+        sub.plot(
+                z_arr,
+                fqcen_sdss_rebin[im] * (1. + z_arr)**alpha_m[im], 
+                c='k', ls='--', lw=2)
+    
+    sub.set_xlim([0.0, 1.0])
+    sub.set_ylim([0.0, 1.0])
+    sub.set_xlabel(r'$\mathtt{M_*}$', fontsize=30) 
+    sub.set_ylabel(r'$\mathtt{f_Q^{cen}}$', fontsize=30) 
+    fig_file = ''.join(['figure/test/', 
+        'test_fQcen_parameterized.png']) 
+    fig.savefig(fig_file, bbox_inches='tight') 
+    plt.close() 
+
+
+
+
 if __name__=="__main__": 
-    grpcat = GroupCat(Mrcut=18, position='central')
-    grpcat.Read()
-    print np.min(grpcat.z), np.max(grpcat.z)
+    Plot_fQcen_parameterized()
+
+    #Plot_fQcentrals()
+
+    #grpcat = GroupCat(Mrcut=18, position='central')
+    #grpcat.Read()
+    #print np.min(grpcat.z), np.max(grpcat.z)
     #PlotLee2015_SFMS_zdep()
 
     #[BuildGroupCat(Mrcut=Mr, position='satellite') for Mr in [18, 19, 20]]
