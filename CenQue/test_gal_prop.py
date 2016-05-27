@@ -82,7 +82,6 @@ def PlotFq_t(lit='wetzelsmooth'):
 
     return None
 
-
 def PlotFq_comp(lit=['wetzel', 'wetzel_alternate']): 
     ''' Compare the quiescent function evolution for different analytic prescriptions 
     '''
@@ -99,6 +98,49 @@ def PlotFq_comp(lit=['wetzel', 'wetzel_alternate']):
     qf = gp.Fq()
     for il, l in enumerate(lit): 
         sub = fig.add_subplot(1,len(lit),il+1) 
+        
+        for iz, z in enumerate(z_arr): 
+            if iz == 0: 
+                label = (l.replace('_', ' ')).title()
+            else: 
+                label = None
+            fq_M = qf.model(M_arr, z, lit=l)  
+            sub.plot(M_arr, fq_M, c=pretty_colors[iz], lw=3, label=label)
+    
+        sub.set_xlim([9.0, 12.]) 
+        sub.set_xlabel(r'$\mathtt{M_{*}}$', fontsize=25)
+
+        sub.set_ylim([0., 1.])
+        if il == 0: 
+            sub.set_ylabel(r'$\mathtt{f_Q}$', fontsize=25) 
+        else: 
+            sub.set_yticklabels([]) 
+
+        sub.legend(loc='upper left') 
+    fig_file = ''.join(['figure/test/', 
+        'Fq_Comparison.', '_'.join(lit), '.png'])
+    fig.savefig(fig_file, bbox_inches='tight') 
+    plt.close()
+
+    return None
+
+def PlotFq_WetzelTinker_comparison(): 
+    ''' Compare the quiescent function evolution for different analytic prescriptions 
+    '''
+    lit = ['wetzel', 'wetzel_alternate', 'cosmos_tinker']
+    prettyplot()
+    pretty_colors = prettycolors()
+    
+    M_arr = np.arange(9.0, 12.2, 0.2)
+    z_arr = np.arange(0.0, 1.2, 0.2)
+    
+    prettyplot() 
+    pretty_colors = prettycolors() 
+    fig = plt.figure(figsize=(20,5))
+    
+    qf = gp.Fq()
+    for il, l in enumerate(lit): 
+        sub = fig.add_subplot(1,4,il+1) 
         
         for iz, z in enumerate(z_arr): 
             if iz == 0: 

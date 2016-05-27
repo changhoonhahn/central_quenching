@@ -309,7 +309,6 @@ def Plot_fQcentrals():
     sub.set_ylabel(r'$\mathtt{f_Q^{cen}}$', fontsize=30) 
     plt.show() 
         
-
 def Plot_fQcen_parameterized():
     ''' Plot the bestfit parameterization of the quiescent fractions 
     from Tinker et al. (2013)
@@ -386,11 +385,56 @@ def Plot_fQcen_parameterized():
     fig.savefig(fig_file, bbox_inches='tight') 
     plt.close() 
 
+def Plot_fQcen_SDSS(): 
+    ''' Compare the quiescent fraction of SDSS from the *corrected* SDSS fQ^cen 
+    from Tinker et al. (2013) versus the Wetzel et al. (2013) parameterization. 
+    '''
+    # mass binnning we impose 
+    m_low = np.array([9.5, 10., 10.5, 11., 11.5]) 
+    m_high = np.array([10., 10.5, 11., 11.5, 12.0])
+    m_mid = 0.5 * (m_low + m_high) 
+
+    # SDSS 
+    fq_file = ''.join(['dat/observations/cosmos_fq/', 'fcen_red_sdss_scatter.dat']) 
+    m_sdss, fqcen_sdss, N_sdss = np.loadtxt(fq_file, unpack=True, usecols=[0,1,2])
+    
+    fqcen_sdss_rebin = [] 
+    for im, m_mid_i in enumerate(m_mid): 
+        sdss_mbin = np.where(
+                (m_sdss >= m_low[im]) & 
+                (m_sdss < m_high[im])) 
+    
+        fqcen_sdss_rebin.append(
+                np.sum(fqcen_sdss[sdss_mbin] * N_sdss[sdss_mbin].astype('float'))/np.sum(N_sdss[sdss_mbin].astype('float'))
+                )
+    fqcen_sdss_rebin = np.array(fqcen_sdss_rebin)
+
+    prettyplot() 
+    pretty_colors = prettycolors()  
+    fig = plt.figure() 
+    sub = fig.add_subplot(111)
+    qf = Fq()
+    fqcen_model = qf.model(m_mid, 0.05, lit='cosmos_tinker') 
+    sub.plot(m_mid, fqcen_model, 
+            c=pretty_colors[3], lw=3, label=r'Wetzel et al. (2013) fit') 
+    sub.scatter(m_mid, fqcen_sdss_rebin, 
+            color=pretty_colors[0], lw=0, s=40, label=r'Tinker et al. (2013)') 
+
+    sub.set_xlim([9.0, 12.0]) 
+    sub.set_xlabel(r'$\mathtt{log\;M_*}$', fontsize=25) 
+    sub.set_ylim([0.0, 1.0]) 
+    sub.set_ylabel(r'$\mathtt{f_Q^{cen}}$', fontsize=25) 
+    sub.legend(loc='upper left', scatterpoints=1, markerscale=3) 
+    fig_file = ''.join(['figure/test/', 
+        'Fq_central_SDSS.png']) 
+    fig.savefig(fig_file, bbox_inches='tight') 
+    plt.close() 
 
 
 
 if __name__=="__main__": 
-    Plot_fQcen_parameterized()
+    Plot_fQcen_SDSS()
+    #Plot_fQcen_parameterized()
 
     #Plot_fQcentrals()
 

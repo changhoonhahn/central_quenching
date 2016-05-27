@@ -847,7 +847,7 @@ class PlotABC(object):
 
 if __name__=="__main__": 
     for tf in [3]:
-        ppp = PlotABC(tf, abcrun='RHOssfrfq', prior_name='updated')
+        ppp = PlotABC(tf, abcrun='RHOssfrfq_TinkerFq_Std', prior_name='updated')
         ppp.Corner()
         #ppp.Ssfr()
         #ppp.QAplot(nsnap_descendant=[1, 6])
