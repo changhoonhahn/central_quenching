@@ -251,11 +251,11 @@ def MakeABCrun(abcrun=None, nsnap_start=15, subhalo=None, fq=None, sfms=None, du
     # Subhalo properties
     f.write('# Subhalo Properties \n') 
     if subhalo is None:    
-        subhalo = {'scatter': 0.2, 'source': 'li-march'}
+        subhalo_dict = {'scatter': 0.2, 'source': 'li-march'}
     elif isinstance(subhalo, str):  
-        subhalo = {'scatter': 0.2, 'source': subhalo}
-    f.write(''.join(['scatter = ', str(subhalo['scatter']), '\n']))
-    f.write(''.join(['source = ', subhalo['source'], '\n']))
+        subhalo_dict = {'scatter': 0.2, 'source': subhalo}
+    f.write(''.join(['scatter = ', str(subhalo_dict['scatter']), '\n']))
+    f.write(''.join(['source = ', subhalo_dict['source'], '\n']))
     f.write('\n')
     
     # Quiescent fraction properties
@@ -300,7 +300,7 @@ def MakeABCrun(abcrun=None, nsnap_start=15, subhalo=None, fq=None, sfms=None, du
             }
     kwargs = {
             'nsnap_ancestor': nsnap_start, 
-            'subhalo_prop': subhalo, 
+            'subhalo_prop': subhalo_dict, 
             'sfr_prop': {'fq': fq, 'sfms': sfms},
             'evol_prop': evol_dict
             }
