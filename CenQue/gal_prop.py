@@ -172,10 +172,12 @@ class Fq(object):
                 if Mstar < 10.0: 
                     alpha = -2.57
                 elif (Mstar >= 10.0) & (Mstar < 10.5): 
-                    alpha = -1.47
+                    alpha = -2.52
                 elif (Mstar >= 10.5) & (Mstar < 11.0): 
+                    alpha = -1.47
+                elif (Mstar >= 11.0) & (Mstar <= 11.5): 
                     alpha = -0.55
-                elif (Mstar >= 11.0): # & (Mstar <= 11.5): 
+                elif (Mstar >= 11.5):
                     alpha = -0.12
             #else: 
             #    raise NameError('Mstar is out of range')

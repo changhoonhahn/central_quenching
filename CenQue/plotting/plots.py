@@ -862,7 +862,10 @@ def QAplot(descendant, sfinh_kwargs, fig_name=None, **kwargs):
             sub_i.scatter(M_mid, gc_fq, color='k', s=100, lw=0, label='Group Catalog')
             # fQ of the model (input) fQ
             fq_model = qfrac.model(M_bin, descendant.zsnap, lit=sfinh_kwargs['sfr_prop']['fq']['name'])
-            sub_i.plot(M_bin, fq_model, color='k', lw=4, ls='--', label=sfinh_kwargs['sfr_prop']['fq']['name'])
+            sub_i.plot(M_bin, fq_model, 
+                    color='k', lw=4, ls='--', 
+                    label=sfinh_kwargs['sfr_prop']['fq']['name'].replace('_', ' ').title() 
+                    )
 
             sub_i.set_xlim([9.0, 12.0])
             sub_i.set_ylim([0.0, 1.0])

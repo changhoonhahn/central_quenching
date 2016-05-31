@@ -369,15 +369,19 @@ def Plot_fQcen_parameterized():
                 np.array([fqcen_sdss_rebin[im]]+list(fqcen_low_cosmos_rebin[:,im])),
                 np.array([fqcen_sdss_rebin[im]]+list(fqcen_high_cosmos_rebin[:,im])),
                 color=pretty_colors[2*im], 
-                alpha=0.5
-                )
+                alpha=0.5, 
+                label=r'$\mathtt{log\;M_*} = '+str(m_mid[im])+'$')
         sub.plot(
                 z_arr,
                 fqcen_sdss_rebin[im] * (1. + z_arr)**alpha_m[im], 
                 c='k', ls='--', lw=2)
+
+    sub.legend(loc='best') 
     
     sub.set_xlim([0.0, 1.0])
-    sub.set_ylim([0.0, 1.0])
+    #sub.set_ylim([0.0, 1.0])
+    sub.set_ylim([0.01, 1.0]) 
+    sub.set_yscale('log') 
     sub.set_xlabel(r'$\mathtt{M_*}$', fontsize=30) 
     sub.set_ylabel(r'$\mathtt{f_Q^{cen}}$', fontsize=30) 
     fig_file = ''.join(['figure/test/', 
@@ -433,8 +437,8 @@ def Plot_fQcen_SDSS():
 
 
 if __name__=="__main__": 
-    Plot_fQcen_SDSS()
-    #Plot_fQcen_parameterized()
+    #Plot_fQcen_SDSS()
+    Plot_fQcen_parameterized()
 
     #Plot_fQcentrals()
 
