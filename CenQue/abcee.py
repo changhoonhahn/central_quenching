@@ -846,12 +846,12 @@ class PlotABC(object):
 
 
 if __name__=="__main__": 
-    for tf in [7]:
-        ppp = PlotABC(tf, abcrun='RHOssfrfq_TinkerFq_Std', prior_name='updated')
-        ppp = PlotABC(tf, abcrun='RHOssfrfq', prior_name='updated')
+    for tf in [0,1,2]:
+        ppp = PlotABC(tf, abcrun='RHOssfrfq_TinkerFq_NOSMFevol', prior_name='updated')
+        #ppp = PlotABC(tf, abcrun='RHOssfrfq', prior_name='updated')
         ppp.Corner()
-        ppp.Ssfr()
-        ppp.QAplot(nsnap_descendant=[1, 6])
+        #ppp.Ssfr()
+        #ppp.QAplot(nsnap_descendant=[1, 6])
     
     #for run in ['multifq_wideprior_nosmfevo', 'multifq_wideprior_extremesmfevo']:
     #    ppp = PlotABC(8, abcrun=run)

@@ -551,7 +551,7 @@ def fig_SSFR_tau_satellite(tf, abcrun='rhofq_tausat', prior_name='satellite'):
 
 
 def fig_tau_ABC_post(tf, abcrun=None, prior_name='try0'): 
-    ''' The SSFR distribution from the median value of the ABC posterior
+    ''' The tau_Q^cen for the median values of the quenching timescale parameters in the ABC posterior
     '''
     # model 
     ppp = PlotABC(tf, abcrun=abcrun, prior_name=prior_name)
@@ -611,6 +611,50 @@ def fig_tau_ABC_post(tf, abcrun=None, prior_name='try0'):
         '.', abcrun, 
         '.', prior_name, '_prior', 
         '.png'])
+    fig.savefig(fig_file, bbox_inches='tight', dpi=150)
+    plt.close()
+    Util.png2pdf(fig_file)
+    return None 
+
+
+def fig_tau_SMFevol(standard_run=None, standard_tf=7, noSMF_run=None, noSMF_tf=7, extraSMF_run=None, extraSMF_tf=7): 
+    ''' tau_Q^cen comparison for different SMF evolution prescription 
+    '''
+    prettyplot() 
+    pretty_colors = prettycolors() 
+    fig = plt.figure(figsize=(7,7))
+    sub = fig.add_subplot(111)
+    m_arr = np.arange(8.5, 12.5, 0.25)   # log M* 
+
+    # Standard model 
+    std = PlotABC(standard_tf, abcrun=standard_run, prior_name='updated')
+    gv_slope, gv_offset, fudge_slope, fudge_offset, tau_slope, tau_offset = std.med_theta
+    std_med_tau_dict = {'name': 'line', 'slope': tau_slope, 'fid_mass': 11.1, 'yint': tau_offset}
+    sub.plot(10**m_arr, sfr_evol.getTauQ(m_arr, tau_prop=std_med_tau_dict), c=pretty_colors[3], fmt='o', lw=2, label='Centrals (Hahn+2016)')
+    # No SMF evolution  
+    nosmf = PlotABC(noSMF_tf, abcrun=noSMF_run, prior_name='updated')
+    gv_slope, gv_offset, fudge_slope, fudge_offset, tau_slope, tau_offset = nosmf.med_theta
+    nosmf_med_tau_dict = {'name': 'line', 'slope': tau_slope, 'fid_mass': 11.1, 'yint': tau_offset}
+    sub.plot(10**m_arr, sfr_evol.getTauQ(m_arr, tau_prop=nosmf_med_tau_dict), c=pretty_colors[5], fmt='o', lw=2, label='Constant SMF Evolution')
+    # Extra SMF evolution  
+    extrasmf = PlotABC(noSMF_tf, abcrun=noSMF_run, prior_name='updated')
+    gv_slope, gv_offset, fudge_slope, fudge_offset, tau_slope, tau_offset = extrasmf.med_theta
+    extrasmf_med_tau_dict = {'name': 'line', 'slope': tau_slope, 'fid_mass': 11.1, 'yint': tau_offset}
+    sub.plot(10**m_arr, sfr_evol.getTauQ(m_arr, tau_prop=extrasmf_med_tau_dict), c=pretty_colors[7], fmt='o', lw=2, label='Exaggerated SMF Evolution')
+
+    sub.plot(10**m_arr, sfr_evol.getTauQ(m_arr, tau_prop={'name': 'satellite'}), 
+            c='k', ls='--', lw=3, label='Satellites (Wetzel+2014)')
+    sub.set_xlabel(r"$\mathtt{log(M_*\;[M_\odot])}$", fontsize=25)
+    sub.set_xscale('log') 
+    sub.set_xlim([10**9.5, 10**11.5])
+
+    sub.set_ylim([0.0, 1.7])
+    sub.set_yticks([0.0, 0.25, 0.5, 0.75, 1.0, 1.25, 1.5])
+    sub.set_ylabel(r"$\tau_\mathtt{Q}\;[\mathtt{Gyr}]$", fontsize=25)
+    sub.legend(loc='upper right', numpoints=1, prop={'size': 20}, handletextpad=0.5, markerscale=3)
+    
+    fig_file = ''.join(['figure/paper/',
+        'tau.SMFevolcomparison.png'])
     fig.savefig(fig_file, bbox_inches='tight', dpi=150)
     plt.close()
     Util.png2pdf(fig_file)
