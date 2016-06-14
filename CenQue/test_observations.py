@@ -435,10 +435,126 @@ def Plot_fQcen_SDSS():
     plt.close() 
 
 
+def fgas_comparison(): 
+    '''
+    Compare f_gas (gas fraction) from different literature 
+    '''
+    m_arr = np.arange(9.0, 12.1, 0.1)   # mass array 
+
+    prettyplot()
+    pretty_colors = prettycolors() 
+    fig = plt.figure(figsize=(15,7)) 
+    fig1 = plt.figure(figsize=(15,7)) 
+    fig2 = plt.figure(figsize=(15,7)) 
+    for iz, z in enumerate([0.1, 0.4, 0.8]): 
+        sub = fig.add_subplot(1, 3, iz+1)
+        sub1 = fig1.add_subplot(1, 3, iz+1)
+        sub2 = fig2.add_subplot(1, 3, iz+1)
+        # Stewart+2009
+        f_stargas = 0.04 * ((10.**m_arr)/(4.5*10.**11.))**(-0.59 * (1. + z)**0.45)
+        f_gas_Stewart = 1. - 1./(1. + f_stargas)
+
+        # Santini+2014
+        if z < 0.2: 
+            dat_file = util.code_dir().split('CenQue')[0]+'dat/santini_fgas_z0.1.dat'
+        elif (z >= 0.2) & (z < 0.6): 
+            dat_file = util.code_dir().split('CenQue')[0]+'dat/santini_fgas_z0.4.dat'
+        elif (z >= 0.6) & (z < 1.): 
+            dat_file = util.code_dir().split('CenQue')[0]+'dat/santini_fgas_z0.8.dat'
+        else: 
+            raise ValueError
+        m_dat, fgas_dat = np.loadtxt(dat_file, delimiter=',', unpack=True, usecols=[0,1]) 
+        f_gas_Santini = fgas_dat 
+        
+        # Boselli+2014
+        f_gas_Boselli = 1. - 1./(1. + 10**(-0.69 * m_arr + 6.63))
+        
+        M_gas_Stewart = np.log10(1./(1./f_gas_Stewart-1.) * 10**m_arr)
+        M_gas_Santini = np.log10(1./(1./f_gas_Santini-1.) * 10**m_dat)
+        M_gas_Boselli = np.log10(1./(1./f_gas_Boselli-1.) * 10**m_arr)
+    
+        t_gas_stewart = 10**M_gas_Stewart / 10**AverageLogSFR_sfms(m_arr, z, sfms_prop={'name': 'linear', 'zslope':1.14})/10**9
+        t_gas_santini = 10**M_gas_Santini / 10**AverageLogSFR_sfms(m_dat, z, sfms_prop={'name': 'linear', 'zslope':1.14})/10**9
+        t_gas_boselli = 10**M_gas_Boselli / 10**AverageLogSFR_sfms(m_arr, z, sfms_prop={'name': 'linear', 'zslope':1.14})/10**9
+
+
+        sub.plot(m_arr, f_gas_Stewart, lw=3, c=pretty_colors[1], label='Stewart+2009') 
+        sub.plot(m_dat, f_gas_Santini, lw=3, c=pretty_colors[3], label='Santini+2014') 
+        if z < 0.2: 
+            sub.plot(m_arr, f_gas_Boselli, lw=3, c=pretty_colors[5], label='Boselli+2014') 
+        sub.text(10.0, 0.05, r"$\mathtt{z = "+str(z)+"}$", fontsize=25) 
+        sub.set_xlim([9.7, 11.5]) 
+        if iz == 1: 
+            sub.set_xlabel(r'Stellar Mass', fontsize=25) 
+        sub.set_ylim([0., 0.5]) 
+        if iz == 0: 
+            sub.set_ylabel(r'$\mathtt{f_{gas}} = \mathtt{M_{gas}/(M_{gas} + M_{star})}$', fontsize=25) 
+            sub.legend(loc='upper right') 
+        else: 
+            sub.set_yticklabels([]) 
+
+
+        sub1.plot(m_arr, M_gas_Stewart, lw=3, c=pretty_colors[1], label='Stewart+2009') 
+        sub1.plot(m_dat, M_gas_Santini, lw=3, c=pretty_colors[3], label='Santini+2014') 
+        if z < 0.2: 
+            sub1.plot(m_arr, M_gas_Boselli, lw=3, c=pretty_colors[5], label='Boselli+2014') 
+    
+        sub1.text(10.0, 9.25, r"$\mathtt{z = "+str(z)+"}$", fontsize=25) 
+        sub1.set_xlim([9.7, 11.5]) 
+        if iz == 1: 
+            sub1.set_xlabel(r'Stellar Mass', fontsize=25) 
+        sub1.set_ylim([9., 10.5]) 
+        if iz == 0: 
+            sub1.set_ylabel(r'$\mathtt{M_{gas}}$', fontsize=25) 
+            sub1.legend(loc='upper right') 
+        else: 
+            sub1.set_yticklabels([]) 
+
+
+        sub2.plot(m_arr, t_gas_stewart, lw=3, c=pretty_colors[1], label='Stewart+2009') 
+        sub2.plot(m_dat, t_gas_santini, lw=3, c=pretty_colors[3], label='Santini+2014') 
+        if z < 0.2: 
+            sub2.plot(m_arr, t_gas_boselli, lw=3, c=pretty_colors[5], label='Boselli+2014, z=0') 
+        
+        sub2.text(10.0, 0.05, r"$\mathtt{z = "+str(z)+"}$", fontsize=25) 
+        sub2.set_xlim([9.7, 11.5]) 
+        if iz == 1: 
+            sub2.set_xlabel(r'Stellar Mass', fontsize=25) 
+        sub2.set_ylim([0., 10.]) 
+        if iz == 0: 
+            sub2.set_ylabel(r'$\mathtt{M_{gas}(z)/SFR^{SFMS}(z)}$ [Gyr]', fontsize=25) 
+            sub2.legend(loc='upper right') 
+        else: 
+            sub2.set_yticklabels([]) 
+
+    fig.subplots_adjust(wspace=0.0, hspace=0.0)
+    fig_file = ''.join(['figure/',
+        'f_gas_comparison',
+        '.png'])
+    fig.savefig(fig_file, bbox_inches='tight', dpi=150)
+    plt.close()
+
+    fig1.subplots_adjust(wspace=0.0, hspace=0.0)
+    fig_file = ''.join(['figure/',
+        'M_gas_comparison',
+        '.png'])
+    fig1.savefig(fig_file, bbox_inches='tight', dpi=150)
+    plt.close()
+
+    fig2.subplots_adjust(wspace=0.0, hspace=0.0)
+    fig_file = ''.join(['figure/',
+        't_gas_comparison',
+        '.png'])
+    fig2.savefig(fig_file, bbox_inches='tight', dpi=150)
+    plt.close()
+    return None
+
+
+
 
 if __name__=="__main__": 
     #Plot_fQcen_SDSS()
-    Plot_fQcen_parameterized()
+    #Plot_fQcen_parameterized()
 
     #Plot_fQcentrals()
 
@@ -446,9 +562,10 @@ if __name__=="__main__":
     #grpcat.Read()
     #print np.min(grpcat.z), np.max(grpcat.z)
     #PlotLee2015_SFMS_zdep()
+    fgas_comparison()
 
-    [BuildGroupCat(Mrcut=Mr, position='central') for Mr in [18, 19, 20]]
-    [BuildGroupCat(Mrcut=Mr, position='satellite') for Mr in [18, 19, 20]]
+    #[BuildGroupCat(Mrcut=Mr, position='central') for Mr in [18, 19, 20]]
+    #[BuildGroupCat(Mrcut=Mr, position='satellite') for Mr in [18, 19, 20]]
     #PlotObservedSSFR('groupcat_cen', isedfit=False, Peak=True)
     #PlotObservedSSFR('groupcat_sat', isedfit=False, Peak=True)
 

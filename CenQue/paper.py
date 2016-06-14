@@ -7,6 +7,7 @@ central quenching timescale paper
 import os 
 import pickle
 import numpy as np 
+from scipy.interpolate import interp1d
 
 import util.util as Util 
 import sfr_evol
@@ -800,117 +801,88 @@ def fig_tau_SMFevol(standard_run=None, standard_tf=7, noSMF_run=None, noSMF_tf=7
     return None 
 
 
-def fig_gas_depletion_Stewart(z=0.5):
+def fig_gas_depletion():
     ''' Explore the gas depletion time to the quenching time 
     using the gas mass scaling relation of Stewart et al. (2009)
     '''
-    f_stargas = lambda log_mstar, zz: 0.04 * ((10.**log_mstar)/(4.5*10.**11.))**(-0.59 * (1. + zz)**0.45)
 
     m_arr = np.arange(9.0, 12.1, 0.1)   # mass array 
-    print np.log10(f_stargas(m_arr, 1.0)/f_stargas(m_arr, 0.)) 
-    
-    # quenching time 
-    std = PlotABC(7, abcrun='RHOssfrfq_TinkerFq_Std', prior_name='updated')
-    gv_slope, gv_offset, fudge_slope, fudge_offset, tau_slope, tau_offset = std.med_theta
-    std_med_tau_dict = {'name': 'line', 'slope': tau_slope, 'fid_mass': 11.1, 'yint': tau_offset}
-    
-    t_deplete = f_stargas(m_arr, z) * 10**m_arr / 10**sfr_evol.AverageLogSFR_sfms(m_arr, z, sfms_prop={'name': 'linear', 'zslope': 1.14})
-    t_deplete /= 10**9
-
-    f_sfr = 10**(-1.*(
-            sfr_evol.AverageLogSFR_sfms(m_arr, z, sfms_prop={'name': 'linear', 'zslope': 1.14}) - 
-            (sfr_evol.AverageLogSSFR_q_peak(m_arr) + m_arr)))
-
-    t_quench = np.log(f_sfr) * sfr_evol.getTauQ(m_arr, tau_prop=std_med_tau_dict) * -1.
+    #print np.log10(f_stargas(m_arr, 1.0)/f_stargas(m_arr, 0.)) 
     
     prettyplot()
     pretty_colors = prettycolors() 
-    fig = plt.figure()
-    sub = fig.add_subplot(111)
-    sub.plot(10**m_arr, t_deplete, lw=3, c='k', label='Gas Depletion Time')
-    sub.plot(10**m_arr, t_quench, lw=3, c=pretty_colors[3], label='Quenching Time') 
-    sub.text(10**11., 9., r'$\mathtt{z = '+str(z)+'}$', fontsize=20)
-
-    sub.legend(loc='lower left') 
-    sub.set_xlim([10**9.7, 10**11.5]) 
-    sub.set_xscale('log') 
-    sub.set_xlabel(r'Redshift $\mathtt{(z)}$', fontsize=25) 
-    sub.set_ylim([0., 10.]) 
-    sub.set_ylabel(r'Gas Depletion Time [Gyr]', fontsize=25) 
-
-    fig_file = ''.join(['figure/paper/',
-        't_gas_depletion',
-        '.z', str(z), 
-        '.png'])
-    fig.savefig(fig_file, bbox_inches='tight', dpi=150)
-    plt.close()
-    Util.png2pdf(fig_file)
-    return None 
-
-
-def fig_gas_depletion_Santini(z=0.5):
-    ''' Explore the gas depletion time to the quenching time 
-    using the gas mass scaling relation of Santini et al. (2014)
-
-    fgas = alpha + beta (log M* - 11) 
-
-    '''
-
-    m_arr = np.arange(9.8, 12.1, 0.1)   # mass array 
-    
-    # our quenching time 
-    std = PlotABC(7, abcrun='RHOssfrfq_TinkerFq_Std', prior_name='updated')
-    gv_slope, gv_offset, fudge_slope, fudge_offset, tau_slope, tau_offset = std.med_theta
-    std_med_tau_dict = {'name': 'line', 'slope': tau_slope, 'fid_mass': 11.1, 'yint': tau_offset}
-    
-    f_sfr = 10**(-1.*(
-            sfr_evol.AverageLogSFR_sfms(m_arr, z, sfms_prop={'name': 'linear', 'zslope': 1.14}) - 
-            (sfr_evol.AverageLogSSFR_q_peak(m_arr) + m_arr)))
-
-    t_quench = np.log(f_sfr) * sfr_evol.getTauQ(m_arr, tau_prop=std_med_tau_dict) * -1.
-
-    # Santini et al. (2014) 
-    sfr_sfms_arr = sfr_evol.AverageLogSFR_sfms(m_arr, z, sfms_prop={'name': 'linear', 'zslope': 1.14})
-    for im, mm in enumerate(m_arr): 
-        sfr_sfms_m = sfr_sfms_arr[im]
-        if (sfr_sfms_m >= -0.25) & (sfr_sfms_m < 0.25):  
-        elif (sfr_sfms_m >= 0.25) & (sfr_sfms_m < 0.5):  
-        elif (sfr_sfms_m >= 0.5) & (sfr_sfms_m < 0.25):  
-        elif (sfr_sfms_m >= 0.25) & (sfr_sfms_m < 0.25):  
-        elif (sfr_sfms_m >= 0.25) & (sfr_sfms_m < 0.25):  
-        elif (sfr_sfms_m >= 0.25) & (sfr_sfms_m < 0.25):  
-        elif (sfr_sfms_m >= 0.25) & (sfr_sfms_m < 0.25):  
-
-    
-
-
+    fig = plt.figure(figsize=(15, 6))
+    for iz, z in enumerate([0.1, 0.4, 0.8]): 
+        # central quenching time 
+        std = PlotABC(7, abcrun='RHOssfrfq_TinkerFq_Std', prior_name='updated')
+        gv_slope, gv_offset, fudge_slope, fudge_offset, tau_slope, tau_offset = std.med_theta
+        std_med_tau_dict = {'name': 'line', 'slope': tau_slope, 'fid_mass': 11.1, 'yint': tau_offset}
         
+        f_sfr = 10**(-1.*(
+                sfr_evol.AverageLogSFR_sfms(m_arr, z, sfms_prop={'name': 'linear', 'zslope': 1.14}) + 2.0))
+        #(sfr_evol.AverageLogSSFR_q_peak(m_arr) + m_arr)))
 
-    
-    prettyplot()
-    pretty_colors = prettycolors() 
-    fig = plt.figure()
-    sub = fig.add_subplot(111)
-    sub.plot(10**m_arr, t_deplete, lw=3, c='k', label='Gas Depletion Time')
-    sub.plot(10**m_arr, t_quench, lw=3, c=pretty_colors[3], label='Quenching Time') 
-    sub.text(10**11., 9., r'$\mathtt{z = '+str(z)+'}$', fontsize=20)
+        t_quench = np.log(f_sfr) * sfr_evol.getTauQ(m_arr, tau_prop=std_med_tau_dict) * -1.
 
-    sub.legend(loc='lower left') 
-    sub.set_xlim([10**9.7, 10**11.5]) 
-    sub.set_xscale('log') 
-    sub.set_xlabel(r'Redshift $\mathtt{(z)}$', fontsize=25) 
-    sub.set_ylim([0., 10.]) 
-    sub.set_ylabel(r'Gas Depletion Time [Gyr]', fontsize=25) 
+        # Stewart+2009
+        f_stargas = 0.04 * ((10.**m_arr)/(4.5*10.**11.))**(-0.59 * (1. + z)**0.45)
+        f_gas_Stewart = 1. - 1./(1. + f_stargas)
+        M_gas_Stewart = np.log10(1./(1./f_gas_Stewart-1.) * 10**m_arr)
+        t_gas_Stewart = 10**M_gas_Stewart / 10**sfr_evol.AverageLogSFR_sfms(m_arr, z, sfms_prop={'name': 'linear', 'zslope':1.14})/10**9
 
+        # Santini+2014
+        if z < 0.2: 
+            dat_file = Util.code_dir().split('CenQue')[0]+'dat/santini_fgas_z0.1.dat'
+        elif (z >= 0.2) & (z < 0.6): 
+            dat_file = Util.code_dir().split('CenQue')[0]+'dat/santini_fgas_z0.4.dat'
+        elif (z >= 0.6) & (z < 1.): 
+            dat_file = Util.code_dir().split('CenQue')[0]+'dat/santini_fgas_z0.8.dat'
+        else: 
+            raise ValueError
+        m_dat, fgas_dat = np.loadtxt(dat_file, delimiter=',', unpack=True, usecols=[0,1]) 
+        f_gas_Santini = fgas_dat 
+        M_gas_Santini = np.log10(1./(1./f_gas_Santini-1.) * 10**m_dat)
+        t_gas_Santini = 10**M_gas_Santini / 10**sfr_evol.AverageLogSFR_sfms(m_dat, z, sfms_prop={'name': 'linear', 'zslope':1.14})/10**9
+
+        # Boselli+2014
+        f_gas_Boselli = 1. - 1./(1. + 10**(-0.69 * m_arr + 6.63))
+        M_gas_Boselli = np.log10(1./(1./f_gas_Boselli-1.) * 10**m_arr)
+        t_gas_Boselli = 10**M_gas_Boselli / 10**sfr_evol.AverageLogSFR_sfms(m_arr, z, sfms_prop={'name': 'linear', 'zslope':1.14})/10**9
+
+        sub = fig.add_subplot(1,3,iz+1)
+        sub.plot(10**m_arr, t_gas_Stewart, lw=3, c='k', label='Stewart+2009')
+        sub.plot(10**m_dat, t_gas_Santini, lw=3, c='k', ls='--', 
+                label='Santini+2014')
+        if z < 0.2: 
+            sub.plot(10**m_arr, t_gas_Boselli, lw=3, c='k', ls='-.',
+                    label='Boselli+2014')
+        else: 
+            sub.plot([0], [0], lw=3, c='k', ls='-.',
+                    label='Boselli+2014')
+        sub.plot(10**m_arr, t_quench, lw=3, c=pretty_colors[3], label='Quenching Time') 
+        sub.text(10**9.9, 1., r'$\mathtt{z = '+str(z)+'}$', fontsize=20)
+
+        sub.set_xlim([10**9.7, 10**11.5]) 
+        sub.set_xscale('log') 
+        if iz == 1: 
+            sub.set_xlabel(r'Stellar Mass', fontsize=25) 
+        sub.set_ylim([0., 10.]) 
+        
+        if iz == 0: 
+            sub.set_ylabel(r'Gas Depletion Time [Gyr]', fontsize=25) 
+        elif iz == 2: 
+            sub.set_yticklabels([]) 
+            sub.legend(loc='best') 
+        else: 
+            sub.set_yticklabels([]) 
+
+    fig.subplots_adjust(wspace=0.0, hspace=0.0)
     fig_file = ''.join(['figure/paper/',
-        't_gas_depletion',
-        '.z', str(z), 
-        '.png'])
+        't_gas_depletion.png'])
     fig.savefig(fig_file, bbox_inches='tight', dpi=150)
     plt.close()
     Util.png2pdf(fig_file)
     return None 
-
 
 
 def non_decreasing(L):
@@ -931,8 +903,9 @@ def keep_non_descreasing(L):
 if __name__=='__main__': 
     #for z in [0.1, 0.3, 0.5, 0.7, 0.9]: 
     #    fig_gas_depletion(z=z)
-    #fig_gas_depletion(z=1.)
-    figSFH_SchematicDemo(7, 'RHOssfrfq_TinkerFq_Std', prior_name='updated')
+    fig_gas_depletion()
+    #fig_gas_depletion_Santini(z=0.5)
+    #figSFH_SchematicDemo(7, 'RHOssfrfq_TinkerFq_Std', prior_name='updated')
     #fig_tau_SMFevol(
     #        standard_run='RHOssfrfq_TinkerFq_Std', standard_tf=7, 
     #        noSMF_run='RHOssfrfq_TinkerFq_NOSMFevol', noSMF_tf=8, 
