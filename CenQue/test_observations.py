@@ -447,7 +447,8 @@ if __name__=="__main__":
     #print np.min(grpcat.z), np.max(grpcat.z)
     #PlotLee2015_SFMS_zdep()
 
-    #[BuildGroupCat(Mrcut=Mr, position='satellite') for Mr in [18, 19, 20]]
+    [BuildGroupCat(Mrcut=Mr, position='central') for Mr in [18, 19, 20]]
+    [BuildGroupCat(Mrcut=Mr, position='satellite') for Mr in [18, 19, 20]]
     #PlotObservedSSFR('groupcat_cen', isedfit=False, Peak=True)
     #PlotObservedSSFR('groupcat_sat', isedfit=False, Peak=True)
 

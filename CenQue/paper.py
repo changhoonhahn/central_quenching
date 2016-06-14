@@ -291,6 +291,118 @@ def figSFH_demo(t, abcrun, prior_name='try0'):
     return None 
 
 
+def figSFH_SchematicDemo(t, abcrun, prior_name='try0'): 
+    ''' Figure that schematically demonstrates the Star-formation history 
+    of Quiescent, SF, and GV galaxies. These are not actually 
+    from the real model but demonstrations
+    '''
+    abc_plot = PlotABC(t, abcrun=abcrun, prior_name=prior_name) 
+    # median theta values 
+    gv_slope, gv_offset, fudge_slope, fudge_offset, tau_slope, tau_offset = abc_plot.med_theta
+    # other parameters
+    sfinherit_kwargs, abcrun_flag = ReadABCrun(abcrun)
+    sim_kwargs = sfinherit_kwargs.copy()
+    sim_kwargs['sfr_prop']['gv'] = {
+            'slope': gv_slope, 'fidmass': 10.5, 'offset': gv_offset}
+    sim_kwargs['evol_prop']['fudge'] = {
+            'slope': fudge_slope, 'fidmass': 10.5, 'offset': fudge_offset}
+    sim_kwargs['evol_prop']['tau'] = {
+            'name': 'line', 'slope': tau_slope, 'fid_mass': 11.1, 'yint': tau_offset}
+
+    figdata_file = ''.join(['/data1/hahn/paper/', 'figSFH_demo.data_file.', abcrun, '.p']) 
+    if not os.path.isfile(figdata_file): 
+        # run model for median theta values 
+        inh = Inherit([1], 
+                nsnap_ancestor=sim_kwargs['nsnap_ancestor'],
+                subhalo_prop=sim_kwargs['subhalo_prop'], 
+                sfr_prop=sim_kwargs['sfr_prop'], 
+                evol_prop=sim_kwargs['evol_prop'])
+        des_dict = inh()
+        anc = inh.ancestor
+        pickle.dump([anc, des_dict], open(figdata_file, 'wb'))
+    else:
+        anc, des_dict = pickle.load(open(figdata_file, 'rb'))
+
+    z_snap, t_snap = np.loadtxt(Util.snapshottable(), unpack=True, usecols=[2, 3]) 
+    z_cosmics = z_snap[1:sim_kwargs['nsnap_ancestor']+1][::-1]
+    t_cosmics = t_snap[1:sim_kwargs['nsnap_ancestor']+1][::-1]
+
+    des1 = des_dict['1']    # descendant at nsnap = 1
+
+    M_anc = (anc.mass)[des1.will] # ancestor mass 
+    m0_lim = np.where((M_anc > 9.5) & (M_anc < 10.)) 
+    
+    Msham_evol = (anc.Msham_evol[0])[des1.will[m0_lim]][::-1]
+
+    avg_Msham_evol = np.zeros(Msham_evol.shape[1]) 
+    for i in range(Msham_evol.shape[1]): 
+        hasmass = np.where(Msham_evol[:,i] > 0.)
+        avg_Msham_evol[i] = np.mean((Msham_evol[:,i])[hasmass])
+
+    # star-forming 
+    sf_SFRs = \
+            sfr_evol.AverageLogSFR_sfms(
+                    avg_Msham_evol,
+                    z_cosmics.max(), 
+                    sfms_prop=sim_kwargs['sfr_prop']['sfms']) + \
+            sfr_evol.DeltaLogSFR_sfms(
+                    z_cosmics.max(), 
+                    z_cosmics.min(), 
+                    sfms_prop=sim_kwargs['sfr_prop']['sfms']) 
+
+    # quenching  
+    tqq = np.array([9.0])
+    qing_SFRs = np.zeros(len(z_cosmics))
+    for i_z, z_f in enumerate(z_cosmics): 
+        # log(SFR)_SFMS evolution from t0
+        logsfr_sfms = sf_SFRs[i_z]
+
+        closest_tQ_index = np.abs(t_cosmics - tqq[0]).argmin() - 1
+        logsfr_quench = sfr_evol.DeltaLogSFR_quenching(
+                tqq, 
+                t_cosmics[i_z],
+                M_q=avg_Msham_evol[closest_tQ_index],
+                tau_prop=sim_kwargs['evol_prop']['tau'])
+        logsfr_tot = logsfr_sfms + logsfr_quench
+        qing_SFRs[i_z] = logsfr_tot
+    '''
+    # overquenching 
+    avg_q_ssfr = sfr_evol.AverageLogSSFR_q_peak(avg_Msham_evol[-1])
+    sigma_q_ssfr = sfr_evol.ScatterLogSSFR_q_peak(avg_Msham_evol[-1])
+    min_q_ssfr = (sigma_q_ssfr + avg_q_ssfr)#[0]
+    qing_ssfr = qing_SFRs - avg_Msham_evol 
+    qing_SFRs[np.where(qing_ssfr < min_q_ssfr)] = \
+            avg_Msham_evol[np.where(qing_ssfr < min_q_ssfr)] + min_q_ssfr
+    '''
+    # figure 
+    prettyplot() 
+    pretty_colors = prettycolors()
+    fig = plt.figure(1, figsize=(7, 6))
+    sub = fig.add_subplot(111) 
+
+    sub.plot(t_cosmics, qing_SFRs, color=pretty_colors[6], lw=5)#, label='$Quenching$ ($\mathtt{t_Q=9}$ Gyr)')
+    sub.text(9.5, -.9, '$Quenching\;(\mathtt{t_Q=9}$ Gyr)', rotation=-42.5) 
+    sub.plot(t_cosmics, sf_SFRs, color=pretty_colors[1], lw=5, ls='--')#, label='$Star-Forming$') 
+    sub.text(10., -0.25, '$StarForming$', rotation=-3) 
+
+    avg_q_ssfr = sfr_evol.AverageLogSSFR_q_peak(avg_Msham_evol[-1])
+    sigma_q_ssfr = sfr_evol.ScatterLogSSFR_q_peak(avg_Msham_evol[-1])
+    sub.fill_between(t_cosmics, 
+            np.repeat(avg_q_ssfr + sigma_q_ssfr + avg_Msham_evol[-1], len(t_cosmics)), 
+            np.repeat(-3., len(t_cosmics)), color=pretty_colors[4]) 
+    sub.text(8.25, -2.5, '$Quiescent$', fontsize=25) 
+
+    sub.set_xlim([t_cosmics.min(), t_cosmics.max()])
+    sub.set_xlabel(r'$\mathtt{t_{cosmic}}\;[\mathtt{Gyr}]$', fontsize=25) 
+    sub.set_ylim([-3., 0.5]) 
+    sub.set_ylabel(r'$\mathtt{log}(\mathtt{SFR}\;[\mathtt{M}_\odot/\mathtt{yr}])$', fontsize=25) 
+    fig_file = ''.join(['figure/paper/', 'SFH_SchematicDemo.png']) 
+    fig.savefig(fig_file, bbox_inches='tight', dpi=150) 
+    Util.png2pdf(fig_file)
+    plt.close() 
+    return None 
+    
+
 def fig_SSFRevol(t, abcrun, prior_name='try0'): 
     ''' Demonstrate the SFR assignment scheme based through the 
     SSFR distribution function P(SSFR) with different GV prescriptions.
@@ -624,26 +736,53 @@ def fig_tau_SMFevol(standard_run=None, standard_tf=7, noSMF_run=None, noSMF_tf=7
     pretty_colors = prettycolors() 
     fig = plt.figure(figsize=(7,7))
     sub = fig.add_subplot(111)
-    m_arr = np.arange(8.5, 12.5, 0.25)   # log M* 
+    m_arr = np.arange(8.5, 12.1, 0.1)   # log M* 
 
     # Standard model 
     std = PlotABC(standard_tf, abcrun=standard_run, prior_name='updated')
     gv_slope, gv_offset, fudge_slope, fudge_offset, tau_slope, tau_offset = std.med_theta
     std_med_tau_dict = {'name': 'line', 'slope': tau_slope, 'fid_mass': 11.1, 'yint': tau_offset}
-    sub.plot(10**m_arr, sfr_evol.getTauQ(m_arr, tau_prop=std_med_tau_dict), c=pretty_colors[3], fmt='o', lw=2, label='Centrals (Hahn+2016)')
+
+    tauq_list = [] 
+    for ii in range(len(std.theta)): 
+        tau_dict_i = {
+                'name': 'line', 
+                'slope': (std.theta[ii])[-2], 
+                'fid_mass': 11.1, 
+                'yint': (std.theta[ii])[-1]
+                }
+        #sub.plot(10**m_arr, sfr_evol.getTauQ(m_arr, tau_prop=tau_dict_i), 
+        #        c=pretty_colors[8], lw=0.4, alpha=0.1)
+        tauq_list.append(sfr_evol.getTauQ(m_arr, tau_prop=tau_dict_i))
+    tauq_list = np.array(tauq_list)
+    #a, b, c, d, e = np.percentile(tauq_list, [2.5, 16, 50, 84, 97.5], axis=0)
+    b, c, d = np.percentile(tauq_list, [16, 50, 84], axis=0)
+    #yerr = np.std(tauq_list, axis=0)
+
+    #sub.errorbar(10**m_arr, sfr_evol.getTauQ(m_arr, tau_prop=std_med_tau_dict), 
+    #        yerr=yerr, c=pretty_colors[3], fmt='o', lw=2, label='Centrals (Hahn+2016)')
+    sub.fill_between(10**m_arr, b, d, color=pretty_colors[3], alpha=0.5, edgecolor='none', label='Centrals') 
+
+    sub.plot(10**m_arr, sfr_evol.getTauQ(m_arr, tau_prop=std_med_tau_dict), 
+            c=pretty_colors[3], lw=2, ls='--')#, label='Centrals (Hahn+2016)')
+
     # No SMF evolution  
     nosmf = PlotABC(noSMF_tf, abcrun=noSMF_run, prior_name='updated')
     gv_slope, gv_offset, fudge_slope, fudge_offset, tau_slope, tau_offset = nosmf.med_theta
     nosmf_med_tau_dict = {'name': 'line', 'slope': tau_slope, 'fid_mass': 11.1, 'yint': tau_offset}
-    sub.plot(10**m_arr, sfr_evol.getTauQ(m_arr, tau_prop=nosmf_med_tau_dict), c=pretty_colors[5], fmt='o', lw=2, label='Constant SMF Evolution')
+    #sub.plot(10**m_arr, sfr_evol.getTauQ(m_arr, tau_prop=nosmf_med_tau_dict), 
+    #        c=pretty_colors[5], lw=2, label='Constant SMF Evo.')
+    sub.plot(10**m_arr, sfr_evol.getTauQ(m_arr, tau_prop=nosmf_med_tau_dict), 
+            c=pretty_colors[5], lw=2, label='Constant SMF Evo.')
     # Extra SMF evolution  
-    extrasmf = PlotABC(noSMF_tf, abcrun=noSMF_run, prior_name='updated')
+    extrasmf = PlotABC(extraSMF_tf, abcrun=extraSMF_run, prior_name='updated')
     gv_slope, gv_offset, fudge_slope, fudge_offset, tau_slope, tau_offset = extrasmf.med_theta
     extrasmf_med_tau_dict = {'name': 'line', 'slope': tau_slope, 'fid_mass': 11.1, 'yint': tau_offset}
-    sub.plot(10**m_arr, sfr_evol.getTauQ(m_arr, tau_prop=extrasmf_med_tau_dict), c=pretty_colors[7], fmt='o', lw=2, label='Exaggerated SMF Evolution')
+    sub.plot(10**m_arr, sfr_evol.getTauQ(m_arr, tau_prop=extrasmf_med_tau_dict), 
+            c=pretty_colors[7], lw=2, label='Exaggerated SMF Evo.')
 
     sub.plot(10**m_arr, sfr_evol.getTauQ(m_arr, tau_prop={'name': 'satellite'}), 
-            c='k', ls='--', lw=3, label='Satellites (Wetzel+2014)')
+            c='k', ls='--', lw=3, label='Satellites')
     sub.set_xlabel(r"$\mathtt{log(M_*\;[M_\odot])}$", fontsize=25)
     sub.set_xscale('log') 
     sub.set_xlim([10**9.5, 10**11.5])
@@ -651,7 +790,7 @@ def fig_tau_SMFevol(standard_run=None, standard_tf=7, noSMF_run=None, noSMF_tf=7
     sub.set_ylim([0.0, 1.7])
     sub.set_yticks([0.0, 0.25, 0.5, 0.75, 1.0, 1.25, 1.5])
     sub.set_ylabel(r"$\tau_\mathtt{Q}\;[\mathtt{Gyr}]$", fontsize=25)
-    sub.legend(loc='upper right', numpoints=1, prop={'size': 20}, handletextpad=0.5, markerscale=3)
+    sub.legend(loc='upper right', scatterpoints=1, prop={'size': 20}, handletextpad=0.5, markerscale=3)
     
     fig_file = ''.join(['figure/paper/',
         'tau.SMFevolcomparison.png'])
@@ -659,6 +798,119 @@ def fig_tau_SMFevol(standard_run=None, standard_tf=7, noSMF_run=None, noSMF_tf=7
     plt.close()
     Util.png2pdf(fig_file)
     return None 
+
+
+def fig_gas_depletion_Stewart(z=0.5):
+    ''' Explore the gas depletion time to the quenching time 
+    using the gas mass scaling relation of Stewart et al. (2009)
+    '''
+    f_stargas = lambda log_mstar, zz: 0.04 * ((10.**log_mstar)/(4.5*10.**11.))**(-0.59 * (1. + zz)**0.45)
+
+    m_arr = np.arange(9.0, 12.1, 0.1)   # mass array 
+    print np.log10(f_stargas(m_arr, 1.0)/f_stargas(m_arr, 0.)) 
+    
+    # quenching time 
+    std = PlotABC(7, abcrun='RHOssfrfq_TinkerFq_Std', prior_name='updated')
+    gv_slope, gv_offset, fudge_slope, fudge_offset, tau_slope, tau_offset = std.med_theta
+    std_med_tau_dict = {'name': 'line', 'slope': tau_slope, 'fid_mass': 11.1, 'yint': tau_offset}
+    
+    t_deplete = f_stargas(m_arr, z) * 10**m_arr / 10**sfr_evol.AverageLogSFR_sfms(m_arr, z, sfms_prop={'name': 'linear', 'zslope': 1.14})
+    t_deplete /= 10**9
+
+    f_sfr = 10**(-1.*(
+            sfr_evol.AverageLogSFR_sfms(m_arr, z, sfms_prop={'name': 'linear', 'zslope': 1.14}) - 
+            (sfr_evol.AverageLogSSFR_q_peak(m_arr) + m_arr)))
+
+    t_quench = np.log(f_sfr) * sfr_evol.getTauQ(m_arr, tau_prop=std_med_tau_dict) * -1.
+    
+    prettyplot()
+    pretty_colors = prettycolors() 
+    fig = plt.figure()
+    sub = fig.add_subplot(111)
+    sub.plot(10**m_arr, t_deplete, lw=3, c='k', label='Gas Depletion Time')
+    sub.plot(10**m_arr, t_quench, lw=3, c=pretty_colors[3], label='Quenching Time') 
+    sub.text(10**11., 9., r'$\mathtt{z = '+str(z)+'}$', fontsize=20)
+
+    sub.legend(loc='lower left') 
+    sub.set_xlim([10**9.7, 10**11.5]) 
+    sub.set_xscale('log') 
+    sub.set_xlabel(r'Redshift $\mathtt{(z)}$', fontsize=25) 
+    sub.set_ylim([0., 10.]) 
+    sub.set_ylabel(r'Gas Depletion Time [Gyr]', fontsize=25) 
+
+    fig_file = ''.join(['figure/paper/',
+        't_gas_depletion',
+        '.z', str(z), 
+        '.png'])
+    fig.savefig(fig_file, bbox_inches='tight', dpi=150)
+    plt.close()
+    Util.png2pdf(fig_file)
+    return None 
+
+
+def fig_gas_depletion_Santini(z=0.5):
+    ''' Explore the gas depletion time to the quenching time 
+    using the gas mass scaling relation of Santini et al. (2014)
+
+    fgas = alpha + beta (log M* - 11) 
+
+    '''
+
+    m_arr = np.arange(9.8, 12.1, 0.1)   # mass array 
+    
+    # our quenching time 
+    std = PlotABC(7, abcrun='RHOssfrfq_TinkerFq_Std', prior_name='updated')
+    gv_slope, gv_offset, fudge_slope, fudge_offset, tau_slope, tau_offset = std.med_theta
+    std_med_tau_dict = {'name': 'line', 'slope': tau_slope, 'fid_mass': 11.1, 'yint': tau_offset}
+    
+    f_sfr = 10**(-1.*(
+            sfr_evol.AverageLogSFR_sfms(m_arr, z, sfms_prop={'name': 'linear', 'zslope': 1.14}) - 
+            (sfr_evol.AverageLogSSFR_q_peak(m_arr) + m_arr)))
+
+    t_quench = np.log(f_sfr) * sfr_evol.getTauQ(m_arr, tau_prop=std_med_tau_dict) * -1.
+
+    # Santini et al. (2014) 
+    sfr_sfms_arr = sfr_evol.AverageLogSFR_sfms(m_arr, z, sfms_prop={'name': 'linear', 'zslope': 1.14})
+    for im, mm in enumerate(m_arr): 
+        sfr_sfms_m = sfr_sfms_arr[im]
+        if (sfr_sfms_m >= -0.25) & (sfr_sfms_m < 0.25):  
+        elif (sfr_sfms_m >= 0.25) & (sfr_sfms_m < 0.5):  
+        elif (sfr_sfms_m >= 0.5) & (sfr_sfms_m < 0.25):  
+        elif (sfr_sfms_m >= 0.25) & (sfr_sfms_m < 0.25):  
+        elif (sfr_sfms_m >= 0.25) & (sfr_sfms_m < 0.25):  
+        elif (sfr_sfms_m >= 0.25) & (sfr_sfms_m < 0.25):  
+        elif (sfr_sfms_m >= 0.25) & (sfr_sfms_m < 0.25):  
+
+    
+
+
+        
+
+    
+    prettyplot()
+    pretty_colors = prettycolors() 
+    fig = plt.figure()
+    sub = fig.add_subplot(111)
+    sub.plot(10**m_arr, t_deplete, lw=3, c='k', label='Gas Depletion Time')
+    sub.plot(10**m_arr, t_quench, lw=3, c=pretty_colors[3], label='Quenching Time') 
+    sub.text(10**11., 9., r'$\mathtt{z = '+str(z)+'}$', fontsize=20)
+
+    sub.legend(loc='lower left') 
+    sub.set_xlim([10**9.7, 10**11.5]) 
+    sub.set_xscale('log') 
+    sub.set_xlabel(r'Redshift $\mathtt{(z)}$', fontsize=25) 
+    sub.set_ylim([0., 10.]) 
+    sub.set_ylabel(r'Gas Depletion Time [Gyr]', fontsize=25) 
+
+    fig_file = ''.join(['figure/paper/',
+        't_gas_depletion',
+        '.z', str(z), 
+        '.png'])
+    fig.savefig(fig_file, bbox_inches='tight', dpi=150)
+    plt.close()
+    Util.png2pdf(fig_file)
+    return None 
+
 
 
 def non_decreasing(L):
@@ -677,11 +929,18 @@ def keep_non_descreasing(L):
 
 
 if __name__=='__main__': 
+    #for z in [0.1, 0.3, 0.5, 0.7, 0.9]: 
+    #    fig_gas_depletion(z=z)
+    #fig_gas_depletion(z=1.)
+    figSFH_SchematicDemo(7, 'RHOssfrfq_TinkerFq_Std', prior_name='updated')
+    #fig_tau_SMFevol(
+    #        standard_run='RHOssfrfq_TinkerFq_Std', standard_tf=7, 
+    #        noSMF_run='RHOssfrfq_TinkerFq_NOSMFevol', noSMF_tf=8, 
+    #        extraSMF_run='RHOssfrfq_TinkerFq_XtraSMF', extraSMF_tf=9)
     #fig_SSFRevol(7, 'multirho_inh', prior_name='try0')
     #fig_SFRassign(7, 'multirho_inh', prior_name='try0')
     #figSFH_demo(7, 'multirho_inh', prior_name='try0')
     #fig_ABC_posterior(7, abcrun='multifq_wideprior', prior_name='updated')
     #fig_SSFR_ABC_post(7, abcrun='multifq_wideprior', prior_name='updated')
     #fig_tau_ABC_post(7, abcrun='multifq_wideprior', prior_name='updated')
-    fig_SSFR_tau_satellite(12, abcrun='rhofq_tausat', prior_name='satellite')
-
+    #fig_SSFR_tau_satellite(10, abcrun='SatABC_TinkerFq', prior_name='satellite')

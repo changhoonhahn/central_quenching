@@ -502,8 +502,9 @@ def SatelliteABC(T, eps_input, Npart=1000, prior_name='try0', observables=['fqz_
         sim_kwargs['sfr_prop']['gv'] = {'slope': gv_slope, 'fidmass': 10.5, 'offset': gv_offset}
         sim_kwargs['evol_prop']['fudge'] = {'slope': fudge_slope, 'fidmass': 10.5, 'offset': fudge_offset}
         sim_kwargs['evol_prop']['tau'] = {'name': 'satellite'}
-
-        return SimSummary(observables=observables, **sim_kwargs)
+        
+        sim_output = SimSummary(observables=observables, **sim_kwargs)
+        return sim_output
 
     theta_file = lambda pewl: ''.join([code_dir(), 
         'dat/pmc_abc/', 'CenQue_theta_t', str(pewl), '_', abcrun_flag, '.satellite.dat']) 
@@ -846,12 +847,14 @@ class PlotABC(object):
 
 
 if __name__=="__main__": 
-    for tf in [0,1,2]:
+    for tf in [8]:
+        #ppp = PlotABC(tf, abcrun='RHOssfrfq_TinkerFq_XtraSMF', prior_name='updated')
         ppp = PlotABC(tf, abcrun='RHOssfrfq_TinkerFq_NOSMFevol', prior_name='updated')
-        #ppp = PlotABC(tf, abcrun='RHOssfrfq', prior_name='updated')
+        #ppp = PlotABC(tf, abcrun='RHOssfrfq_TinkerFq_Std', prior_name='updated')
+        #ppp = PlotABC(tf, abcrun='SatABC_TinkerFq', prior_name='satellite')
         ppp.Corner()
-        #ppp.Ssfr()
-        #ppp.QAplot(nsnap_descendant=[1, 6])
+        ppp.Ssfr()
+        ppp.QAplot(nsnap_descendant=[1, 6])
     
     #for run in ['multifq_wideprior_nosmfevo', 'multifq_wideprior_extremesmfevo']:
     #    ppp = PlotABC(8, abcrun=run)

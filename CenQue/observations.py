@@ -122,7 +122,7 @@ class GroupCat(object):
                 setattr(self, column, column_data)
         return None
 
-    def _ReadGroupCat_GalData(self, Mrcut=18): 
+    def _ReadGroupCat_GalData(self): 
         '''
         '''
         h = 0.7
@@ -155,7 +155,7 @@ class GroupCat(object):
         
         return gal_data
 
-    def _ReadGroupCat_Prob(self, Mrcut=18): 
+    def _ReadGroupCat_Prob(self): 
         ''' wrapper for reading in probability galaxy data 
         '''
         file = ''.join([
