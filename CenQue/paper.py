@@ -764,8 +764,8 @@ def fig_tau_SMFevol(standard_run=None, standard_tf=7, noSMF_run=None, noSMF_tf=7
     #        yerr=yerr, c=pretty_colors[3], fmt='o', lw=2, label='Centrals (Hahn+2016)')
     sub.fill_between(10**m_arr, b, d, color=pretty_colors[3], alpha=0.5, edgecolor='none', label='Centrals') 
 
-    sub.plot(10**m_arr, sfr_evol.getTauQ(m_arr, tau_prop=std_med_tau_dict), 
-            c=pretty_colors[3], lw=2, ls='--')#, label='Centrals (Hahn+2016)')
+    #sub.plot(10**m_arr, sfr_evol.getTauQ(m_arr, tau_prop=std_med_tau_dict), 
+    #        c=pretty_colors[3], lw=2, ls='--')#, label='Centrals (Hahn+2016)')
 
     # No SMF evolution  
     nosmf = PlotABC(noSMF_tf, abcrun=noSMF_run, prior_name='updated')
@@ -774,13 +774,13 @@ def fig_tau_SMFevol(standard_run=None, standard_tf=7, noSMF_run=None, noSMF_tf=7
     #sub.plot(10**m_arr, sfr_evol.getTauQ(m_arr, tau_prop=nosmf_med_tau_dict), 
     #        c=pretty_colors[5], lw=2, label='Constant SMF Evo.')
     sub.plot(10**m_arr, sfr_evol.getTauQ(m_arr, tau_prop=nosmf_med_tau_dict), 
-            c=pretty_colors[5], lw=2, label='Constant SMF Evo.')
+            c=pretty_colors[5], lw=2, ls='--', label='Constant SMF Evo.')
     # Extra SMF evolution  
     extrasmf = PlotABC(extraSMF_tf, abcrun=extraSMF_run, prior_name='updated')
     gv_slope, gv_offset, fudge_slope, fudge_offset, tau_slope, tau_offset = extrasmf.med_theta
     extrasmf_med_tau_dict = {'name': 'line', 'slope': tau_slope, 'fid_mass': 11.1, 'yint': tau_offset}
     sub.plot(10**m_arr, sfr_evol.getTauQ(m_arr, tau_prop=extrasmf_med_tau_dict), 
-            c=pretty_colors[7], lw=2, label='Exaggerated SMF Evo.')
+            c=pretty_colors[7], lw=2, ls='--', label='Extreme SMF Evo.')
 
     sub.plot(10**m_arr, sfr_evol.getTauQ(m_arr, tau_prop={'name': 'satellite'}), 
             c='k', ls='--', lw=3, label='Satellites')
@@ -903,13 +903,13 @@ def keep_non_descreasing(L):
 if __name__=='__main__': 
     #for z in [0.1, 0.3, 0.5, 0.7, 0.9]: 
     #    fig_gas_depletion(z=z)
-    fig_gas_depletion()
+    #fig_gas_depletion()
     #fig_gas_depletion_Santini(z=0.5)
     #figSFH_SchematicDemo(7, 'RHOssfrfq_TinkerFq_Std', prior_name='updated')
-    #fig_tau_SMFevol(
-    #        standard_run='RHOssfrfq_TinkerFq_Std', standard_tf=7, 
-    #        noSMF_run='RHOssfrfq_TinkerFq_NOSMFevol', noSMF_tf=8, 
-    #        extraSMF_run='RHOssfrfq_TinkerFq_XtraSMF', extraSMF_tf=9)
+    fig_tau_SMFevol(
+            standard_run='RHOssfrfq_TinkerFq_Std', standard_tf=7, 
+            noSMF_run='RHOssfrfq_TinkerFq_NOSMFevol', noSMF_tf=8, 
+            extraSMF_run='RHOssfrfq_TinkerFq_XtraSMF', extraSMF_tf=9)
     #fig_SSFRevol(7, 'multirho_inh', prior_name='try0')
     #fig_SFRassign(7, 'multirho_inh', prior_name='try0')
     #figSFH_demo(7, 'multirho_inh', prior_name='try0')
