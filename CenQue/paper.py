@@ -885,6 +885,103 @@ def fig_gas_depletion():
     return None 
 
 
+def fig_quenching_comparison(z = 0.5): 
+    ''' Compare the quenching *time* to the gas depletion time estimated
+    from gas fraction of galaxies from Stewart+(2009), Boselli+(2014), 
+    Santini+(2014) at the central redshift bin of our simulation. 
+    '''
+    m_arr = np.arange(9.0, 12.1, 0.1)   # mass array 
+    
+    prettyplot()
+    pretty_colors = prettycolors() 
+    fig = plt.figure(figsize=(6, 6))
+        
+    # estimate central quenching time from the timescale
+    # tQ = - tauQ * ln( SFRq/SFRsf ) 
+    std = PlotABC(7, abcrun='RHOssfrfq_TinkerFq_Std', prior_name='updated')
+    gv_slope, gv_offset, fudge_slope, fudge_offset, tau_slope, tau_offset = std.med_theta
+    std_med_tau_dict = {'name': 'line', 'slope': tau_slope, 'fid_mass': 11.1, 'yint': tau_offset}
+    
+    del_logSFR = sfr_evol.AverageLogSFR_sfms(m_arr, z, sfms_prop={'name': 'linear', 'zslope': 1.14}) + 2. # - sfr_evol.ScatterLogSFR_sfms(m_arr, z, sfms_prop={'name': 'linear', 'zslope': 1.14})
+    f_sfr = 10**(-1. * del_logSFR)                      # fractional decrease of SFR 
+    t_quench = -1. * np.log(f_sfr) * sfr_evol.getTauQ(m_arr, tau_prop=std_med_tau_dict)  # centrla quenching time 
+        
+    # Stewart+2009
+    f_stargas = 0.04 * ((10.**m_arr)/(4.5*10.**11.))**(-0.59 * (1. + z)**0.45)
+    M_gas_Stewart = f_stargas * 10**m_arr #np.log10(1./(1./f_gas_Stewart-1.) * 10**m_arr)
+    t_gas_Stewart = M_gas_Stewart / 10**sfr_evol.AverageLogSFR_sfms(m_arr, z, sfms_prop={'name': 'linear', 'zslope':1.14}) /10**9
+
+    # Santini+2014
+    #if z < 0.2: 
+    #    dat_file = Util.code_dir().split('CenQue')[0]+'dat/santini_fgas_z0.1.dat'
+    #elif (z >= 0.2) & (z < 0.6): 
+    #    dat_file = Util.code_dir().split('CenQue')[0]+'dat/santini_fgas_z0.4.dat'
+    #elif (z >= 0.6) & (z < 1.): 
+    #    dat_file = Util.code_dir().split('CenQue')[0]+'dat/santini_fgas_z0.8.dat'
+    #else: 
+    #    raise ValueError
+    #m_dat, fgas_dat = np.loadtxt(dat_file, delimiter=',', unpack=True, usecols=[0,1]) 
+    #f_gas_Santini = fgas_dat 
+    if z == 0.5: 
+        m_dat = np.array([10., 10.5, 11.0, 11.5]) 
+        alpha = np.array([-1.53, -1.53, -1.34, -1.58]) 
+        beta = np.array([-0.52, -0.52, -0.53, -0.85]) 
+    elif z == 0.1: 
+        m_dat = np.array([10.25, 10.5, 11.0, 11.5]) 
+        alpha = np.array([-2.17, -2.17, -2.17, -1.53]) 
+        beta = np.array([-1.04, -1.04, -1.04, -0.52]) 
+    f_gas_Santini = 10.**(alpha + beta * (m_dat - 11.)) 
+    M_gas_Santini = np.log10(1./(1./f_gas_Santini-1.) * 10**m_dat)
+    t_gas_Santini = 10**M_gas_Santini / 10**sfr_evol.AverageLogSFR_sfms(m_dat, z, sfms_prop={'name': 'linear', 'zslope':1.14})/10**9
+
+    # Boselli+2014
+    f_gas_Boselli = 1. - 1./(1. + 10**(-0.69 * m_arr + 6.63))
+    M_gas_Boselli = np.log10(1./(1./f_gas_Boselli-1.) * 10**m_arr)
+    t_gas_Boselli = 10**M_gas_Boselli / 10**sfr_evol.AverageLogSFR_sfms(m_arr, z, sfms_prop={'name': 'linear', 'zslope':1.14})/10**9
+
+    sub = fig.add_subplot(111)
+    stewart_plot, = sub.plot(10**m_arr, t_gas_Stewart, lw=3, c='k', 
+            label=r'$\mathtt{\hat{t}_{gas}}$ Stewart+2009')
+    boselli_plot, = sub.plot(10**m_arr, t_gas_Boselli, lw=3, c='k', ls='-.',
+            label=r'$\mathtt{\hat{t}_{gas}}$ Boselli+2014')
+    #santini_plot, = sub.plot(10**m_dat, t_gas_Santini, lw=3, c='k', ls='dotted', 
+    #        label=r'$\mathtt{\hat{t}_{gas}}$ Santini+2014')
+    peng_plot, = sub.plot(10**np.arange(9.5, 11.1, 0.1), 
+            np.repeat(4., len(np.arange(9.5, 11.1, 0.1))), lw=3, c='k', ls='--',
+            label=r'$\mathtt{\hat{t}_{Q}}$ Peng+2015') 
+    q_plot, = sub.plot(10**m_arr, t_quench, lw=3, c=pretty_colors[3], 
+            label=r'$\mathtt{\hat{t}_{Q}^{cen}}$ Hahn+2016') 
+
+    # Martig+2009
+    martig_plot = sub.scatter([2.*10**11], [2.5], c='k', s=75, marker='*',
+            label=r'Martig+2009(Morph.)') 
+    # Haywood+2016
+    del_logSFR = sfr_evol.AverageLogSFR_sfms(np.array([np.log10(6.*10**10)]), z, sfms_prop={'name': 'linear', 'zslope': 1.14}) + 2. 
+    f_sfr = 10**(-1. * del_logSFR)                      # fractional decrease of SFR 
+    t_q_haywood = -1. * np.log(f_sfr) * (1.5/np.log(10.))
+    haywood_plot = sub.scatter([6.*10**10], t_q_haywood, c='k', s=75, marker='^', zorder=5,
+            label=r'Haywood+2016(Morph.)') 
+
+    sub.set_xlim([10**9.7, 10**11.5]) 
+    sub.set_xscale('log') 
+    sub.set_xlabel(r'$\mathtt{M}_*$ [$\mathtt{M_\odot}$]', fontsize=25) 
+    sub.set_ylim([0., 8.]) 
+    sub.set_ylabel(r'$\mathtt{\hat{t}_{Q}}$ [Gyr]', fontsize=25) 
+    first_legend = plt.legend(handles=[stewart_plot, boselli_plot, peng_plot], #santini_plot, 
+            handletextpad=-0.1, loc='upper right')
+    ax = plt.gca().add_artist(first_legend)
+    plt.legend(handles=[q_plot, martig_plot, haywood_plot], loc='lower left', scatterpoints=1, 
+            handletextpad=-0.1, markerscale=1.3, scatteryoffsets=[0.5,0.5,0.5]) 
+
+    fig.subplots_adjust(wspace=0.0, hspace=0.0)
+    fig_file = ''.join(['figure/paper/',
+        't_quenching_comparison.png'])
+    fig.savefig(fig_file, bbox_inches='tight', dpi=150)
+    plt.close()
+    Util.png2pdf(fig_file)
+    return None 
+
+
 def non_decreasing(L):
     return all(x<=y for x, y in zip(L, L[1:]))
 
@@ -906,10 +1003,11 @@ if __name__=='__main__':
     #fig_gas_depletion()
     #fig_gas_depletion_Santini(z=0.5)
     #figSFH_SchematicDemo(7, 'RHOssfrfq_TinkerFq_Std', prior_name='updated')
-    fig_tau_SMFevol(
-            standard_run='RHOssfrfq_TinkerFq_Std', standard_tf=7, 
-            noSMF_run='RHOssfrfq_TinkerFq_NOSMFevol', noSMF_tf=8, 
-            extraSMF_run='RHOssfrfq_TinkerFq_XtraSMF', extraSMF_tf=9)
+    fig_quenching_comparison(z = 0.5)
+    #fig_tau_SMFevol(
+    #        standard_run='RHOssfrfq_TinkerFq_Std', standard_tf=7, 
+    #        noSMF_run='RHOssfrfq_TinkerFq_NOSMFevol', noSMF_tf=8, 
+    #        extraSMF_run='RHOssfrfq_TinkerFq_XtraSMF', extraSMF_tf=9)
     #fig_SSFRevol(7, 'multirho_inh', prior_name='try0')
     #fig_SFRassign(7, 'multirho_inh', prior_name='try0')
     #figSFH_demo(7, 'multirho_inh', prior_name='try0')
