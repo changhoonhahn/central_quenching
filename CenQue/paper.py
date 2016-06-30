@@ -31,7 +31,10 @@ def fig_SFRassign(t, abcrun, prior_name='try0'):
 
     no_gv = [0., 0.]
     med_gv = [gv_slope, gv_offset]
-    lot_gv = [2. * gv_slope, 2. * gv_offset]
+    if gv_offset < 0: 
+        lot_gv = [2. * gv_slope, np.abs(gv_offset)]
+    else: 
+        lot_gv = [2. * gv_slope, 2. * gv_offset]
 
     # other parameters
     sfinherit_kwargs, abcrun_flag = ReadABCrun(abcrun)
@@ -81,7 +84,10 @@ def fig_SFRassign(t, abcrun, prior_name='try0'):
             colors = pretty_colors[1]
         elif gv_key == 'med_gv': 
             lstyle = '-' 
-            label = r'$\mathtt{f_{GV} = '+str(round(med_gv[0], 1))+' (log\;M_* - 10.5) + '+str(round(med_gv[1], 1))+'}$'
+            if med_gv[1] > 0: 
+                label = r'$\mathtt{f_{GV} = '+str(round(med_gv[0], 1))+' (log\;M_* - 10.5) + '+str(round(med_gv[1], 1))+'}$'
+            else:
+                label = r'$\mathtt{f_{GV} = '+str(round(med_gv[0], 1))+' (log\;M_* - 10.5) - '+str(round(np.abs(med_gv[1]), 1))+'}$'
             colors = 'k'#pretty_colors[4]
         elif gv_key == 'lot_gv': 
             lstyle = '--'
@@ -391,6 +397,7 @@ def figSFH_SchematicDemo(t, abcrun, prior_name='try0'):
     sub.fill_between(t_cosmics, 
             np.repeat(avg_q_ssfr + sigma_q_ssfr + avg_Msham_evol[-1], len(t_cosmics)), 
             np.repeat(-3., len(t_cosmics)), color=pretty_colors[4]) 
+    print np.repeat(avg_q_ssfr + sigma_q_ssfr + avg_Msham_evol[-1], len(t_cosmics))
     sub.text(8.25, -2.5, '$Quiescent$', fontsize=25) 
 
     sub.set_xlim([t_cosmics.min(), t_cosmics.max()])
@@ -767,20 +774,21 @@ def fig_tau_SMFevol(standard_run=None, standard_tf=7, noSMF_run=None, noSMF_tf=7
     #sub.plot(10**m_arr, sfr_evol.getTauQ(m_arr, tau_prop=std_med_tau_dict), 
     #        c=pretty_colors[3], lw=2, ls='--')#, label='Centrals (Hahn+2016)')
 
-    # No SMF evolution  
-    nosmf = PlotABC(noSMF_tf, abcrun=noSMF_run, prior_name='updated')
-    gv_slope, gv_offset, fudge_slope, fudge_offset, tau_slope, tau_offset = nosmf.med_theta
-    nosmf_med_tau_dict = {'name': 'line', 'slope': tau_slope, 'fid_mass': 11.1, 'yint': tau_offset}
-    #sub.plot(10**m_arr, sfr_evol.getTauQ(m_arr, tau_prop=nosmf_med_tau_dict), 
-    #        c=pretty_colors[5], lw=2, label='Constant SMF Evo.')
-    sub.plot(10**m_arr, sfr_evol.getTauQ(m_arr, tau_prop=nosmf_med_tau_dict), 
-            c=pretty_colors[5], lw=2, ls='--', label='Constant SMF Evo.')
     # Extra SMF evolution  
     extrasmf = PlotABC(extraSMF_tf, abcrun=extraSMF_run, prior_name='updated')
     gv_slope, gv_offset, fudge_slope, fudge_offset, tau_slope, tau_offset = extrasmf.med_theta
     extrasmf_med_tau_dict = {'name': 'line', 'slope': tau_slope, 'fid_mass': 11.1, 'yint': tau_offset}
     sub.plot(10**m_arr, sfr_evol.getTauQ(m_arr, tau_prop=extrasmf_med_tau_dict), 
             c=pretty_colors[7], lw=2, ls='--', label='Extreme SMF Evo.')
+
+    # No SMF evolution  
+    nosmf = PlotABC(noSMF_tf, abcrun=noSMF_run, prior_name='updated')
+    gv_slope, gv_offset, fudge_slope, fudge_offset, tau_slope, tau_offset = nosmf.med_theta
+    nosmf_med_tau_dict = {'name': 'line', 'slope': tau_slope, 'fid_mass': 11.1, 'yint': tau_offset}
+    #sub.plot(10**m_arr, sfr_evol.getTauQ(m_arr, tau_prop=nosmf_med_tau_dict), 
+    #        c=pretty_colors[5], lw=2, label='No SMF Evo.')
+    sub.plot(10**m_arr, sfr_evol.getTauQ(m_arr, tau_prop=nosmf_med_tau_dict), 
+            c=pretty_colors[5], lw=2, ls='--', label='No SMF Evo.')
 
     sub.plot(10**m_arr, sfr_evol.getTauQ(m_arr, tau_prop={'name': 'satellite'}), 
             c='k', ls='--', lw=3, label='Satellites')
@@ -906,12 +914,12 @@ if __name__=='__main__':
     #fig_gas_depletion()
     #fig_gas_depletion_Santini(z=0.5)
     #figSFH_SchematicDemo(7, 'RHOssfrfq_TinkerFq_Std', prior_name='updated')
-    fig_tau_SMFevol(
-            standard_run='RHOssfrfq_TinkerFq_Std', standard_tf=7, 
-            noSMF_run='RHOssfrfq_TinkerFq_NOSMFevol', noSMF_tf=8, 
-            extraSMF_run='RHOssfrfq_TinkerFq_XtraSMF', extraSMF_tf=9)
+    #fig_tau_SMFevol(
+    #        standard_run='RHOssfrfq_TinkerFq_Std', standard_tf=7, 
+    #        noSMF_run='RHOssfrfq_TinkerFq_NOSMFevol', noSMF_tf=8, 
+    #        extraSMF_run='RHOssfrfq_TinkerFq_XtraSMF', extraSMF_tf=9)
     #fig_SSFRevol(7, 'multirho_inh', prior_name='try0')
-    #fig_SFRassign(7, 'multirho_inh', prior_name='try0')
+    #fig_SFRassign(7, 'RHOssfrfq_TinkerFq_Std', prior_name='updated')
     #figSFH_demo(7, 'multirho_inh', prior_name='try0')
     #fig_ABC_posterior(7, abcrun='multifq_wideprior', prior_name='updated')
     #fig_SSFR_ABC_post(7, abcrun='multifq_wideprior', prior_name='updated')
