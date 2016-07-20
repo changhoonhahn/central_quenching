@@ -73,8 +73,8 @@ def PlotObservedSFMS(Mfid=10.5, isedfit=False, sfms_prop=None):
             obs_str = 'iSEDfit z='+str(round(z, 2))
             kwargs = {'redshift': z, 'environment': 'no'} 
 
-        mass, muSFR, sigSFR, ngal = ObservedSFMS(observable, **kwargs) 
-        bestfit = FitObservedSFMS(observable, Mfid=Mfid, **kwargs) 
+        mass, muSFR, sigSFR, ngal = ObservedSFMS(observable, sfms_prop=sfms_prop, **kwargs) 
+        #bestfit = FitObservedSFMS(observable, Mfid=Mfid, **kwargs) 
 
         sub = fig.add_subplot(1, len(zbins), i_z+1)
 
@@ -82,8 +82,8 @@ def PlotObservedSFMS(Mfid=10.5, isedfit=False, sfms_prop=None):
                 muSFR-sigSFR, 
                 muSFR+sigSFR, color=prettycolors()[i_z], label='Observed')
         mrange = np.arange(9.0, 12.0, 0.1)
-        sub.plot(mrange, util.line(mrange-Mfid, bestfit), c='k', ls='--', lw=4, 
-                label='Best-fit') 
+        #sub.plot(mrange, util.line(mrange-Mfid, bestfit), c='k', ls='--', lw=4, 
+        #        label='Best-fit') 
         if sfms_prop is not None: 
             plt.plot(mrange, AverageLogSFR_sfms(mrange, z, sfms_prop=sfms_prop), 
                     c='k', ls='-.', lw=2, label='Model')
@@ -551,7 +551,6 @@ def fgas_comparison():
 
 
 
-
 if __name__=="__main__": 
     #Plot_fQcen_SDSS()
     #Plot_fQcen_parameterized()
@@ -562,7 +561,7 @@ if __name__=="__main__":
     #grpcat.Read()
     #print np.min(grpcat.z), np.max(grpcat.z)
     #PlotLee2015_SFMS_zdep()
-    fgas_comparison()
+    #fgas_comparison()
 
     #[BuildGroupCat(Mrcut=Mr, position='central') for Mr in [18, 19, 20]]
     #[BuildGroupCat(Mrcut=Mr, position='satellite') for Mr in [18, 19, 20]]
@@ -571,6 +570,6 @@ if __name__=="__main__":
 
     #GroupCat_iSEDfitMatch(Mrcut=18, position='central')
     #PlotObservedSSFR(isedfit=False)
-    #print PlotObservedSFMS(isedfit=True,
-    #        sfms_prop={'name': 'linear', 'mslope': 0.55, 'zslope': 1.1}
-    #        )
+    print PlotObservedSFMS(isedfit=False,
+            sfms_prop={'name': 'linear', 'mslope': 0.53, 'zslope': 1.14}
+            )

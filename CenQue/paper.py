@@ -15,11 +15,105 @@ from inherit import Inherit
 from abcee import PlotABC
 from abcee import ReadABCrun
 
+from gal_prop import SMF
 from observations import GroupCat 
 
 import matplotlib.pyplot as plt 
 from ChangTools.plotting import prettyplot
 from ChangTools.plotting import prettycolors
+
+def fig_SMFevol(): 
+    ''' Plot the evolution of the SMF used for SHAM and also plot the 
+    extreme cases.
+    '''
+    zrange = [0.9, 0.5, 0.1]
+    source_list = ['li-march', 'li-march-extreme']
+
+    prettyplot() 
+    pretty_colors = prettycolors()
+    fig = plt.figure(1, figsize=(7, 6))
+    sub = fig.add_subplot(111)
+
+    smf = SMF()
+    for i_s, source in enumerate(source_list): 
+        for iz, z in enumerate(zrange): 
+            mass, phi = smf.analytic(z, source=source)  # SMF phi(M*) 
+                
+            # labels for the SMF sources 
+            if source == 'li-march': 
+                source_lbl = 'Marchesini+2009 \&\nLi+2009 (Fiducial)'
+            elif source == 'li-march-extreme': 
+                #source_lbl = 'Li$+$2009 $\&$ \nextreme evolution'
+                source_lbl = 'extreme SMF evolution'
+
+            if source == 'li-march':  
+                if z == 0.1: 
+                    sub.plot(mass, phi, lw=4, color='#b35a00', label=source_lbl)
+                elif z == 0.5: 
+                    sub.plot(mass, phi, lw=4, color='#ff8100')
+                elif z == 0.9: 
+                    sub.plot(mass, phi, lw=4, color='#ffa74d') 
+            else: 
+                if z == 0.5:  
+                    sub.plot(mass, phi, lw=2, ls='-.', c='k', label=source_lbl)
+                elif z == 0.9:  
+                    sub.plot(mass, phi, lw=2, ls='-.', c='k')
+            
+    sub.set_ylim([10**-5, 10**-1.5])
+    sub.set_xlim([8.8, 12.0])
+    sub.set_yscale('log')
+    sub.set_xlabel(r'log($\mathtt{M_*} /\mathtt{M_\odot}$)', fontsize=25) 
+    sub.set_ylabel(r'log($\mathtt{\Phi / Mpc^{-3}\;dex^{-1}}$)', fontsize=25) 
+    sub.legend(loc='lower left', scatteryoffsets=[0.6])
+    
+    fig_file = ''.join(['figure/paper/', 'SMF_evol.png'])
+    fig.savefig(fig_file, bbox_inches='tight', dpi=150) 
+    Util.png2pdf(fig_file)
+    return None
+
+
+def fig_SFMSevol(): 
+    ''' Plot the evolution of the SMF used for SHAM and also plot the 
+    extreme cases.
+    '''
+    prettyplot() 
+    pretty_colors = prettycolors()
+    fig = plt.figure(1, figsize=(7, 6))
+    sub = fig.add_subplot(111)
+    
+    z_arr = np.array([0.1, 0.3, 0.5, 0.7, 0.9]) 
+
+    sfms_dict = {'name': 'linear', 'zslope': 1.14}
+    mu_sfr_z = sfr_evol.AverageLogSFR_sfms(np.array([10.5]), z_arr, sfms_prop=sfms_dict) 
+    print mu_sfr_z 
+    sig_sfr_z = sfr_evol.ScatterLogSFR_sfms(np.array([10.5]), z_arr, sfms_prop=sfms_dict)
+
+    # Lee et al. (2015) 
+    # log SFR(M*, z) = S0(z) - log( 1 + (M*/M0)^-gamma)
+    z_mid = np.array([0.36, 0.55, 0.70, 0.85, 0.99, 1.19])
+    S0 = np.array([0.80, 0.99, 1.23, 1.35, 1.53, 1.72])
+    S0_err = np.array([0.019, 0.015, 0.016, 0.014, 0.017, 0.024])
+    M0 = np.array([10.03, 9.82, 9.93, 9.96, 10.10, 10.31]) 
+    gamma = np.array([0.92, 1.13, 1.11, 1.28, 1.26, 1.07]) 
+
+    sfr_lee = lambda mm: S0 - np.log10(1.+np.power(10, mm - M0)**(-1. * gamma))
+
+    sub.errorbar(z_arr, mu_sfr_z, yerr=sig_sfr_z, color='#b35a00')
+    sub.scatter(z_mid, sfr_lee(10.5), color='k')
+            
+    #sub.set_ylim([10**-5, 10**-1.5])
+    sub.set_xlim([0., 1.0])
+    #sub.set_yscale('log')
+    #sub.set_xlabel(r'log($\mathtt{M_*} /\mathtt{M_\odot}$)', fontsize=25) 
+    #sub.set_ylabel(r'log($\mathtt{\Phi / Mpc^{-3}\;dex^{-1}}$)', fontsize=25) 
+    sub.legend(loc='lower left', scatteryoffsets=[0.6])
+    plt.show()
+    
+    #fig_file = ''.join(['figure/paper/', 'SMF_evol.png'])
+    #fig.savefig(fig_file, bbox_inches='tight', dpi=150) 
+    #Util.png2pdf(fig_file)
+    return None
+
 
 def fig_SFRassign(t, abcrun, prior_name='try0'): 
     ''' Demonstrate the SFR assignment scheme based through the 
@@ -909,10 +1003,26 @@ def fig_quenching_comparison(z = 0.5):
     std = PlotABC(7, abcrun='RHOssfrfq_TinkerFq_Std', prior_name='updated')
     gv_slope, gv_offset, fudge_slope, fudge_offset, tau_slope, tau_offset = std.med_theta
     std_med_tau_dict = {'name': 'line', 'slope': tau_slope, 'fid_mass': 11.1, 'yint': tau_offset}
-    
+
+    tauq_list = [] 
+    for ii in range(len(std.theta)): 
+        tau_dict_i = {
+                'name': 'line', 
+                'slope': (std.theta[ii])[-2], 
+                'fid_mass': 11.1, 
+                'yint': (std.theta[ii])[-1]
+                }
+        #sub.plot(10**m_arr, sfr_evol.getTauQ(m_arr, tau_prop=tau_dict_i), 
+        #        c=pretty_colors[8], lw=0.4, alpha=0.1)
+        tauq_list.append(sfr_evol.getTauQ(m_arr, tau_prop=tau_dict_i))
+    tauq_list = np.array(tauq_list)
+    b, c, d = np.percentile(tauq_list, [16, 50, 84], axis=0)
+
     del_logSFR = sfr_evol.AverageLogSFR_sfms(m_arr, z, sfms_prop={'name': 'linear', 'zslope': 1.14}) + 2. # - sfr_evol.ScatterLogSFR_sfms(m_arr, z, sfms_prop={'name': 'linear', 'zslope': 1.14})
     f_sfr = 10**(-1. * del_logSFR)                      # fractional decrease of SFR 
     t_quench = -1. * np.log(f_sfr) * sfr_evol.getTauQ(m_arr, tau_prop=std_med_tau_dict)  # centrla quenching time 
+    t_quench_low = -1. * np.log(f_sfr) * b  
+    t_quench_high = -1. * np.log(f_sfr) * d  
         
     # Stewart+2009
     f_stargas = 0.04 * ((10.**m_arr)/(4.5*10.**11.))**(-0.59 * (1. + z)**0.45)
@@ -957,8 +1067,12 @@ def fig_quenching_comparison(z = 0.5):
     peng_plot, = sub.plot(10**np.arange(9.5, 11.1, 0.1), 
             np.repeat(4., len(np.arange(9.5, 11.1, 0.1))), lw=3, c='k', ls='--',
             label=r'$\mathtt{\hat{t}_{Q}}$ Peng+2015') 
-    q_plot, = sub.plot(10**m_arr, t_quench, lw=3, c=pretty_colors[3], 
-            label=r'$\mathtt{\hat{t}_{Q}^{cen}}$ Hahn+2016') 
+    #q_plot, = sub.plot(10**m_arr, t_quench, lw=3, c=pretty_colors[3], 
+    #        label=r'$\mathtt{\hat{t}_{Q}^{cen}}$ Hahn+2016') 
+    #sub.plot(10**m_arr, t_quench_low, lw=3, c=pretty_colors[3])
+    #sub.plot(10**m_arr, t_quench_high, lw=3, c=pretty_colors[3])
+    q_plot = sub.fill_between(10**m_arr, t_quench_low, t_quench_high, color=pretty_colors[3], 
+            alpha=0.5, edgecolor='none', label=r'$\mathtt{\hat{t}_{Q}^{cen}}$ Hahn+2016') 
 
     # Martig+2009
     martig_plot = sub.scatter([2.*10**11], [2.5], c='k', s=75, marker='*',
@@ -979,7 +1093,7 @@ def fig_quenching_comparison(z = 0.5):
             handletextpad=-0.1, loc='upper right')
     ax = plt.gca().add_artist(first_legend)
     plt.legend(handles=[q_plot, martig_plot, haywood_plot], loc='lower left', scatterpoints=1, 
-            handletextpad=-0.1, markerscale=1.3, scatteryoffsets=[0.5,0.5,0.5]) 
+            handletextpad=0.1, markerscale=1.3, scatteryoffsets=[0.0,0.5,0.5]) 
 
     fig.subplots_adjust(wspace=0.0, hspace=0.0)
     fig_file = ''.join(['figure/paper/',
@@ -1006,12 +1120,14 @@ def keep_non_descreasing(L):
 
 
 if __name__=='__main__': 
+    #fig_SMFevol()
+    fig_SFMSevol()
     #for z in [0.1, 0.3, 0.5, 0.7, 0.9]: 
     #    fig_gas_depletion(z=z)
     #fig_gas_depletion()
     #fig_gas_depletion_Santini(z=0.5)
     #figSFH_SchematicDemo(7, 'RHOssfrfq_TinkerFq_Std', prior_name='updated')
-    fig_quenching_comparison(z = 0.5)
+    #fig_quenching_comparison(z = 0.5)
     #fig_tau_SMFevol(
     #        standard_run='RHOssfrfq_TinkerFq_Std', standard_tf=7, 
     #        noSMF_run='RHOssfrfq_TinkerFq_NOSMFevol', noSMF_tf=8, 

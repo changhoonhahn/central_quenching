@@ -115,7 +115,6 @@ class Inherit(object):
             self.dutycycle_prop['delta_sfr'] = self.ancestor.delta_sfr[allwill[sf_ancestors]].copy()
             if not self.quiet: 
                 print 'SFR dutycycle properties take ', time.time() - dutycycle_time, ' to generate'
-        
             logsfr, t_quench = self._Evol_MshamSFR(nsnap_d, allwill, sf_ancestors, q_ancestors)
 
             self.descendant_dict[str(nsnap_d)].sfr[allsucc[sf_ancestors]] = logsfr
@@ -126,8 +125,11 @@ class Inherit(object):
             is_qing = np.where(t_quench < self.descendant_dict[str(nsnap_d)].t_cosmic) 
             is_notqing = np.where(t_quench >= self.descendant_dict[str(nsnap_d)].t_cosmic) 
 
-            self.descendant_dict[str(nsnap_d)].sfr_class[is_qing] = 'quiescent'
-            self.descendant_dict[str(nsnap_d)].sfr_class[is_notqing] = 'star-forming'
+            self.descendant_dict[str(nsnap_d)].sfr_class[allsucc[sf_ancestors[is_qing]]] = \
+                    'quiescent'
+            self.descendant_dict[str(nsnap_d)].sfr_class[allsucc[sf_ancestors[is_notqing]]] = \
+                    'star-forming'
+            self.descendant_dict[str(nsnap_d)].t_quench[allsucc[sf_ancestors[is_qing]]] = t_quench[is_qing]
 
         return None
 
@@ -304,6 +306,9 @@ class Inherit(object):
                 self.descendant_dict[str(n_d)].sfr[sf_succ[overquenched]] = \
                     self.descendant_dict[str(n_d)].ssfr[sf_succ[overquenched]] + \
                     self.descendant_dict[str(n_d)].mass[sf_succ[overquenched]]
+                # some indicator that the galaxy has fully quenched! 
+                # 1 = has fully quenched 0 = otherwise 
+                self.descendant_dict[str(n_d)].quenched[sf_succ[overquenched]] = 1 
             del n_d
             del des 
         return None 
@@ -445,6 +450,8 @@ class Inherit(object):
 
             des.q_ancestor = q_ancestor
             des.sf_ancestor = sf_ancestor
+            des.t_quench = np.repeat(999., len(des.mass)).copy()
+            des.quenched = np.repeat(0, len(des.mass)).copy()
 
             self.descendant_dict[str(n_d)] = des
 

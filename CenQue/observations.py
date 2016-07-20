@@ -257,7 +257,7 @@ class PrimusSDSS(object):
 
         return None
         
-def ObservedSFMS(observable, **kwargs): 
+def ObservedSFMS(observable, sfms_prop=None, **kwargs): 
     ''' Calculate the observed SF-MS function relation for either
     Jeremy's group catalog or the SDSS+PRIMUS sample. The SF-MS 
     relation is calculated by the median SFR in mass bins. 
@@ -280,7 +280,8 @@ def ObservedSFMS(observable, **kwargs):
         fq_obj = Fq()
         setattr(galdata, 
                 'sfr_class', 
-                fq_obj.Classify(galdata.mass, galdata.sfr, np.mean(galdata.z))
+                fq_obj.Classify(galdata.mass, galdata.sfr, np.mean(galdata.z), 
+                    sfms_prop=sfms_prop) 
                 )
 
     elif observable == 'sdssprimus': 
@@ -483,6 +484,7 @@ def FitObservedSSFR_Peaks(observable='groupcat', sfq='star-forming', Mrcut=18, p
 
     return bestfit.params
 
+
 def Lee2015_SFMS_zslope(): 
     ''' Calculate the sloep of the redshift dependence of the Lee et al. (2015) SFMS parameterizations 
 
@@ -506,6 +508,7 @@ def Lee2015_SFMS_zslope():
     bestfit = mpfit.mpfit(util.mpfit_line, p0, functkw=fa, quiet=True) 
 
     return bestfit.params
+
 
 def FqCen_bestfit(clobber=False): 
     ''' We parameterize the central galaxy quiescent fraction as 

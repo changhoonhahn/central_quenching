@@ -343,6 +343,7 @@ def Plot_rhoSFR(source='li-march', sfms_prop=None, fq_lit='wetzel', zslope=None)
     sub.set_ylabel(r'$\rho_\mathtt{SFR}$', fontsize=25)
     sub.set_yscale('log') 
     sub.legend(loc='upper left') 
+    plt.show() 
 
     fig_name = ''.join(['figure/test/', 
         'rhoSFR', 
