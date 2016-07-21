@@ -17,6 +17,7 @@ from abcee import ReadABCrun
 
 from gal_prop import SMF
 from observations import GroupCat 
+from observations import FqCen_bestfit
 
 import matplotlib.pyplot as plt 
 from ChangTools.plotting import prettyplot
@@ -26,7 +27,7 @@ def fig_SMFevol():
     ''' Plot the evolution of the SMF used for SHAM and also plot the 
     extreme cases.
     '''
-    zrange = [0.9, 0.5, 0.1]
+    zrange = [0.9, 0.5, 0.05]
     source_list = ['li-march', 'li-march-extreme']
 
     prettyplot() 
@@ -47,7 +48,7 @@ def fig_SMFevol():
                 source_lbl = 'extreme SMF evolution'
 
             if source == 'li-march':  
-                if z == 0.1: 
+                if z == 0.05: 
                     sub.plot(mass, phi, lw=4, color='#b35a00', label=source_lbl)
                 elif z == 0.5: 
                     sub.plot(mass, phi, lw=4, color='#ff8100')
@@ -112,6 +113,108 @@ def fig_SFMSevol():
     #fig_file = ''.join(['figure/paper/', 'SMF_evol.png'])
     #fig.savefig(fig_file, bbox_inches='tight', dpi=150) 
     #Util.png2pdf(fig_file)
+    return None
+
+
+def fig_fQcen_evol(): 
+    ''' Plot the evolution of the central galaxy quiescent fraction
+    '''
+    # best fit alpha(M*) values 
+    m_mid, alpha_m = FqCen_bestfit(clobber=True) 
+
+    # mass binnning we impose 
+    m_bin = np.arange(9.5, 12.5, 0.5)
+    if not np.array_equal(m_mid, 0.5 * (m_bin[1:] + m_bin[:-1])):
+        raise ValueError
+
+    # read in SDSS fQ^cen data from Jeremy and evaulate at M_mid
+    fq_file = ''.join(['dat/observations/cosmos_fq/', 'fcen_red_sdss_scatter.dat']) 
+    m_sdss, fqcen_sdss, N_sdss = np.loadtxt(fq_file, unpack=True, usecols=[0,1,2])
+    
+    fqcen_sdss_rebin = np.zeros(len(m_bin)-1)  
+    for im in xrange(len(m_bin)-1): 
+        sdss_mbin = np.where((m_sdss >= m_bin[im]) & (m_sdss < m_bin[im+1])) 
+    
+        fqcen_sdss_rebin[im] = np.sum(fqcen_sdss[sdss_mbin] * N_sdss[sdss_mbin].astype('float'))/np.sum(N_sdss[sdss_mbin].astype('float'))
+    
+    # Read in COSMOS fQ^cen data from Jeremy
+    fqcen_cosmos_rebin = [] 
+    fqcen_low_cosmos_rebin = [] 
+    fqcen_high_cosmos_rebin = [] 
+    for iz, z in enumerate([0.36, 0.66, 0.88]): 
+        fq_file = ''.join(['dat/observations/cosmos_fq/', 
+            'stats_z', str(iz+1), '.fq_cen']) 
+        
+        m_cosmos, fqcen_cosmos, fqcen_cosmos_low, fqcen_cosmos_high = np.loadtxt(fq_file, unpack=True, usecols=[0,1,2,3])
+        m_cosmos = np.log10(m_cosmos)
+
+        fqcen_interp = interp1d(m_cosmos, fqcen_cosmos) 
+        fqcen_low_interp = interp1d(m_cosmos, fqcen_cosmos_low) 
+        fqcen_high_interp = interp1d(m_cosmos, fqcen_cosmos_high) 
+    
+        fqcen_cosmos_rebin.append( fqcen_interp(m_mid) ) 
+        fqcen_low_cosmos_rebin.append( fqcen_low_interp(m_mid) ) 
+        fqcen_high_cosmos_rebin.append( fqcen_high_interp(m_mid) ) 
+
+    fqcen_cosmos_rebin = np.array(fqcen_cosmos_rebin) 
+    fqcen_low_cosmos_rebin = np.array(fqcen_low_cosmos_rebin)
+    fqcen_high_cosmos_rebin = np.array(fqcen_high_cosmos_rebin) 
+
+    z_arr = np.array([0.025, 0.36, 0.66, 0.88])
+    z_fin = np.arange(0.0, 1.1, 0.1)
+    
+    prettyplot()
+    pretty_colors = prettycolors() 
+    fig = plt.figure(figsize=(7, 7))
+    sub = fig.add_subplot(111)#, len(m_mid), im+1) 
+    lines = []
+    for im in range(len(m_mid)-1): 
+        fqcen_z = np.array([fqcen_sdss_rebin[im]]+list(fqcen_cosmos_rebin[:,im]))
+        fqcen_z_err_low = np.array(
+                [0.0] + list(fqcen_cosmos_rebin[:,im] - fqcen_low_cosmos_rebin[:,im])
+                )
+        fqcen_z_err_high = np.array(
+                [0.0] + list(fqcen_high_cosmos_rebin[:,im] - fqcen_cosmos_rebin[:,im])
+                )
+        if im == 0: 
+            err_label = 'Tinker+(2013)'
+            tink = sub.errorbar(z_arr, fqcen_z, yerr=[fqcen_z_err_low, fqcen_z_err_high], 
+                    fmt='o', markersize=8, color=pretty_colors[2*im+1], lw=0, 
+                    ecolor='k', elinewidth=2, capthick=2, label=err_label)
+            tink_handles, tink_labels = sub.get_legend_handles_labels()
+            # remove the errorbars
+            tink_handles = [h[0] for h in tink_handles]
+        else: 
+            err_label = None
+            sub.errorbar(z_arr, fqcen_z, yerr=[fqcen_z_err_low, fqcen_z_err_high], 
+                    fmt='o', markersize=8, color=pretty_colors[2*im+1], lw=0,
+                    ecolor='k', elinewidth=2, capthick=2)
+
+        line, = sub.plot(z_fin, fqcen_sdss_rebin[im] * (1. + z_fin)**alpha_m[im], 
+                c=pretty_colors[2*im+1], ls='--', lw=2, 
+                label=r'log$\mathtt{\;M_* = '+str(m_mid[im])+'}$')
+        lines.append(line) 
+
+    first_legend = sub.legend(handles=lines, loc='upper right', handletextpad=0.1, 
+            prop={'size': 20})
+
+    ax = plt.gca().add_artist(first_legend)
+
+    # use them in the legend
+    sub.legend(tink_handles, tink_labels, loc='upper left', numpoints=1, markerscale=2, 
+            handletextpad=-0.15) 
+    
+    sub.set_xlim([0.0, 1.0])
+    sub.set_ylim([0.0, 1.0])
+    #sub.set_ylim([0.01, 1.0]) 
+    #sub.set_yscale('log') 
+    sub.set_xlabel(r'Redshift $(\mathtt{z})$', fontsize=25) 
+    sub.set_ylabel(r'Quiescent Fraction of Central Galaxies', fontsize=22) 
+
+    fig_file = ''.join(['figure/paper/', 'fqcen.png'])
+    fig.savefig(fig_file, bbox_inches='tight', dpi=150) 
+    Util.png2pdf(fig_file)
+    plt.close()
     return None
 
 
@@ -1121,7 +1224,8 @@ def keep_non_descreasing(L):
 
 if __name__=='__main__': 
     #fig_SMFevol()
-    fig_SFMSevol()
+    fig_fQcen_evol()
+    #fig_SFMSevol()
     #for z in [0.1, 0.3, 0.5, 0.7, 0.9]: 
     #    fig_gas_depletion(z=z)
     #fig_gas_depletion()
