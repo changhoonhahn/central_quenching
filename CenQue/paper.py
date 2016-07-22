@@ -530,6 +530,8 @@ def figSFH_SchematicDemo(t, abcrun, prior_name='try0'):
     z_snap, t_snap = np.loadtxt(Util.snapshottable(), unpack=True, usecols=[2, 3]) 
     z_cosmics = z_snap[1:sim_kwargs['nsnap_ancestor']+1][::-1]
     t_cosmics = t_snap[1:sim_kwargs['nsnap_ancestor']+1][::-1]
+    #z_cosmics = np.arange(z_cosmics.min(), z_cosmics.max()+0.01, 0.01) 
+    #t_cosmics = Util.get_tsnap(z_cosmics)
 
     des1 = des_dict['1']    # descendant at nsnap = 1
 
@@ -557,6 +559,7 @@ def figSFH_SchematicDemo(t, abcrun, prior_name='try0'):
     # quenching  
     tqq = np.array([9.0])
     qing_SFRs = np.zeros(len(z_cosmics))
+    qing_SFRs_sat = np.zeros(len(z_cosmics))
     for i_z, z_f in enumerate(z_cosmics): 
         # log(SFR)_SFMS evolution from t0
         logsfr_sfms = sf_SFRs[i_z]
@@ -569,6 +572,14 @@ def figSFH_SchematicDemo(t, abcrun, prior_name='try0'):
                 tau_prop=sim_kwargs['evol_prop']['tau'])
         logsfr_tot = logsfr_sfms + logsfr_quench
         qing_SFRs[i_z] = logsfr_tot
+
+        logsfr_quench_sat = sfr_evol.DeltaLogSFR_quenching(
+                tqq, 
+                t_cosmics[i_z],
+                M_q=avg_Msham_evol[closest_tQ_index],
+                tau_prop={'name': 'satellite'})
+        logsfr_tot_sat = logsfr_sfms + logsfr_quench_sat
+        qing_SFRs_sat[i_z] = logsfr_tot_sat
     '''
     # overquenching 
     avg_q_ssfr = sfr_evol.AverageLogSSFR_q_peak(avg_Msham_evol[-1])
@@ -584,22 +595,23 @@ def figSFH_SchematicDemo(t, abcrun, prior_name='try0'):
     fig = plt.figure(1, figsize=(7, 6))
     sub = fig.add_subplot(111) 
 
-    sub.plot(t_cosmics, qing_SFRs, color=pretty_colors[6], lw=5)#, label='$Quenching$ ($\mathtt{t_Q=9}$ Gyr)')
-    sub.text(9.5, -.9, '$Quenching\;(\mathtt{t_Q=9}$ Gyr)', rotation=-42.5) 
-    sub.plot(t_cosmics, sf_SFRs, color=pretty_colors[1], lw=5, ls='--')#, label='$Star-Forming$') 
-    sub.text(10., -0.25, '$StarForming$', rotation=-3) 
+    sub.plot(t_cosmics, qing_SFRs_sat, color=pretty_colors[7], lw=2, ls='--')
+    sub.plot(t_cosmics, qing_SFRs, color=pretty_colors[6], lw=5)
+    sub.text(9.8, -.7, 'Quenching ($\mathtt{t_Q=9}$ Gyr)', rotation=-47.5) 
+    sub.plot(t_cosmics, sf_SFRs, color=pretty_colors[1], lw=5, ls='--')
+    sub.text(8.5, -0.24, 'Star Forming', rotation=-4, fontsize=18) 
 
     avg_q_ssfr = sfr_evol.AverageLogSSFR_q_peak(avg_Msham_evol[-1])
     sigma_q_ssfr = sfr_evol.ScatterLogSSFR_q_peak(avg_Msham_evol[-1])
     sub.fill_between(t_cosmics, 
             np.repeat(avg_q_ssfr + sigma_q_ssfr + avg_Msham_evol[-1], len(t_cosmics)), 
             np.repeat(-3., len(t_cosmics)), color=pretty_colors[4]) 
-    print np.repeat(avg_q_ssfr + sigma_q_ssfr + avg_Msham_evol[-1], len(t_cosmics))
-    sub.text(8.25, -2.5, '$Quiescent$', fontsize=25) 
+    #print np.repeat(avg_q_ssfr + sigma_q_ssfr + avg_Msham_evol[-1], len(t_cosmics))
+    sub.text(8.7, -2.18, 'Quiescent', fontsize=22) 
 
     sub.set_xlim([t_cosmics.min(), t_cosmics.max()])
     sub.set_xlabel(r'$\mathtt{t_{cosmic}}\;[\mathtt{Gyr}]$', fontsize=25) 
-    sub.set_ylim([-3., 0.5]) 
+    sub.set_ylim([-2.4, 0.5]) 
     sub.set_ylabel(r'$\mathtt{log}(\mathtt{SFR}\;[\mathtt{M}_\odot/\mathtt{yr}])$', fontsize=25) 
     fig_file = ''.join(['figure/paper/', 'SFH_SchematicDemo.png']) 
     fig.savefig(fig_file, bbox_inches='tight', dpi=150) 
@@ -1224,13 +1236,13 @@ def keep_non_descreasing(L):
 
 if __name__=='__main__': 
     #fig_SMFevol()
-    fig_fQcen_evol()
+    #fig_fQcen_evol()
     #fig_SFMSevol()
     #for z in [0.1, 0.3, 0.5, 0.7, 0.9]: 
     #    fig_gas_depletion(z=z)
     #fig_gas_depletion()
     #fig_gas_depletion_Santini(z=0.5)
-    #figSFH_SchematicDemo(7, 'RHOssfrfq_TinkerFq_Std', prior_name='updated')
+    figSFH_SchematicDemo(7, 'RHOssfrfq_TinkerFq_Std', prior_name='updated')
     #fig_quenching_comparison(z = 0.5)
     #fig_tau_SMFevol(
     #        standard_run='RHOssfrfq_TinkerFq_Std', standard_tf=7, 
