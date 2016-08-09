@@ -597,7 +597,7 @@ def figSFH_SchematicDemo(t, abcrun, prior_name='try0'):
 
     sub.plot(t_cosmics, qing_SFRs_sat, color=pretty_colors[7], lw=2, ls='--')
     sub.plot(t_cosmics, qing_SFRs, color=pretty_colors[6], lw=5)
-    sub.text(9.8, -.7, 'Quenching ($\mathtt{t_Q=9}$ Gyr)', rotation=-47.5) 
+    sub.text(9.8, -.7, 'Quenching ($\mathtt{t_{Q, start}=9}$ Gyr)', rotation=-47.5) 
     sub.plot(t_cosmics, sf_SFRs, color=pretty_colors[1], lw=5, ls='--')
     sub.text(8.5, -0.24, 'Star Forming', rotation=-4, fontsize=18) 
 
@@ -620,9 +620,11 @@ def figSFH_SchematicDemo(t, abcrun, prior_name='try0'):
     return None 
     
 
-def fig_SSFRevol(t, abcrun, prior_name='try0'): 
-    ''' Demonstrate the SFR assignment scheme based through the 
-    SSFR distribution function P(SSFR) with different GV prescriptions.
+def fig_SSFRevol(t, abcrun, prior_name='try0', orientation='portrait'): 
+    ''' Demonstrate the SFR assignment scheme through the 
+    SSFR distribution function P(SSFR) evolution over multiple
+    snapshots. Also include extreme versions of the quenching
+    timescale for comparison. 
     '''
     abc_plot = PlotABC(t, abcrun=abcrun, prior_name=prior_name) 
     # median theta values 
@@ -639,6 +641,10 @@ def fig_SSFRevol(t, abcrun, prior_name='try0'):
             'slope': gv_slope, 'fidmass': 10.5, 'offset': gv_offset}
     
     nsnaps = [1,4,7,10,12]
+    color_scheme = ['#6c1500', '#b42400', '#c34f32', '#d27b66', '#e1a799'][::-1]
+    #['#cc2800', '#991e00', '#661400', '#330a00', '#000000']
+
+    #nsnaps = [1,4,10]
     inh = Inherit(nsnaps, 
             nsnap_ancestor=sim_kwargs['nsnap_ancestor'],
             subhalo_prop=sim_kwargs['subhalo_prop'], 
@@ -649,29 +655,106 @@ def fig_SSFRevol(t, abcrun, prior_name='try0'):
 
     prettyplot() 
     pretty_colors = prettycolors()
-    fig = plt.figure(1, figsize=(7, 7))
-    sub = fig.add_subplot(111)
+    if orientation == 'portrait': 
+        fig = plt.figure(1, figsize=(5,8))
+        sub = fig.add_subplot(211)
+        sub2 = fig.add_subplot(212)
+    elif orientation == 'landscape': 
+        fig = plt.figure(1, figsize=(14,7))
+        sub = fig.add_subplot(121)
+        sub2 = fig.add_subplot(122)
+    bkgd = fig.add_subplot(111, frameon=False)
 
     bin_mid, ssfr_dist = anc.Ssfr()
-    sub.plot(bin_mid[1], ssfr_dist[1], c='k', lw=2, ls='--', label=r"$\mathtt{z=1.0}$")
+    sub.plot(bin_mid[1], ssfr_dist[1], 
+            c='#f0d3cc', lw=2, ls='-', label="z = 1.")
     
-    for i_snap in nsnaps[::-1]: 
+    for ii, i_snap in enumerate(nsnaps[::-1]): 
         bin_mid, ssfr_dist = des_dict[str(i_snap)].Ssfr()
-        label = r"$\mathtt{\;\;"+str(round(des_dict[str(i_snap)].zsnap,1))+"}$"
+        label = 'z = '+str(round(des_dict[str(i_snap)].zsnap,1))
+        
+        if i_snap == 1: 
+            lwidth = 3
+            lbl = label 
+        else: 
+            lwidth = 2
+            lbl = None
+        sub.plot(bin_mid[1], ssfr_dist[1], 
+                c=color_scheme[ii], lw=lwidth, ls='-', label=lbl)
+        if i_snap == 1: 
+            sub2.plot(bin_mid[1], ssfr_dist[1], 
+                    c='k', lw=3, ls='-')
+        #sub.text(-10.75, 1.25, r"$\mathtt{log\;M_* = [10.1, 10.5]}$", fontsize=20)
+    
+    # plot extreme quenching timescale versions 
+    sat_ppp = PlotABC(10, abcrun='SatABC_TinkerFq', prior_name='satellite')
+    sat_gv_slope, sat_gv_offset, sat_fudge_slope, sat_fudge_offset = sat_ppp.med_theta
+    fast_kwargs = sim_kwargs.copy()     # faster quenching
+    fast_kwargs['sfr_prop']['gv'] = {'slope': sat_gv_slope, 'fidmass': 10.5, 'offset': sat_gv_offset}
+    fast_kwargs['evol_prop']['fudge'] = {'slope': sat_fudge_slope, 'fidmass': 10.5, 'offset': sat_fudge_offset}
+    fast_kwargs['evol_prop']['tau'] = {'name': 'satellite'}
+    fast_inh = Inherit([1], 
+            nsnap_ancestor=fast_kwargs['nsnap_ancestor'],
+            subhalo_prop=fast_kwargs['subhalo_prop'], 
+            sfr_prop=fast_kwargs['sfr_prop'], 
+            evol_prop=fast_kwargs['evol_prop'])
+    fast_des_dict = fast_inh()
+    
+    fast_bin_mid, fast_ssfr_dist = fast_des_dict['1'].Ssfr()
+    sub2.plot(fast_bin_mid[1], fast_ssfr_dist[1], 
+            c='k', lw=3, ls='--', label=r"Shorter $\tau_Q$" )
+    
+    slow_kwargs = sim_kwargs.copy()     # faster quenching
+    slow_kwargs['sfr_prop']['gv'] = {'slope': gv_slope, 'fidmass': 10.5, 'offset': gv_offset}
+    slow_kwargs['evol_prop']['fudge'] = {'slope': fudge_slope, 'fidmass': 10.5, 'offset': fudge_offset}
+    slow_kwargs['evol_prop']['tau'] = {
+            'name': 'line', 'slope': tau_slope, 'fid_mass': 11.1, 'yint': tau_offset+1.}
+    slow_inh = Inherit([1], 
+            nsnap_ancestor=slow_kwargs['nsnap_ancestor'],
+            subhalo_prop=slow_kwargs['subhalo_prop'], 
+            sfr_prop=slow_kwargs['sfr_prop'], 
+            evol_prop=slow_kwargs['evol_prop'])
+    slow_des_dict = slow_inh()
+    
+    slow_bin_mid, slow_ssfr_dist = slow_des_dict['1'].Ssfr()
+    sub2.plot(slow_bin_mid[1], slow_ssfr_dist[1], 
+            c='k', lw=3, ls=':', label=r"Longer $\tau_Q$" )
+    
+    sub.set_xlim([-13.0, -8.5])
+    if orientation == 'portrait': 
+        sub.set_xticklabels([]) 
+    sub.set_ylim([0.0, 1.4])
+    sub.legend(loc='upper left', prop={'size': 20}, borderaxespad=1.)
 
-        sub.plot(bin_mid[1], ssfr_dist[1], c=pretty_colors[i_snap], lw=2, ls='-', label=label)
-
-        sub.text(-10.75, 1.4, r"$\mathtt{log\;M_* = [10.1, 10.5]}$", fontsize=20)
-
-    sub.set_xlim([-13.0, -8.0])
-    sub.set_xlabel(r'$\mathtt{log \; SSFR \;[yr^{-1}]}$', fontsize=25) 
-    sub.set_ylim([0.0, 1.6])
-    sub.set_ylabel(r'$\mathtt{P(log \; SSFR)}$', fontsize=25) 
-    sub.legend(loc='upper left', prop={'size': 20})
-
-    fig_file = ''.join(['figure/paper/', 'SSFRevol.png'])
+    sub2.set_xlim([-13.0, -8.5])
+    sub2.set_ylim([0.0, 1.0])
+    #sub2.set_ylabel(r'$\mathtt{P(log \; SSFR)}$', fontsize=25) 
+    if orientation == 'portrait': 
+        sub2.set_yticklabels([0.0, 0.2, 0.4, 0.6, 0.8])
+        sub2.set_xticklabels([-13, '', -12, '', -11, '', -10, '', -9]) 
+    elif orientation == 'landscape': 
+        sub.set_xticklabels([-13, -12, -11, -10, -9, -8])
+        #sub2.set_xticklabels([-13, '', -12, '', -11, '', -10, '', -9]) 
+        sub2.set_xticklabels(['', -12.5, '', -11.5, '', -10.5, '', -9.5]) 
+        sub2.yaxis.tick_right()
+        sub2.yaxis.set_ticks_position('both')
+        sub2.yaxis.set_label_position('right')
+    sub2.legend(bbox_to_anchor=(1.075, 1.075),
+            loc='upper right', borderaxespad=1.5, prop={'size': 20})
+    
+    bkgd.tick_params(labelcolor='none', top='off', bottom='off', left='off', right='off')
+    bkgd.set_ylabel(r'$\mathtt{P(log \; SSFR)}$', fontsize=25) 
+    bkgd.set_xlabel(r'$\mathtt{log \; SSFR \;[yr^{-1}]}$', fontsize=25) 
+    
+    if orientation == 'portrait': 
+        fig.subplots_adjust(wspace=0.0, hspace=0.0)
+    elif orientation == 'landscape': 
+        fig.subplots_adjust(wspace=0.1, hspace=0.0)
+    fig_file = ''.join(['figure/paper/', 'SSFRevol_test', 
+        '.', orientation, '.png'])
     fig.savefig(fig_file, bbox_inches='tight', dpi=150) 
     plt.close() 
+    Util.png2pdf(fig_file)
     return None 
 
 
@@ -870,6 +953,154 @@ def fig_SSFR_tau_satellite(tf, abcrun='rhofq_tausat', prior_name='satellite'):
         'SSFR.ABC_posterior',
         '.', abcrun, 
         '.', prior_name, '_prior', 
+        '.png'])
+    fig.savefig(fig_file, bbox_inches='tight', dpi=150)
+
+    #ppp.Ssfr(filename=fig_file)
+    plt.close() 
+    Util.png2pdf(fig_file) 
+    return None
+
+
+def fig_SSFR_SDSS(): 
+    ''' Compare P(SSFR) between the SDSS centrals and satellites.
+    '''
+    # group catalog CENTRALS
+    groupcat = GroupCat(Mrcut=18, position='central')
+    cen_bin_mid, cen_ssfr_dist = groupcat.Ssfr()
+    
+    # group catalog SATELLITES
+    groupcat = GroupCat(Mrcut=18, position='satellite')
+    sat_bin_mid, sat_ssfr_dist = groupcat.Ssfr()
+
+    prettyplot() 
+    pretty_colors = prettycolors() 
+    fig = plt.figure(figsize=(6, 6))
+    #bkgd = fig.add_subplot(111, frameon=False)
+
+    panel_mass_bins = [[9.7, 10.1], [10.1, 10.5], [10.5, 10.9], [10.9, 11.3]]
+    for i_m, mass_bin in enumerate(panel_mass_bins): 
+        if i_m != 1: 
+            continue 
+
+        sub = fig.add_subplot(111)
+
+        cen_label = 'SDSS Centrals'
+        sat_label = 'SDSS Satellites'
+
+        sub.plot(cen_bin_mid[i_m], cen_ssfr_dist[i_m], 
+                lw=3, ls='-', c=pretty_colors[1], label=cen_label)
+
+        sub.plot(sat_bin_mid[i_m], sat_ssfr_dist[i_m], 
+                lw=3, ls='--', c=pretty_colors[3], label=sat_label)
+
+        massbin_str = ''.join([ 
+            r'$\mathtt{log \; M_{*} = [', 
+            str(mass_bin[0]), ',\;', 
+            str(mass_bin[1]), ']}$'
+            ])
+        sub.text(-12., 1.275, massbin_str, fontsize=20)
+    
+        # x-axis
+        sub.set_xlim([-13., -9.5])
+        sub.set_xticklabels([-13., '', -12., '', -11., '', -10.])
+        sub.set_xlabel(r'$\mathtt{log \; SSFR \;[yr^{-1}]}$', fontsize=25) 
+        # y-axis 
+        sub.set_ylim([0.0, 1.45])
+        sub.set_ylabel(r'$\mathtt{P(log \; SSFR)}$', fontsize=25) 
+        
+        ax = plt.gca()
+        leg = sub.legend(bbox_to_anchor=(-9.25, 1.4), loc='upper right', prop={'size': 20}, borderpad=2, 
+                bbox_transform=ax.transData, handletextpad=0.5)
+        
+    fig.subplots_adjust(wspace=0.0, hspace=0.0)
+
+    #bkgd.tick_params(labelcolor='none', top='off', bottom='off', left='off', right='off')
+    #bkgd.set_xlabel(r'$\mathtt{log \; SSFR \;[yr^{-1}]}$', fontsize=25) 
+    
+    fig_file = ''.join(['figure/paper/', 'SSFR_SDSS.png'])
+    fig.savefig(fig_file, bbox_inches='tight', dpi=150)
+
+    #ppp.Ssfr(filename=fig_file)
+    plt.close() 
+    Util.png2pdf(fig_file) 
+    return None
+
+
+def fig_SSFR_Poster(): 
+    ''' The SSFR distribution from the median value of the ABC posterior
+    '''
+    figdata_file = ''.join(['/data1/hahn/paper/',  
+        'SSFR.ABC_posterior', '.RHOssfrfq_TinkerFq_Std.updated_prior', '.p'])
+    model_bin_mid, model_ssfr_dist = pickle.load(open(figdata_file, 'rb')) 
+   
+    sat_figdata_file = ''.join(['/data1/hahn/paper/',  
+        'SSFR.ABC_posterior', '.rhofq_tausat.satellite_prior', '.p'])
+    sat_model_bin_mid, sat_model_ssfr_dist = pickle.load(open(sat_figdata_file, 'rb')) 
+
+    # group catalog
+    groupcat = GroupCat(Mrcut=18, position='central')
+    sdss_bin_mid, sdss_ssfr_dist = groupcat.Ssfr()
+
+    prettyplot() 
+    pretty_colors = prettycolors() 
+    fig = plt.figure(figsize=(20, 6))
+
+    panel_mass_bins = [[9.7, 10.1], [10.1, 10.5], [10.5, 10.9], [10.9, 11.3]]
+    for i_m, mass_bin in enumerate(panel_mass_bins): 
+        sub = fig.add_subplot(1, 4, i_m+1)
+
+        if i_m == 3:  
+            model_label = 'Hahn+(2016)'
+            sat_model_label = r'w/ Satellite $\tau_Q$'
+            sdss_label = 'SDSS Centrals'
+        else: 
+            sdss_label = None 
+            sat_model_label = None 
+            model_label = None
+        
+        scale_down = model_ssfr_dist[i_m].max()/sat_model_ssfr_dist[i_m].max()
+        print model_ssfr_dist[i_m].max(), sat_model_ssfr_dist[i_m].max()
+        print scale_down
+        sub.plot(sat_model_bin_mid[i_m], scale_down*sat_model_ssfr_dist[i_m], 
+                lw=2, ls=':', c=pretty_colors[1], label=sat_model_label)
+
+        sub.plot(model_bin_mid[i_m], model_ssfr_dist[i_m], 
+                lw=3, ls='-', c=pretty_colors[3], label=model_label)
+
+        sub.plot(sdss_bin_mid[i_m], sdss_ssfr_dist[i_m], 
+                lw=2, ls='--', c='k', label=sdss_label)
+
+        massbin_str = ''.join([ 
+            r'$\mathtt{log \; M_{*} = [', 
+            str(mass_bin[0]), ',\;', 
+            str(mass_bin[1]), ']}$'
+            ])
+        sub.text(-12., 1.6, massbin_str, fontsize=20)
+    
+        # x-axis
+        if i_m == 3:
+            sub.set_xticks([-13, -12, -11, -10, -9])
+        else: 
+            sub.set_xticks([-13, -12, -11, -10])
+        sub.set_xlim([-13., -9.])
+        sub.set_xlabel(r'$\mathtt{log \; SSFR \;[yr^{-1}]}$', fontsize=25) 
+        # y-axis 
+        sub.set_ylim([0.0, 1.8])
+        sub.set_yticks([0.0, 0.5, 1.0, 1.5])
+        if i_m == 0: 
+            sub.set_ylabel(r'$\mathtt{P(log \; SSFR)}$', fontsize=25) 
+        else: 
+            sub.set_yticklabels([])
+        
+        ax = plt.gca()
+        leg = sub.legend(bbox_to_anchor=(-8.5, 1.75), loc='upper right', prop={'size': 20}, borderpad=2, 
+                bbox_transform=ax.transData, handletextpad=0.5)
+        
+    fig.subplots_adjust(wspace=0.0, hspace=0.0)
+
+    fig_file = ''.join(['figure/paper/',
+        'SSFR.Poster.ABC_posterior',
         '.png'])
     fig.savefig(fig_file, bbox_inches='tight', dpi=150)
 
@@ -1108,10 +1339,6 @@ def fig_quenching_comparison(z = 0.5):
     Santini+(2014) at the central redshift bin of our simulation. 
     '''
     m_arr = np.arange(9.0, 12.1, 0.1)   # mass array 
-    
-    prettyplot()
-    pretty_colors = prettycolors() 
-    fig = plt.figure(figsize=(6, 6))
         
     # estimate central quenching time from the timescale
     # tQ = - tauQ * ln( SFRq/SFRsf ) 
@@ -1142,7 +1369,7 @@ def fig_quenching_comparison(z = 0.5):
     # Stewart+2009
     f_stargas = 0.04 * ((10.**m_arr)/(4.5*10.**11.))**(-0.59 * (1. + z)**0.45)
     M_gas_Stewart = f_stargas * 10**m_arr #np.log10(1./(1./f_gas_Stewart-1.) * 10**m_arr)
-    t_gas_Stewart = M_gas_Stewart / 10**sfr_evol.AverageLogSFR_sfms(m_arr, z, sfms_prop={'name': 'linear', 'zslope':1.14}) /10**9
+    t_gas_Stewart = M_gas_Stewart / 10**(sfr_evol.AverageLogSFR_sfms(m_arr, z, sfms_prop={'name': 'linear', 'zslope':1.14}) + 9.) 
 
     # Santini+2014
     #if z < 0.2: 
@@ -1155,64 +1382,109 @@ def fig_quenching_comparison(z = 0.5):
     #    raise ValueError
     #m_dat, fgas_dat = np.loadtxt(dat_file, delimiter=',', unpack=True, usecols=[0,1]) 
     #f_gas_Santini = fgas_dat 
-    if z == 0.5: 
+    if z > 0.2 and z < 0.6: 
         m_dat = np.array([10., 10.5, 11.0, 11.5]) 
         alpha = np.array([-1.53, -1.53, -1.34, -1.58]) 
         beta = np.array([-0.52, -0.52, -0.53, -0.85]) 
-    elif z == 0.1: 
+    elif z <= 0.2: 
         m_dat = np.array([10.25, 10.5, 11.0, 11.5]) 
         alpha = np.array([-2.17, -2.17, -2.17, -1.53]) 
         beta = np.array([-1.04, -1.04, -1.04, -0.52]) 
     f_gas_Santini = 10.**(alpha + beta * (m_dat - 11.)) 
     M_gas_Santini = np.log10(1./(1./f_gas_Santini-1.) * 10**m_dat)
-    t_gas_Santini = 10**M_gas_Santini / 10**sfr_evol.AverageLogSFR_sfms(m_dat, z, sfms_prop={'name': 'linear', 'zslope':1.14})/10**9
+    t_gas_Santini = 10**M_gas_Santini / 10**(sfr_evol.AverageLogSFR_sfms(m_dat, z, sfms_prop={'name': 'linear', 'zslope':1.14}) + 9.) 
 
     # Boselli+2014
     f_gas_Boselli = 1. - 1./(1. + 10**(-0.69 * m_arr + 6.63))
     M_gas_Boselli = np.log10(1./(1./f_gas_Boselli-1.) * 10**m_arr)
-    t_gas_Boselli = 10**M_gas_Boselli / 10**sfr_evol.AverageLogSFR_sfms(m_arr, z, sfms_prop={'name': 'linear', 'zslope':1.14})/10**9
+    t_gas_Boselli = 10**M_gas_Boselli / 10**(sfr_evol.AverageLogSFR_sfms(m_arr, z, sfms_prop={'name': 'linear', 'zslope':1.14}) + 9.) 
 
+    # Popping+(2015) SHAMed gas results 
+    # import Popping data 
+    popping_file = ''.join(['dat/observations/popping2015/', 'mstar.vs.SFE.dat'])
+    z_pop, logm_pop, logsfe_pop, sig_logsfr_pop = np.loadtxt(popping_file, unpack=True, skiprows=4, usecols=[0,1,2,3])
+    tdep_pop = (1./10**logsfe_pop)/1e9    # convert to Gyrs
+
+    popping_m_lowz = 10**logm_pop[np.where(z_pop == 0.0)]
+    popping_delt_lowz = tdep_pop[np.where(z_pop == 0.0)]
+    popping_m_highz = 10**logm_pop[np.where(z_pop == 0.5)]
+    popping_delt_highz = tdep_pop[np.where(z_pop == 0.5)]
+
+    t_lowz, t_highz = 13.8099, 8.628
+    popping_delt_tinterp_lowz = ((popping_delt_lowz - popping_delt_highz)/(t_lowz - t_highz)) *\
+            (11.8271 - t_highz) + popping_delt_highz
+    popping_delt_tinterp_highz = ((popping_delt_lowz - popping_delt_highz)/(t_lowz - t_highz))*\
+            (10.5893 - t_highz) + popping_delt_highz
+    popping_delt_tinterp = ((popping_delt_lowz - popping_delt_highz)/(t_lowz - t_highz)) *\
+            (11.1980 - t_highz) + popping_delt_highz
+
+    # make the figure  
+    prettyplot()
+    pretty_colors = prettycolors() 
+    fig = plt.figure(figsize=(6, 6))
     sub = fig.add_subplot(111)
-    stewart_plot, = sub.plot(10**m_arr, t_gas_Stewart, lw=3, c='k', 
-            label=r'$\mathtt{\hat{t}_{gas}}$ Stewart+2009')
-    boselli_plot, = sub.plot(10**m_arr, t_gas_Boselli, lw=3, c='k', ls='-.',
-            label=r'$\mathtt{\hat{t}_{gas}}$ Boselli+2014')
+    #stewart_plot, = sub.plot(10**m_arr, t_gas_Stewart, lw=3, c='k', 
+    #        label=r'$\mathtt{\hat{t}_{gas}}$ Stewart+2009')
+    #boselli_plot, = sub.plot(10**m_arr, t_gas_Boselli, lw=3, c='k', ls='-.',
+    #        label=r'$\mathtt{\hat{t}_{gas}}$ Boselli+2014')
     #santini_plot, = sub.plot(10**m_dat, t_gas_Santini, lw=3, c='k', ls='dotted', 
     #        label=r'$\mathtt{\hat{t}_{gas}}$ Santini+2014')
-    peng_plot, = sub.plot(10**np.arange(9.5, 11.1, 0.1), 
-            np.repeat(4., len(np.arange(9.5, 11.1, 0.1))), lw=3, c='k', ls='--',
-            label=r'$\mathtt{\hat{t}_{Q}}$ Peng+2015') 
+    popping_plot = sub.fill_between(popping_m_highz, 
+            popping_delt_tinterp_highz, popping_delt_tinterp_lowz, 
+            color=pretty_colors[1], alpha=0.5, edgecolor='none', 
+            label=r'$\mathtt{t_{gas}}$ Popping+2015') 
+    sub.plot(popping_m_lowz, popping_delt_tinterp, lw=2, alpha=0.75,
+            c=pretty_colors[1], ls='-.')
+
+    #peng_m = np.array([10.121919584954604, 10.348897535667964, 10.71206225680934, 10.890402075226978, 11.110894941634243])
+    #peng_m = np.array([9.92088197146563, 10.488326848249027, 10.757457846952011, 11.033073929961091, 11.123865110246435])
+    peng_m = np.array([9.429542645241039, 10.11248454882571, 10.328800988875155, 10.65945611866502, 10.869592088998765, 11.088998763906057]) 
+    peng_delt = np.array([5., 5., 4., 3., 2., 1.])
+
+    #peng_plot, = sub.plot(10**np.arange(9.5, 11.1, 0.1), 
+    #        np.repeat(4., len(np.arange(9.5, 11.1, 0.1))), lw=3, c='k', ls='--',
+    #        label=r'$\mathtt{\hat{t}_{Q}}$ Peng+2015') 
+    peng_plot, = sub.plot(10**peng_m, 
+            peng_delt, lw=3, c='k', ls='--',
+            label=r'$\mathtt{t_{mig}}$ Peng+2015') 
     #q_plot, = sub.plot(10**m_arr, t_quench, lw=3, c=pretty_colors[3], 
     #        label=r'$\mathtt{\hat{t}_{Q}^{cen}}$ Hahn+2016') 
     #sub.plot(10**m_arr, t_quench_low, lw=3, c=pretty_colors[3])
     #sub.plot(10**m_arr, t_quench_high, lw=3, c=pretty_colors[3])
     q_plot = sub.fill_between(10**m_arr, t_quench_low, t_quench_high, color=pretty_colors[3], 
-            alpha=0.5, edgecolor='none', label=r'$\mathtt{\hat{t}_{Q}^{cen}}$ Hahn+2016') 
+            alpha=0.5, edgecolor='none', label=r'$\mathtt{t_{mig}^{cen}}$ Hahn+2016') 
+    
 
     # Martig+2009
     martig_plot = sub.scatter([2.*10**11], [2.5], c='k', s=75, marker='*',
-            label=r'Martig+2009(Morph.)') 
+            label=r'Martig+2009(Morph)') 
     # Haywood+2016
     del_logSFR = sfr_evol.AverageLogSFR_sfms(np.array([np.log10(6.*10**10)]), z, sfms_prop={'name': 'linear', 'zslope': 1.14}) + 2. 
     f_sfr = 10**(-1. * del_logSFR)                      # fractional decrease of SFR 
     t_q_haywood = -1. * np.log(f_sfr) * (1.5/np.log(10.))
     haywood_plot = sub.scatter([6.*10**10], t_q_haywood, c='k', s=75, marker='^', zorder=5,
-            label=r'Haywood+2016(Morph.)') 
+            label=r'Haywood+2016(Morph)') 
 
     sub.set_xlim([10**9.7, 10**11.5]) 
     sub.set_xscale('log') 
     sub.set_xlabel(r'$\mathtt{M}_*$ [$\mathtt{M_\odot}$]', fontsize=25) 
-    sub.set_ylim([0., 8.]) 
-    sub.set_ylabel(r'$\mathtt{\hat{t}_{Q}}$ [Gyr]', fontsize=25) 
-    first_legend = plt.legend(handles=[stewart_plot, boselli_plot, peng_plot], #santini_plot, 
-            handletextpad=-0.1, loc='upper right')
+    sub.set_ylim([0., 6.75]) 
+    sub.set_ylabel(r'$\mathtt{t_{mig}}$ [Gyr]', fontsize=25) 
+    first_legend = plt.legend(handles=[martig_plot, haywood_plot], 
+            loc='upper right', scatterpoints=1, 
+            handletextpad=0.1, markerscale=1.3, scatteryoffsets=[0.5,0.5]) 
+    
     ax = plt.gca().add_artist(first_legend)
-    plt.legend(handles=[q_plot, martig_plot, haywood_plot], loc='lower left', scatterpoints=1, 
-            handletextpad=0.1, markerscale=1.3, scatteryoffsets=[0.0,0.5,0.5]) 
+    plt.legend(handles=[q_plot, peng_plot, popping_plot], #santini_plot, 
+            handletextpad=0.1, loc='lower left')
 
+    #first_legend = plt.legend(handles=[stewart_plot, boselli_plot, peng_plot], #santini_plot, 
+    #        handletextpad=-0.1, loc='upper right')
     fig.subplots_adjust(wspace=0.0, hspace=0.0)
     fig_file = ''.join(['figure/paper/',
-        't_quenching_comparison.png'])
+        't_quenching_comparison', 
+        '.z', str(z), 
+        '.png'])
     fig.savefig(fig_file, bbox_inches='tight', dpi=150)
     plt.close()
     Util.png2pdf(fig_file)
@@ -1235,6 +1507,7 @@ def keep_non_descreasing(L):
 
 
 if __name__=='__main__': 
+    #fig_SSFR_Poster()
     #fig_SMFevol()
     #fig_fQcen_evol()
     #fig_SFMSevol()
@@ -1242,16 +1515,19 @@ if __name__=='__main__':
     #    fig_gas_depletion(z=z)
     #fig_gas_depletion()
     #fig_gas_depletion_Santini(z=0.5)
-    figSFH_SchematicDemo(7, 'RHOssfrfq_TinkerFq_Std', prior_name='updated')
+    #figSFH_SchematicDemo(7, 'RHOssfrfq_TinkerFq_Std', prior_name='updated')
+    #fig_SSFR_SDSS()
+    #fig_quenching_comparison(z = 0.2)
     #fig_quenching_comparison(z = 0.5)
     #fig_tau_SMFevol(
     #        standard_run='RHOssfrfq_TinkerFq_Std', standard_tf=7, 
     #        noSMF_run='RHOssfrfq_TinkerFq_NOSMFevol', noSMF_tf=8, 
     #        extraSMF_run='RHOssfrfq_TinkerFq_XtraSMF', extraSMF_tf=9)
-    #fig_SSFRevol(7, 'multirho_inh', prior_name='try0')
+    fig_SSFRevol(7, 'multirho_inh', prior_name='try0', orientation='portrait')
+    #fig_SSFRevol(6, 'RHOssfrfq_TinkerFq_Std', prior_name='updated')
     #fig_SFRassign(7, 'RHOssfrfq_TinkerFq_Std', prior_name='updated')
     #figSFH_demo(7, 'multirho_inh', prior_name='try0')
     #fig_ABC_posterior(7, abcrun='multifq_wideprior', prior_name='updated')
-    #fig_SSFR_ABC_post(7, abcrun='multifq_wideprior', prior_name='updated')
+    #fig_SSFR_ABC_post(7, abcrun='RHOssfrfq_TinkerFq_Std', prior_name='updated')
     #fig_tau_ABC_post(7, abcrun='multifq_wideprior', prior_name='updated')
     #fig_SSFR_tau_satellite(10, abcrun='SatABC_TinkerFq', prior_name='satellite')

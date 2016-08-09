@@ -599,6 +599,8 @@ class PlotABC(object):
                 code_dir(), 'dat/pmc_abc/', 'CenQue_theta_t', str(t), '_', abcrun, '.dat']) 
             w_file = ''.join([
                 code_dir(), 'dat/pmc_abc/', 'CenQue_w_t', str(t), '_', abcrun, '.dat']) 
+            dist_file = ''.join([
+                code_dir(), 'dat/pmc_abc/', 'CenQue_dist_t', str(t), '_', abcrun, '.dat']) 
             self.satellite_run = False 
         else: 
             theta_file = ''.join([
@@ -608,6 +610,7 @@ class PlotABC(object):
             self.satellite_run = True 
         self.theta = np.loadtxt(theta_file)      # theta values 
         self.w = np.loadtxt(w_file)              # w values 
+        #self.dist = np.loadtxt(dist_file) 
         
         self.med_theta = [np.median(self.theta[:,i]) for i in range(len(self.theta[0]))]
         

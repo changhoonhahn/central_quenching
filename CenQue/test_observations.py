@@ -434,7 +434,6 @@ def Plot_fQcen_SDSS():
     fig.savefig(fig_file, bbox_inches='tight') 
     plt.close() 
 
-
 def fgas_comparison(): 
     '''
     Compare f_gas (gas fraction) from different literature 
@@ -549,9 +548,24 @@ def fgas_comparison():
     plt.close()
     return None
 
+def CenSat_GroupCat(): 
+    '''
+    '''
+    # import centrals
+    centrals = GroupCat(Mrcut=18, position='central')
+    centrals.Read()
+
+    # import satellites 
+    satellites = GroupCat(Mrcut=18, position='satellite')
+    satellites.Read()
+
+    N_cen = np.sum(centrals.mass >= 9.7) 
+    N_sat = np.sum(satellites.mass >= 9.7) 
+    print np.float(N_cen)/np.float(N_cen + N_sat)
 
 
 if __name__=="__main__": 
+    CenSat_GroupCat()
     #Plot_fQcen_SDSS()
     #Plot_fQcen_parameterized()
 
@@ -570,6 +584,6 @@ if __name__=="__main__":
 
     #GroupCat_iSEDfitMatch(Mrcut=18, position='central')
     #PlotObservedSSFR(isedfit=False)
-    print PlotObservedSFMS(isedfit=False,
-            sfms_prop={'name': 'linear', 'mslope': 0.53, 'zslope': 1.14}
-            )
+    #print PlotObservedSFMS(isedfit=False,
+    #        sfms_prop={'name': 'linear', 'mslope': 0.53, 'zslope': 1.14}
+    #        )
