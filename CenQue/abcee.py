@@ -145,7 +145,7 @@ def PriorRange(name):
         # explore more of the parameter space. 
         prior_min = [0.0, -0.4, -5., 0.5, -1.5, 0.01]
         prior_max = [2.0, 0.6, 0.0, 2.5, 0.5, 1.5]
-    elif name == 'satellite':   # theta does not include taus
+    elif name in ['satellite', 'longtau']:   # theta does *not* include tauQs
         prior_min = [0.0, -0.4, -5., 0.5]
         prior_max = [2.0, 0.6, 0.0, 2.5]
     else: 
@@ -454,9 +454,11 @@ def ABC(T, eps_input, Npart=1000, prior_name='try0', observables=['ssfr'], abcru
     return pools 
 
 
-def SatelliteABC(T, eps_input, Npart=1000, prior_name='try0', observables=['fqz_multi'], abcrun=None, 
+def FixedTauABC(T, eps_input, fix='satellite', Npart=1000, prior_name='try0', 
+        observables=['fqz_multi'], abcrun=None, 
         restart=False, t_restart=None, eps_restart=None, **sim_kwargs):
-    ''' ABC-PMC  
+    ''' Run ABC-PMC analysis for central galaxy SFH model with *FIXED* quenching 
+    timescale
 
     Parameters
     ----------
@@ -501,19 +503,23 @@ def SatelliteABC(T, eps_input, Npart=1000, prior_name='try0', observables=['fqz_
         sim_kwargs = sfinherit_kwargs.copy()
         sim_kwargs['sfr_prop']['gv'] = {'slope': gv_slope, 'fidmass': 10.5, 'offset': gv_offset}
         sim_kwargs['evol_prop']['fudge'] = {'slope': fudge_slope, 'fidmass': 10.5, 'offset': fudge_offset}
-        sim_kwargs['evol_prop']['tau'] = {'name': 'satellite'}
+        sim_kwargs['evol_prop']['tau'] = {'name': fix}
         
         sim_output = SimSummary(observables=observables, **sim_kwargs)
         return sim_output
 
     theta_file = lambda pewl: ''.join([code_dir(), 
-        'dat/pmc_abc/', 'CenQue_theta_t', str(pewl), '_', abcrun_flag, '.satellite.dat']) 
+        'dat/pmc_abc/', 'CenQue_theta_t', str(pewl), '_', abcrun_flag, 
+        '.fixedtau.', fix, '.dat']) 
     w_file = lambda pewl: ''.join([code_dir(), 
-        'dat/pmc_abc/', 'CenQue_w_t', str(pewl), '_', abcrun_flag, '.satellite.dat']) 
+        'dat/pmc_abc/', 'CenQue_w_t', str(pewl), '_', abcrun_flag, 
+        '.fixedtau.', fix, '.dat']) 
     dist_file = lambda pewl: ''.join([code_dir(), 
-        'dat/pmc_abc/', 'CenQue_dist_t', str(pewl), '_', abcrun_flag, '.satellite.dat']) 
+        'dat/pmc_abc/', 'CenQue_dist_t', str(pewl), '_', abcrun_flag, 
+        '.fixedtau.', fix, '.dat']) 
     eps_file = ''.join([code_dir(), 
-        'dat/pmc_abc/epsilon_', abcrun_flag, '.satellite.dat'])
+        'dat/pmc_abc/epsilon_', abcrun_flag, 
+        '.fixedtau.', fix, '.dat']) 
 
     distfn = RhoFq
    

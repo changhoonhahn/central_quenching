@@ -3,7 +3,7 @@ Simple wrapper for running ABC with commandline arguments
 '''
 import sys 
 from abcee import ABC
-from abcee import SatelliteABC
+from abcee import FixedTauABC
 
 restart = int(sys.argv[1])
 
@@ -30,15 +30,15 @@ if restart == 0:
         raise ValueError 
     prior = sys.argv[5]
     print 'ABC Prior name = ', prior
-    if prior not in ['try0', 'updated', 'satellite']:
+    if prior not in ['try0', 'updated', 'satellite', 'longtau']:
         raise ValueError("Prior can only be 'try0', 'updated' and 'satellite'")
     abcrun = sys.argv[6]
     print 'ABC run name = ', abcrun
 
     guess = [10. for i in range(len(obvs_list))]
     
-    if prior == 'satellite': 
-        SatelliteABC(Niter, guess, Npart=Npart, prior_name=prior, observables=obvs_list, abcrun=abcrun)
+    if prior in ['satellite', 'longtau']: 
+        FixedTauABC(Niter, guess, Npart=Npart, prior_name=prior, observables=obvs_list, abcrun=abcrun)
     else:
         ABC(Niter, guess, Npart=Npart, prior_name=prior, observables=obvs_list, abcrun=abcrun)
 

@@ -7,6 +7,7 @@ central quenching timescale paper
 import os 
 import pickle
 import numpy as np 
+import astropy.cosmology as astrocosmo
 from scipy.interpolate import interp1d
 
 import util.util as Util 
@@ -36,6 +37,12 @@ def fig_SMFevol():
     sub = fig.add_subplot(111)
 
     smf = SMF()
+    
+    for zz in np.arange(0.9, 1.7, 0.1): 
+        m, phi1 = smf.analytic(zz, source='li-march-extreme')
+        m, phi2 = smf.analytic(zz, source='li-march')
+        print zz, phi1/phi2
+
     for i_s, source in enumerate(source_list): 
         for iz, z in enumerate(zrange): 
             mass, phi = smf.analytic(z, source=source)  # SMF phi(M*) 
@@ -597,7 +604,9 @@ def figSFH_SchematicDemo(t, abcrun, prior_name='try0'):
 
     sub.plot(t_cosmics, qing_SFRs_sat, color=pretty_colors[7], lw=2, ls='--')
     sub.plot(t_cosmics, qing_SFRs, color=pretty_colors[6], lw=5)
-    sub.text(9.8, -.7, 'Quenching ($\mathtt{t_{Q, start}=9}$ Gyr)', rotation=-47.5) 
+    #sub.text(9.8, -.7, 'Quenching ($\mathtt{t_{Q, start}=9}$ Gyr)', rotation=-47.5) 
+    sub.text(10.5, -1.025, 'Central', rotation=-47.5) 
+    sub.text(9.5, -1.05, 'Satellite', rotation=-60.) 
     sub.plot(t_cosmics, sf_SFRs, color=pretty_colors[1], lw=5, ls='--')
     sub.text(8.5, -0.24, 'Star Forming', rotation=-4, fontsize=18) 
 
@@ -607,9 +616,19 @@ def figSFH_SchematicDemo(t, abcrun, prior_name='try0'):
             np.repeat(avg_q_ssfr + sigma_q_ssfr + avg_Msham_evol[-1], len(t_cosmics)), 
             np.repeat(-3., len(t_cosmics)), color=pretty_colors[4]) 
     #print np.repeat(avg_q_ssfr + sigma_q_ssfr + avg_Msham_evol[-1], len(t_cosmics))
-    sub.text(8.7, -2.18, 'Quiescent', fontsize=22) 
 
+    sub.text(8.7, -2.18, 'Quiescent', fontsize=22) 
+    sub2 = sub.twiny()
+    cosmo = astrocosmo.FlatLambdaCDM(H0=70, Om0=0.274)
+    reds = np.array([0.9, 0.7, 0.5, 0.3, 0.1])
+    ages = cosmo.age(reds).value
+    sub2.set_xticks(ages)
+    sub2.set_xticklabels(['{:g}'.format(age) for age in reds])
+    sub2.set_xlabel('Redshift', fontsize=25) 
+    sub2.tick_params(axis='x', pad=0)
+    
     sub.set_xlim([t_cosmics.min(), t_cosmics.max()])
+    sub2.set_xlim([t_cosmics.min(), t_cosmics.max()])
     sub.set_xlabel(r'$\mathtt{t_{cosmic}}\;[\mathtt{Gyr}]$', fontsize=25) 
     sub.set_ylim([-2.4, 0.5]) 
     sub.set_ylabel(r'$\mathtt{log}(\mathtt{SFR}\;[\mathtt{M}_\odot/\mathtt{yr}])$', fontsize=25) 
@@ -656,7 +675,7 @@ def fig_SSFRevol(t, abcrun, prior_name='try0', orientation='portrait'):
     prettyplot() 
     pretty_colors = prettycolors()
     if orientation == 'portrait': 
-        fig = plt.figure(1, figsize=(5,8))
+        fig = plt.figure(1, figsize=(6,10))
         sub = fig.add_subplot(211)
         sub2 = fig.add_subplot(212)
     elif orientation == 'landscape': 
@@ -675,6 +694,9 @@ def fig_SSFRevol(t, abcrun, prior_name='try0', orientation='portrait'):
         
         if i_snap == 1: 
             lwidth = 3
+            lbl = label 
+        elif i_snap == 7: 
+            lwidth = 2
             lbl = label 
         else: 
             lwidth = 2
@@ -724,14 +746,19 @@ def fig_SSFRevol(t, abcrun, prior_name='try0', orientation='portrait'):
     if orientation == 'portrait': 
         sub.set_xticklabels([]) 
     sub.set_ylim([0.0, 1.4])
-    sub.legend(loc='upper left', prop={'size': 20}, borderaxespad=1.)
+    sub.set_yticks([0.0, 0.4, 0.8, 1.2]) 
+    sub.minorticks_on()
+    sub.legend(loc='upper left', prop={'size': 20}, 
+            borderaxespad=1., handletextpad=0.0)
 
     sub2.set_xlim([-13.0, -8.5])
     sub2.set_ylim([0.0, 1.0])
     #sub2.set_ylabel(r'$\mathtt{P(log \; SSFR)}$', fontsize=25) 
     if orientation == 'portrait': 
-        sub2.set_yticklabels([0.0, 0.2, 0.4, 0.6, 0.8])
-        sub2.set_xticklabels([-13, '', -12, '', -11, '', -10, '', -9]) 
+        #sub2.set_yticklabels([0.0, 0.2, 0.4, 0.6, 0.8])
+        sub2.set_xticks([-13, -12, -11, -10, -9]) 
+        sub2.set_yticks([0., 0.2, 0.4, 0.6, 0.8]) 
+        sub2.minorticks_on() 
     elif orientation == 'landscape': 
         sub.set_xticklabels([-13, -12, -11, -10, -9, -8])
         #sub2.set_xticklabels([-13, '', -12, '', -11, '', -10, '', -9]) 
@@ -739,7 +766,7 @@ def fig_SSFRevol(t, abcrun, prior_name='try0', orientation='portrait'):
         sub2.yaxis.tick_right()
         sub2.yaxis.set_ticks_position('both')
         sub2.yaxis.set_label_position('right')
-    sub2.legend(bbox_to_anchor=(1.075, 1.075),
+    sub2.legend(bbox_to_anchor=(1.05, 1.05),
             loc='upper right', borderaxespad=1.5, prop={'size': 20})
     
     bkgd.tick_params(labelcolor='none', top='off', bottom='off', left='off', right='off')
@@ -808,7 +835,8 @@ def fig_SSFR_ABC_post(tf, abcrun=None, prior_name='try0'):
 
     prettyplot() 
     pretty_colors = prettycolors() 
-    fig = plt.figure(figsize=(20, 6))
+    fig = plt.figure(figsize=(20, 5))
+    bkgd = fig.add_subplot(111, frameon=False)
 
     panel_mass_bins = [[9.7, 10.1], [10.1, 10.5], [10.5, 10.9], [10.9, 11.3]]
     for i_m, mass_bin in enumerate(panel_mass_bins): 
@@ -832,7 +860,7 @@ def fig_SSFR_ABC_post(tf, abcrun=None, prior_name='try0'):
             str(mass_bin[0]), ',\;', 
             str(mass_bin[1]), ']}$'
             ])
-        sub.text(-12., 1.6, massbin_str, fontsize=20)
+        sub.text(-12., 1.4, massbin_str, fontsize=20)
     
         # x-axis
         if i_m == 3:
@@ -840,9 +868,8 @@ def fig_SSFR_ABC_post(tf, abcrun=None, prior_name='try0'):
         else: 
             sub.set_xticks([-13, -12, -11, -10])
         sub.set_xlim([-13., -9.])
-        sub.set_xlabel(r'$\mathtt{log \; SSFR \;[yr^{-1}]}$', fontsize=25) 
         # y-axis 
-        sub.set_ylim([0.0, 1.8])
+        sub.set_ylim([0.0, 1.7])
         sub.set_yticks([0.0, 0.5, 1.0, 1.5])
         if i_m == 0: 
             sub.set_ylabel(r'$\mathtt{P(log \; SSFR)}$', fontsize=25) 
@@ -850,8 +877,11 @@ def fig_SSFR_ABC_post(tf, abcrun=None, prior_name='try0'):
             sub.set_yticklabels([])
         
         ax = plt.gca()
-        leg = sub.legend(bbox_to_anchor=(-8.5, 1.75), loc='upper right', prop={'size': 20}, borderpad=2, 
+        leg = sub.legend(bbox_to_anchor=(-8.5, 1.55), loc='upper right', prop={'size': 20}, borderpad=2, 
                 bbox_transform=ax.transData, handletextpad=0.5)
+    
+    bkgd.tick_params(labelcolor='none', top='off', bottom='off', left='off', right='off')
+    bkgd.set_xlabel(r'$\mathtt{log \; SSFR \;[yr^{-1}]}$', fontsize=25) 
         
     fig.subplots_adjust(wspace=0.0, hspace=0.0)
 
@@ -902,7 +932,8 @@ def fig_SSFR_tau_satellite(tf, abcrun='rhofq_tausat', prior_name='satellite'):
 
     prettyplot() 
     pretty_colors = prettycolors() 
-    fig = plt.figure(figsize=(20, 6))
+    fig = plt.figure(figsize=(20, 5))
+    bkgd = fig.add_subplot(111, frameon=False)
 
     panel_mass_bins = [[9.7, 10.1], [10.1, 10.5], [10.5, 10.9], [10.9, 11.3]]
     for i_m, mass_bin in enumerate(panel_mass_bins): 
@@ -926,7 +957,7 @@ def fig_SSFR_tau_satellite(tf, abcrun='rhofq_tausat', prior_name='satellite'):
             str(mass_bin[0]), ',\;', 
             str(mass_bin[1]), ']}$'
             ])
-        sub.text(-12., 1.6, massbin_str, fontsize=20)
+        sub.text(-12., 1.4, massbin_str, fontsize=20)
     
         # x-axis
         if i_m == 3:
@@ -934,9 +965,9 @@ def fig_SSFR_tau_satellite(tf, abcrun='rhofq_tausat', prior_name='satellite'):
         else: 
             sub.set_xticks([-13, -12, -11, -10])
         sub.set_xlim([-13., -9.])
-        sub.set_xlabel(r'$\mathtt{log \; SSFR \;[yr^{-1}]}$', fontsize=25) 
+        #sub.set_xlabel(r'$\mathtt{log \; SSFR \;[yr^{-1}]}$', fontsize=25) 
         # y-axis 
-        sub.set_ylim([0.0, 1.8])
+        sub.set_ylim([0.0, 1.7])
         sub.set_yticks([0.0, 0.5, 1.0, 1.5])
         if i_m == 0: 
             sub.set_ylabel(r'$\mathtt{P(log \; SSFR)}$', fontsize=25) 
@@ -944,8 +975,11 @@ def fig_SSFR_tau_satellite(tf, abcrun='rhofq_tausat', prior_name='satellite'):
             sub.set_yticklabels([])
         
         ax = plt.gca()
-        leg = sub.legend(bbox_to_anchor=(-8.5, 1.75), loc='upper right', prop={'size': 20}, borderpad=2, 
+        leg = sub.legend(bbox_to_anchor=(-8.5, 1.55), loc='upper right', prop={'size': 20}, borderpad=2, 
                 bbox_transform=ax.transData, handletextpad=0.5)
+    
+        bkgd.tick_params(labelcolor='none', top='off', bottom='off', left='off', right='off')
+    bkgd.set_xlabel(r'$\mathtt{log \; SSFR \;[yr^{-1}]}$', fontsize=25) 
         
     fig.subplots_adjust(wspace=0.0, hspace=0.0)
 
@@ -976,52 +1010,45 @@ def fig_SSFR_SDSS():
     prettyplot() 
     pretty_colors = prettycolors() 
     fig = plt.figure(figsize=(6, 6))
-    #bkgd = fig.add_subplot(111, frameon=False)
 
     panel_mass_bins = [[9.7, 10.1], [10.1, 10.5], [10.5, 10.9], [10.9, 11.3]]
     for i_m, mass_bin in enumerate(panel_mass_bins): 
         if i_m != 1: 
             continue 
-
         sub = fig.add_subplot(111)
-
         cen_label = 'SDSS Centrals'
         sat_label = 'SDSS Satellites'
 
-        sub.plot(cen_bin_mid[i_m], cen_ssfr_dist[i_m], 
-                lw=3, ls='-', c=pretty_colors[1], label=cen_label)
-
         sub.plot(sat_bin_mid[i_m], sat_ssfr_dist[i_m], 
                 lw=3, ls='--', c=pretty_colors[3], label=sat_label)
+        
+        sub.plot(cen_bin_mid[i_m], cen_ssfr_dist[i_m], 
+                lw=3, ls='-', c=pretty_colors[1], label=cen_label)
 
         massbin_str = ''.join([ 
             r'$\mathtt{log \; M_{*} = [', 
             str(mass_bin[0]), ',\;', 
             str(mass_bin[1]), ']}$'
             ])
-        sub.text(-12., 1.275, massbin_str, fontsize=20)
+        sub.text(-11.65, 0.925, massbin_str, fontsize=20)
     
         # x-axis
-        sub.set_xlim([-13., -9.5])
-        sub.set_xticklabels([-13., '', -12., '', -11., '', -10.])
+        sub.set_xlim([-13., -9.4])
+        sub.set_xticks([-13, -12, -11, -10])
         sub.set_xlabel(r'$\mathtt{log \; SSFR \;[yr^{-1}]}$', fontsize=25) 
         # y-axis 
-        sub.set_ylim([0.0, 1.45])
+        sub.set_ylim([0.0, 1.1])
+        sub.set_yticks([0.0, 0.25, 0.5, 0.75, 1.])
+        sub.minorticks_on()
         sub.set_ylabel(r'$\mathtt{P(log \; SSFR)}$', fontsize=25) 
         
         ax = plt.gca()
-        leg = sub.legend(bbox_to_anchor=(-9.25, 1.4), loc='upper right', prop={'size': 20}, borderpad=2, 
-                bbox_transform=ax.transData, handletextpad=0.5)
-        
+        leg = sub.legend(bbox_to_anchor=(-9., 1.025), loc='upper right', prop={'size': 20}, borderpad=2, 
+                bbox_transform=ax.transData, handletextpad=0.0)
     fig.subplots_adjust(wspace=0.0, hspace=0.0)
-
-    #bkgd.tick_params(labelcolor='none', top='off', bottom='off', left='off', right='off')
-    #bkgd.set_xlabel(r'$\mathtt{log \; SSFR \;[yr^{-1}]}$', fontsize=25) 
     
     fig_file = ''.join(['figure/paper/', 'SSFR_SDSS.png'])
     fig.savefig(fig_file, bbox_inches='tight', dpi=150)
-
-    #ppp.Ssfr(filename=fig_file)
     plt.close() 
     Util.png2pdf(fig_file) 
     return None
@@ -1147,14 +1174,16 @@ def fig_tau_ABC_post(tf, abcrun=None, prior_name='try0'):
 
     #sub.errorbar(10**m_arr, sfr_evol.getTauQ(m_arr, tau_prop=med_tau_dict), 
     #        c='k', lw=3, label='Centrals (Hahn+2016)')
+    m_arr = np.arange(8.5, 12.5, 0.1)
     satplot, = sub.plot(10**m_arr, sfr_evol.getTauQ(m_arr, tau_prop={'name': 'satellite'}), 
-            c='k', ls='--', lw=3, label='Satellites (Wetzel+2014)')
+            c='k', ls='--', lw=3, label='Satellites (Wetzel+2013)')
     sub.set_xlabel(r"$\mathtt{log(M_*\;[M_\odot])}$", fontsize=25)
     sub.set_xscale('log') 
     sub.set_xlim([10**9.5, 10**11.5])
 
     sub.set_ylim([0.0, 1.7])
-    sub.set_yticks([0.0, 0.25, 0.5, 0.75, 1.0, 1.25, 1.5])
+    sub.set_yticks([0.0, 0.5, 1.0, 1.5])
+    sub.minorticks_on()
     sub.set_ylabel(r"$\tau_\mathtt{Q}\;[\mathtt{Gyr}]$", fontsize=25)
     # get handles
     handles, labels = sub.get_legend_handles_labels()
@@ -1237,7 +1266,8 @@ def fig_tau_SMFevol(standard_run=None, standard_tf=7, noSMF_run=None, noSMF_tf=7
     sub.set_xlim([10**9.5, 10**11.5])
 
     sub.set_ylim([0.0, 1.7])
-    sub.set_yticks([0.0, 0.25, 0.5, 0.75, 1.0, 1.25, 1.5])
+    sub.set_yticks([0.0, 0.5, 1.0, 1.5])
+    sub.minorticks_on()
     sub.set_ylabel(r"$\tau_\mathtt{Q}\;[\mathtt{Gyr}]$", fontsize=25)
     sub.legend(loc='upper right', scatterpoints=1, prop={'size': 20}, handletextpad=0.5, markerscale=3)
     
@@ -1365,6 +1395,10 @@ def fig_quenching_comparison(z = 0.5):
     t_quench = -1. * np.log(f_sfr) * sfr_evol.getTauQ(m_arr, tau_prop=std_med_tau_dict)  # centrla quenching time 
     t_quench_low = -1. * np.log(f_sfr) * b  
     t_quench_high = -1. * np.log(f_sfr) * d  
+    sat_t_mig = -1. * np.log(f_sfr) * sfr_evol.getTauQ(m_arr, tau_prop={'name': 'satellite'})  # satellite quenching time 
+    print sfr_evol.getTauQ(m_arr, tau_prop=std_med_tau_dict)/ sfr_evol.getTauQ(m_arr, tau_prop={'name': 'satellite'})
+    print sat_t_mig[np.where((m_arr > 10.4) & (m_arr < 10.6))]
+    print t_quench - sat_t_mig
         
     # Stewart+2009
     f_stargas = 0.04 * ((10.**m_arr)/(4.5*10.**11.))**(-0.59 * (1. + z)**0.45)
@@ -1529,5 +1563,5 @@ if __name__=='__main__':
     #figSFH_demo(7, 'multirho_inh', prior_name='try0')
     #fig_ABC_posterior(7, abcrun='multifq_wideprior', prior_name='updated')
     #fig_SSFR_ABC_post(7, abcrun='RHOssfrfq_TinkerFq_Std', prior_name='updated')
-    #fig_tau_ABC_post(7, abcrun='multifq_wideprior', prior_name='updated')
+    #fig_tau_ABC_post(7, abcrun='RHOssfrfq_TinkerFq_Std', prior_name='updated')
     #fig_SSFR_tau_satellite(10, abcrun='SatABC_TinkerFq', prior_name='satellite')
