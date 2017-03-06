@@ -4,3 +4,4 @@ dat/
 dat2/
 *.pyc
 *.png
+.ipynb_checkpoints/

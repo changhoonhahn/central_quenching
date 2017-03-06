@@ -1,7 +1,7 @@
 CenQue
 ===
 Last Modified: 04.08.16  
-Contact: chh327@nyu.edu
+Contact: changhoon.hahn@nyu.edu
 
 Evolve central galaxy SFRs
 
