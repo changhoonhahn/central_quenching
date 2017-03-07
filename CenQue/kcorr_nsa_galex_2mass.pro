@@ -1,6 +1,6 @@
 ; IDL code to combine NSA SDSS, GALEX UV, and 2MASS IR photometry
 ; and then run k-correct on them. 
-function kcorr_nsa_galex_2mass, sdss_flux
+pro kcorr_nsa_galex_2mass, sdss_flux
 
     ; import NSA DRP catalog (contains elliptical petrosian fluxes for 
     ; SDSS and also GALEX FNUV) 
@@ -82,9 +82,10 @@ function kcorr_nsa_galex_2mass, sdss_flux
         absmag_ivar:    fltarr(10), $ 
         kcorrect:       fltarr(10)},$
         n_elements(m_vagc_nsa))
+
     ra = nsa.ra
     ra = ra[m_nsa_vagc]
-    dec = nsa.ra
+    dec = nsa.dec
     dec = dec[m_nsa_vagc]
 
     out_struct.ra              = ra
@@ -100,9 +101,8 @@ function kcorr_nsa_galex_2mass, sdss_flux
     out_struct.absmag_ivar     = k_absmag_ivar
     out_struct.kcorrect        = kcorr
     
-    out_file = '/mount/sirocco1/hahn/cenque/observations/nsa_galex_2mass_kcorrect_'+sdss_flux+'.fits'
-    print, out_file
+    ;out_file = '/mount/sirocco1/hahn/cenque/observations/nsa_galex_2mass_kcorrect_'+sdss_flux+'.fits'
+    ;print, out_file
 
-    return, out_struct
-    ;mwrfits, out_struct, outfile, /CREATE
+    mwrfits, out_struct, 'catalog.fits', /CREATE
 end 
