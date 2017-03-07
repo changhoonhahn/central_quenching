@@ -316,7 +316,7 @@ class Subhalos(CentralSubhalos):
 
 
 if __name__=='__main__': 
-    for nsnap_ancestor in [11]: 
+    for nsnap_ancestor in [23]: 
         for scat in [0.2]:#np.arange(0.2, 0.31, 0.01): 
             #subh = SatelliteSubhalos() 
             #subh.build_catalogs(
@@ -330,6 +330,6 @@ if __name__=='__main__':
             subh.build_catalogs(
                     snapshots=range(1, nsnap_ancestor+1), 
                     scatter=scat, 
-                    source='cool_ages', 
+                    source='li-march', 
                     nsnap_ancestor=nsnap_ancestor)
             del subh

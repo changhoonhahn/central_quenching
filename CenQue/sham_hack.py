@@ -146,6 +146,16 @@ class SMFClass:
             self.slopes = np.array([-1.155, -1.00, -1.01, -1.39, -1.39])
             self.make_splines()
             self.initialize_redshift(redshift)
+        elif source == 'muzzin': 
+            ''' Muzzin et al. (2013)
+            '''
+            self.redshifts = np.array([0.35, 0.75, 1.25, 1.75]) 
+            self.mchars = np.array([11.22, 11., 10.87, 10.81]) #- 2 * log10(hubble)
+            self.amplitudes = (np.array([12.16e-4, 16.25e-4, 13.91e-4, 10.13e-4]))# * hubble ** 3)
+            self.slopes = np.array([-1.29, -1.17, -1.02, -0.86])
+            self.make_splines()
+            self.initialize_redshift(redshift)
+
         elif source == 'li-march-extreme': 
             '''
             More extreme version of Marchesini et al 2009, using Li & White at z = 0.1.
@@ -302,7 +312,7 @@ class SMFClass:
             self.amplitude2 = self.amplitudes2[0] * np.log(10)
             self.slope = self.slopes[0] + 1
             self.slope2 = self.slopes2[0] + 1
-        elif self.source in ('cole-march', 'li-march', 'perez', 'constant-li', 'li-march-extreme'):
+        elif self.source in ('cole-march', 'li-march', 'perez', 'constant-li', 'li-march-extreme', 'muzzin'):
             self.m_char = interpolate.splev(redshift, self.mchar_z_spl)
             self.amplitude = interpolate.splev(redshift, self.amplitude_z_spl) * np.log(10)
             self.slope = interpolate.splev(redshift, self.slope_z_spl) + 1

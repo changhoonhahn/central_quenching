@@ -454,7 +454,7 @@ def ABC(T, eps_input, Npart=1000, prior_name='try0', observables=['ssfr'], abcru
     return pools 
 
 
-def FixedTauABC(T, eps_input, fix='satellite', Npart=1000, prior_name='try0', 
+def FixedTauABC(T, eps_input, fixtau='satellite', Npart=1000, prior_name='try0', 
         observables=['fqz_multi'], abcrun=None, 
         restart=False, t_restart=None, eps_restart=None, **sim_kwargs):
     ''' Run ABC-PMC analysis for central galaxy SFH model with *FIXED* quenching 
@@ -503,23 +503,23 @@ def FixedTauABC(T, eps_input, fix='satellite', Npart=1000, prior_name='try0',
         sim_kwargs = sfinherit_kwargs.copy()
         sim_kwargs['sfr_prop']['gv'] = {'slope': gv_slope, 'fidmass': 10.5, 'offset': gv_offset}
         sim_kwargs['evol_prop']['fudge'] = {'slope': fudge_slope, 'fidmass': 10.5, 'offset': fudge_offset}
-        sim_kwargs['evol_prop']['tau'] = {'name': fix}
+        sim_kwargs['evol_prop']['tau'] = {'name': fixtau}
         
         sim_output = SimSummary(observables=observables, **sim_kwargs)
         return sim_output
 
     theta_file = lambda pewl: ''.join([code_dir(), 
         'dat/pmc_abc/', 'CenQue_theta_t', str(pewl), '_', abcrun_flag, 
-        '.fixedtau.', fix, '.dat']) 
+        '.fixedtau.', fixtau, '.dat']) 
     w_file = lambda pewl: ''.join([code_dir(), 
         'dat/pmc_abc/', 'CenQue_w_t', str(pewl), '_', abcrun_flag, 
-        '.fixedtau.', fix, '.dat']) 
+        '.fixedtau.', fixtau, '.dat']) 
     dist_file = lambda pewl: ''.join([code_dir(), 
         'dat/pmc_abc/', 'CenQue_dist_t', str(pewl), '_', abcrun_flag, 
-        '.fixedtau.', fix, '.dat']) 
+        '.fixedtau.', fixtau, '.dat']) 
     eps_file = ''.join([code_dir(), 
         'dat/pmc_abc/epsilon_', abcrun_flag, 
-        '.fixedtau.', fix, '.dat']) 
+        '.fixedtau.', fixtau, '.dat']) 
 
     distfn = RhoFq
    
@@ -600,7 +600,21 @@ class PlotABC(object):
         self.t = t 
         self.abcrun = abcrun
     
-        if prior_name != 'satellite': 
+        if prior_name == 'satellite': 
+            theta_file = ''.join([
+                code_dir(), 'dat/pmc_abc/', 'CenQue_theta_t', str(t), '_', abcrun, '.satellite.dat']) 
+            w_file = ''.join([
+                code_dir(), 'dat/pmc_abc/', 'CenQue_w_t', str(t), '_', abcrun, '.satellite.dat']) 
+            self.satellite_run = True 
+        elif prior_name == 'longtau': 
+            theta_file = ''.join([
+                code_dir(), 'dat/pmc_abc/', 'CenQue_theta_t', str(t), '_', abcrun, 
+                '.fixedtau.long.dat']) 
+            w_file = ''.join([
+                code_dir(), 'dat/pmc_abc/', 'CenQue_w_t', str(t), '_', abcrun, 
+                '.fixedtau.long.dat']) 
+            self.satellite_run = True 
+        else: 
             theta_file = ''.join([
                 code_dir(), 'dat/pmc_abc/', 'CenQue_theta_t', str(t), '_', abcrun, '.dat']) 
             w_file = ''.join([
@@ -608,12 +622,6 @@ class PlotABC(object):
             dist_file = ''.join([
                 code_dir(), 'dat/pmc_abc/', 'CenQue_dist_t', str(t), '_', abcrun, '.dat']) 
             self.satellite_run = False 
-        else: 
-            theta_file = ''.join([
-                code_dir(), 'dat/pmc_abc/', 'CenQue_theta_t', str(t), '_', abcrun, '.satellite.dat']) 
-            w_file = ''.join([
-                code_dir(), 'dat/pmc_abc/', 'CenQue_w_t', str(t), '_', abcrun, '.satellite.dat']) 
-            self.satellite_run = True 
         self.theta = np.loadtxt(theta_file)      # theta values 
         self.w = np.loadtxt(w_file)              # w values 
         #self.dist = np.loadtxt(dist_file) 
@@ -856,11 +864,12 @@ class PlotABC(object):
 
 
 if __name__=="__main__": 
-    for tf in [8]:
+    for tf in [1,5,10,13]:
         #ppp = PlotABC(tf, abcrun='RHOssfrfq_TinkerFq_XtraSMF', prior_name='updated')
-        ppp = PlotABC(tf, abcrun='RHOssfrfq_TinkerFq_NOSMFevol', prior_name='updated')
+        #ppp = PlotABC(tf, abcrun='RHOssfrfq_TinkerFq_NOSMFevol', prior_name='updated')
         #ppp = PlotABC(tf, abcrun='RHOssfrfq_TinkerFq_Std', prior_name='updated')
         #ppp = PlotABC(tf, abcrun='SatABC_TinkerFq', prior_name='satellite')
+        ppp = PlotABC(tf, abcrun='FixedLongTau_TinkerFq', prior_name='longtau')
         ppp.Corner()
         ppp.Ssfr()
         ppp.QAplot(nsnap_descendant=[1, 6])

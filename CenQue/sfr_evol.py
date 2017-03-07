@@ -291,10 +291,18 @@ def getTauQ(mstar, tau_prop={'name': 'instant'}):
         if np.min(tau) < 0.001:     
             tau[np.where( tau < 0.001 )] = 0.001
 
+    elif type == 'satellite_upper': 
+        tau = -0.57 * ( mstar - 9.78) + 0.8 + 0.15
+        if np.min(tau) < 0.001:     
+            tau[np.where( tau < 0.001 )] = 0.001
+    elif type == 'satellite_lower': 
+        tau = -0.57 * ( mstar - 9.78) + 0.8 - 0.15
+        if np.min(tau) < 0.001:     
+            tau[np.where( tau < 0.001 )] = 0.001
     elif type == 'long':      # long quenching (for qa purposes)
 
         n_arr = len(mstar) 
-        tau = np.array([2.0 for i in xrange(n_arr)]) 
+        tau = np.array([2.5 for i in xrange(n_arr)]) 
 
     else: 
         raise NotImplementedError('asdf')

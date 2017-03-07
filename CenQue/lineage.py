@@ -281,8 +281,8 @@ class Lineage(object):
             has_ancestor, has_descendant = Util.intersection_index(
                     ancestor_index, self.ancestor.snap_index)
             print 'Snanpshot ', i_snap
-            print 'Children with ancestors ', len(has_ancestor), \
-                    ' All children ', len(child.snap_index)
+            #print 'Children with ancestors ', len(has_ancestor), \
+            #        ' All children ', len(child.snap_index)
 
             # save SHAM masses
             anc_Msham[has_descendant, i_snap-1] = child.mass[has_ancestor]
@@ -296,7 +296,6 @@ class Lineage(object):
             halomass_genesis = np.repeat(-999., len(child.snap_index)) 
             ancs = ancestor_index[has_ancestor] # ancestor indices
 
-    
             # go through higher redshift snapshots in order to determine when the
             # subhalo was first "started"
             for ii_snap in range(i_snap, self.nsnap_ancestor): 
@@ -326,6 +325,13 @@ class Lineage(object):
             zsnap_genesis = np.repeat(-999., len(nsnap_genesis))
             tsnap_genesis[has_ancestor[nonneg]] = Util.get_t_nsnap(nsnap_genesis[has_ancestor[nonneg]])
             zsnap_genesis[has_ancestor[nonneg]] = Util.get_z_nsnap(nsnap_genesis[has_ancestor[nonneg]])
+
+            print 'Children with ancestors ', len(has_ancestor[nonneg]), \
+                    ' All children ', len(child.mass)
+            print 'Greater than 10^10, Children with ancestors ', np.sum(child.mass[has_ancestor[nonneg]] > 10.), \
+                    ' All children ', np.sum(child.mass > 10.), np.float(np.sum(child.mass[has_ancestor[nonneg]] > 10.))/np.float(np.sum(child.mass > 10.))
+            print 'Greater than 10^9.5, Children with ancestors ', np.sum(child.mass[has_ancestor[nonneg]] > 9.5), \
+                    ' All children ', np.sum(child.mass > 9.5), np.float(np.sum(child.mass[has_ancestor[nonneg]] > 9.5))/np.float(np.sum(child.mass > 9.5))
 
             #neg = np.where(nsnap_massive[has_ancestor] < 0)
             #print child.mass[has_ancestor[neg]]
@@ -362,13 +368,12 @@ class Lineage(object):
 
 
 if __name__=="__main__": 
-    for scat in [0.0, 0.2]:
+    for scat in [0.2]:
         start_time = time.time()
         bloodline = Lineage(nsnap_ancestor=15, 
-                subhalo_prop={'scatter': scat, 'source': 'li-march'}, 
-                clobber=True)
+                subhalo_prop={'scatter': scat, 'source': 'li-march'})#, clobber=True)
         bloodline.Descend(clobber=True) 
-        bloodline.Write()
+        #bloodline.Write()
         print 'lineage construction and write out takes ', (time.time() - start_time)/60.0
     #for nsnap in [15]: 
     #    for scat in [0.0, 0.2]:

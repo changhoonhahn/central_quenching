@@ -19,8 +19,11 @@ from observations import FqCen_bestfit
 
 from sfr_evol import AverageLogSFR_sfms
 from sfr_evol import ScatterLogSFR_sfms
+from sfr_evol import AverageLogSSFR_q_peak
+from sfr_evol import ScatterLogSSFR_q_peak
 
 from gal_prop import Fq
+from gal_prop import Ssfr
 
 from util import util
 
@@ -39,6 +42,18 @@ def BuildGroupCat(Mrcut=18, position='central'):
 
     return None
 
+#def Build_CombinedCatalog(Mrcut=18):
+#    ''' Compile galaxy properties derived from different methods for the VAGC catalog from Jeremy 
+#    and, for now, output to pickle file
+#    '''
+#    grpcat = GroupCat(Mrcut=Mrcut, position='all')  # all group catalog 
+#    grpcat.Read() 
+#    grpcat._iSEDfitMatch()
+#    grpcat._Match_OtherSFR(lit=lit)
+#
+#    return None
+
+
 def GroupCat_iSEDfitMatch(Mrcut=18, position='central'): 
     ''' Test _iSEDfitMatch function of Group Catalog class object
     '''
@@ -46,6 +61,385 @@ def GroupCat_iSEDfitMatch(Mrcut=18, position='central'):
     grpcat.Read()
     grpcat._iSEDfitMatch()
 
+    return None
+
+def GroupCat_SalimMatch(galprop, lit='uv', Mrcut=18, position='central'): 
+    ''' 
+    '''
+    grpcat = GroupCat(Mrcut=Mrcut, position=position)
+    grpcat.Read()
+    grpcat._Match_OtherSFR(lit=lit)
+    hasmatch = np.where(getattr(grpcat, lit+'_match') >= 0)[0]
+
+    prettyplot()
+    pretty_colors = prettycolors() 
+    fig = plt.figure(figsize=(10,10))
+    bkgd = fig.add_subplot(111, frameon=False)
+    bkgd.tick_params(labelcolor='none', top='off', bottom='off', left='off', right='off')
+    fig.subplots_adjust(hspace=0., wspace=0.)
+
+    if galprop == 'mass': 
+        subs = [fig.add_subplot(2, 2, i_mass+1) for i_mass in xrange(4)]  
+
+        mass_bins = [[9.7, 10.1], [10.1, 10.5], [10.5, 10.9], [10.9, 11.3]]
+
+        for i_mass, mbin in enumerate(mass_bins): 
+            mbin = np.where((grpcat.mass[hasmatch] > mass_bins[i_mass][0]) & (grpcat.mass[hasmatch] < mass_bins[i_mass][-1])) 
+            subs[i_mass].scatter(grpcat.mass[hasmatch[mbin]], getattr(grpcat, lit+'_mass')[hasmatch[mbin]], color=pretty_colors[3], s=4) 
+            subs[i_mass].plot([9., 12.], [9., 12.], color='k', lw=4, ls='--') 
+            subs[i_mass].set_xlim([9., 12.]) 
+            subs[i_mass].set_ylim([9., 12.]) 
+            subs[i_mass].set_xticks([9., 10., 11., 12.])
+            subs[i_mass].set_yticks([9., 10., 11., 12.])
+    
+            massbin_str = ''.join([ 
+                r'$\mathtt{log \; M^{VAGC}_{*} = [', 
+                str(mass_bins[i_mass][0]), ',\;', 
+                str(mass_bins[i_mass][1]), ']}$'
+                ])
+            subs[i_mass].text(9.2, 11.6, massbin_str, fontsize=15)
+
+            if i_mass == 0: 
+                subs[i_mass].set_xticklabels([])
+            elif i_mass == 1: 
+                subs[i_mass].set_xticklabels([])
+                subs[i_mass].set_yticklabels([])
+            elif i_mass == 3: 
+                subs[i_mass].set_yticklabels([])
+    
+        bkgd.set_ylabel(lit+' $\mathcal{M}_*$', fontsize=30) 
+        bkgd.set_xlabel('VAGC $\mathcal{M}_*$', fontsize=30) 
+
+    elif galprop == 'ssfr':
+        subs = [fig.add_subplot(2, 2, i_mass+1) for i_mass in xrange(4)]  
+
+        mass_bins = [[9.7, 10.1], [10.1, 10.5], [10.5, 10.9], [10.9, 11.3]]
+
+        for i_mass, mbin in enumerate(mass_bins): 
+            mbin = np.where((grpcat.mass[hasmatch] > mass_bins[i_mass][0]) & (grpcat.mass[hasmatch] < mass_bins[i_mass][-1])) 
+            subs[i_mass].scatter(grpcat.ssfr[hasmatch[mbin]], getattr(grpcat, lit+'_ssfr')[hasmatch[mbin]], color=pretty_colors[3], s=4) 
+            subs[i_mass].plot([-13., -9.], [-13., -9.], color='k', lw=4, ls='--') 
+            subs[i_mass].set_xlim([-13., -9.]) 
+            subs[i_mass].set_ylim([-13., -9.]) 
+    
+            massbin_str = ''.join([ 
+                r'$\mathtt{log \; M^{VAGC}_{*} = [', 
+                str(mass_bins[i_mass][0]), ',\;', 
+                str(mass_bins[i_mass][1]), ']}$'
+                ])
+            subs[i_mass].text(-12.8, -9.5, massbin_str, fontsize=15)
+            subs[i_mass].set_xticks([-13, -12, -11, -10, -9])
+            subs[i_mass].set_yticks([-13, -12, -11, -10, -9])
+
+            if i_mass == 0: 
+                subs[i_mass].set_xticklabels([])
+            elif i_mass == 1: 
+                subs[i_mass].set_xticklabels([])
+                subs[i_mass].set_yticklabels([])
+            elif i_mass == 3: 
+                subs[i_mass].set_yticklabels([])
+    
+        bkgd.set_ylabel(lit+' SSFR', fontsize=30) 
+        bkgd.set_xlabel('VAGC SSFR ', fontsize=30) 
+    
+    elif galprop == 'sfr':
+        subs = [fig.add_subplot(2, 2, i_mass+1) for i_mass in xrange(4)]  
+
+        mass_bins = [[9.7, 10.1], [10.1, 10.5], [10.5, 10.9], [10.9, 11.3]]
+
+        for i_mass, mbin in enumerate(mass_bins): 
+            mbin = np.where((grpcat.mass[hasmatch] > mass_bins[i_mass][0]) & (grpcat.mass[hasmatch] < mass_bins[i_mass][-1])) 
+            subs[i_mass].scatter(grpcat.sfr[hasmatch[mbin]], getattr(grpcat, lit+'_sfr')[hasmatch[mbin]], color=pretty_colors[3], s=4) 
+            subs[i_mass].plot([-3., 2.], [-3., 2.], color='k', lw=4, ls='--') 
+            subs[i_mass].set_xlim([-3., 3.]) 
+            subs[i_mass].set_ylim([-3., 3.]) 
+    
+            massbin_str = ''.join([ 
+                r'$\mathtt{log \; M^{VAGC}_{*} = [', 
+                str(mass_bins[i_mass][0]), ',\;', 
+                str(mass_bins[i_mass][1]), ']}$'
+                ])
+            subs[i_mass].text(-12.8, -9.5, massbin_str, fontsize=15)
+            subs[i_mass].set_xticks([-3, -2, -1, 0, 1, 2, 3])
+            subs[i_mass].set_yticks([-3, -2, -1, 0, 1, 2, 3])
+
+            if i_mass == 0: 
+                subs[i_mass].set_xticklabels([])
+            elif i_mass == 1: 
+                subs[i_mass].set_xticklabels([])
+                subs[i_mass].set_yticklabels([])
+            elif i_mass == 3: 
+                subs[i_mass].set_yticklabels([])
+    
+        bkgd.set_ylabel(lit+' SFR', fontsize=30) 
+        bkgd.set_xlabel('VAGC SFR ', fontsize=30) 
+
+    fig_file = ''.join([
+        'figure/test/', 
+        'Salim_Comparison',
+        '.Mr', str(Mrcut), 
+        '.', position, 
+        '.', galprop, 
+        '.', lit, 
+        '.png'])
+    fig.savefig(fig_file, bbox_inches='tight', dpi=150)
+    return None
+
+def GroupCat_SalimMatch_SFMS(galprop, lit='uv', Mrcut=18, position='central'): 
+    ''' 
+    '''
+    grpcat = GroupCat(Mrcut=Mrcut, position=position)
+    grpcat.Read()
+    grpcat._Match_OtherSFR(lit=lit)
+    #grpcat._match_NSA_UVssfr()
+    hasmatch = np.where(getattr(grpcat, lit+'_match') >= 0)[0]
+
+    prettyplot()
+    pretty_colors = prettycolors() 
+    fig = plt.figure(figsize=(10,10))
+    bkgd = fig.add_subplot(111, frameon=False)
+    bkgd.tick_params(labelcolor='none', top='off', bottom='off', left='off', right='off')
+    fig.subplots_adjust(hspace=0., wspace=0.)
+
+    if galprop == 'mass': 
+        subs = [fig.add_subplot(2, 2, i_mass+1) for i_mass in xrange(4)]  
+
+        mass_bins = [[9.7, 10.1], [10.1, 10.5], [10.5, 10.9], [10.9, 11.3]]
+
+        for i_mass, mbin in enumerate(mass_bins): 
+            mbin = np.where((grpcat.mass[hasmatch] > mass_bins[i_mass][0]) & (grpcat.mass[hasmatch] < mass_bins[i_mass][-1])) 
+            subs[i_mass].scatter(grpcat.mass[hasmatch[mbin]], getattr(grpcat, lit+'_mass')[hasmatch[mbin]], color=pretty_colors[3], s=4) 
+            subs[i_mass].plot([9., 12.], [9., 12.], color='k', lw=4, ls='--') 
+            subs[i_mass].set_xlim([9., 12.]) 
+            subs[i_mass].set_ylim([9., 12.]) 
+            subs[i_mass].set_xticks([9., 10., 11., 12.])
+            subs[i_mass].set_yticks([9., 10., 11., 12.])
+    
+            massbin_str = ''.join([ 
+                r'$\mathtt{log \; M^{VAGC}_{*} = [', 
+                str(mass_bins[i_mass][0]), ',\;', 
+                str(mass_bins[i_mass][1]), ']}$'
+                ])
+            subs[i_mass].text(9.2, 11.6, massbin_str, fontsize=15)
+
+            if i_mass == 0: 
+                subs[i_mass].set_xticklabels([])
+            elif i_mass == 1: 
+                subs[i_mass].set_xticklabels([])
+                subs[i_mass].set_yticklabels([])
+            elif i_mass == 3: 
+                subs[i_mass].set_yticklabels([])
+    
+        bkgd.set_ylabel(lit+' $\mathcal{M}_*$', fontsize=30) 
+        bkgd.set_xlabel('VAGC $\mathcal{M}_*$', fontsize=30) 
+
+    elif galprop == 'ssfr':
+        subs = [fig.add_subplot(2, 2, i_mass+1) for i_mass in xrange(4)]  
+
+        mass_bins = [[9.7, 10.1], [10.1, 10.5], [10.5, 10.9], [10.9, 11.3]]
+
+        for i_mass, mbin in enumerate(mass_bins): 
+            mbin = np.where((grpcat.mass[hasmatch] > mass_bins[i_mass][0]) & (grpcat.mass[hasmatch] < mass_bins[i_mass][-1])) 
+            subs[i_mass].scatter(grpcat.ssfr[hasmatch[mbin]], getattr(grpcat, lit+'_ssfr')[hasmatch[mbin]], color=pretty_colors[3], s=4) 
+            subs[i_mass].plot([-13., -9.], [-13., -9.], color='k', lw=4, ls='--') 
+            subs[i_mass].set_xlim([-13., -9.]) 
+            subs[i_mass].set_ylim([-13., -9.]) 
+    
+            massbin_str = ''.join([ 
+                r'$\mathtt{log \; M^{VAGC}_{*} = [', 
+                str(mass_bins[i_mass][0]), ',\;', 
+                str(mass_bins[i_mass][1]), ']}$'
+                ])
+            subs[i_mass].text(-12.8, -9.5, massbin_str, fontsize=15)
+            subs[i_mass].set_xticks([-13, -12, -11, -10, -9])
+            subs[i_mass].set_yticks([-13, -12, -11, -10, -9])
+
+            if i_mass == 0: 
+                subs[i_mass].set_xticklabels([])
+            elif i_mass == 1: 
+                subs[i_mass].set_xticklabels([])
+                subs[i_mass].set_yticklabels([])
+            elif i_mass == 3: 
+                subs[i_mass].set_yticklabels([])
+    
+        bkgd.set_ylabel(lit+' SSFR', fontsize=30) 
+        bkgd.set_xlabel('VAGC SSFR ', fontsize=30) 
+    
+    elif galprop == 'sfr':
+        subs = [fig.add_subplot(2, 2, i_mass+1) for i_mass in xrange(4)]  
+
+        mass_bins = [[9.7, 10.1], [10.1, 10.5], [10.5, 10.9], [10.9, 11.3]]
+
+        for i_mass, mbin in enumerate(mass_bins): 
+            mbin = np.where((grpcat.mass[hasmatch] > mass_bins[i_mass][0]) & (grpcat.mass[hasmatch] < mass_bins[i_mass][-1])) 
+            subs[i_mass].scatter(grpcat.sfr[hasmatch[mbin]], getattr(grpcat, lit+'_sfr')[hasmatch[mbin]], color=pretty_colors[3], s=4) 
+            subs[i_mass].plot([-3., 2.], [-3., 2.], color='k', lw=4, ls='--') 
+            subs[i_mass].set_xlim([-3., 3.]) 
+            subs[i_mass].set_ylim([-3., 3.]) 
+    
+            massbin_str = ''.join([ 
+                r'$\mathtt{log \; M^{VAGC}_{*} = [', 
+                str(mass_bins[i_mass][0]), ',\;', 
+                str(mass_bins[i_mass][1]), ']}$'
+                ])
+            subs[i_mass].text(-12.8, -9.5, massbin_str, fontsize=15)
+            subs[i_mass].set_xticks([-3, -2, -1, 0, 1, 2, 3])
+            subs[i_mass].set_yticks([-3, -2, -1, 0, 1, 2, 3])
+
+            if i_mass == 0: 
+                subs[i_mass].set_xticklabels([])
+            elif i_mass == 1: 
+                subs[i_mass].set_xticklabels([])
+                subs[i_mass].set_yticklabels([])
+            elif i_mass == 3: 
+                subs[i_mass].set_yticklabels([])
+    
+        bkgd.set_ylabel(lit+' SFR', fontsize=30) 
+        bkgd.set_xlabel('VAGC SFR ', fontsize=30) 
+
+    fig_file = ''.join([
+        'figure/test/', 
+        'Salim_Comparison',
+        '.Mr', str(Mrcut), 
+        '.', position, 
+        '.', galprop, 
+        '.', lit, 
+        '.png'])
+    fig.savefig(fig_file, bbox_inches='tight', dpi=150)
+    return None
+
+
+def GroupCat_SalimMatch_SSFR(Mrcut=18, position='central'):
+    ''' Compare the SSFr distribution
+    '''
+    grpcat = GroupCat(Mrcut=Mrcut, position=position)
+    grpcat.Read()
+    grpcat._Match_OtherSFR(lit='salim2016')
+    grpcat._Match_OtherSFR(lit='uv')
+    
+    prettyplot()
+    pretty_colors = prettycolors()
+    fig = plt.figure(figsize=(16,16))
+    fig.subplots_adjust(hspace=0., wspace=0.)
+    subs = [fig.add_subplot(2, 2, i_mass+1) for i_mass in xrange(4)]  
+
+    mass_bins = [[9.7, 10.1], [10.1, 10.5], [10.5, 10.9], [10.9, 11.3]]
+    for i_mass, mbin in enumerate(mass_bins): 
+        in_massbin = np.where(
+                (grpcat.mass > mass_bins[i_mass][0]) & 
+                (grpcat.mass <= mass_bins[i_mass][1]) & 
+                (grpcat.salim2016_match != -999) & 
+                (grpcat.uv_match != -999))
+            
+        vagc_dist, bin_edges = np.histogram(grpcat.ssfr[in_massbin], range=[-13., -7.], bins=40, normed=True)
+        salim_dist, bin_edges = np.histogram(grpcat.salim2016_ssfr[in_massbin], range=[-13., -7.], bins=40, normed=True)
+        uv_dist, bin_edges = np.histogram(grpcat.uv_ssfr[in_massbin], range=[-13., -7.], bins=40, normed=True)
+
+        subs[i_mass].plot(0.5*(bin_edges[:-1] + bin_edges[1:]), vagc_dist, color='k', lw=4, ls='-') 
+        subs[i_mass].plot(0.5*(bin_edges[:-1] + bin_edges[1:]), salim_dist, color=pretty_colors[3], lw=4, ls='--') 
+        subs[i_mass].plot(0.5*(bin_edges[:-1] + bin_edges[1:]), uv_dist, color=pretty_colors[5], lw=4, ls=':') 
+        #subs[i_mass].plot(salim_bin[i_mass], salim_ssfr[i_mass], color='r', lw=4, ls='--') 
+        subs[i_mass].set_xlim([-13.0, -9.])
+        subs[i_mass].set_ylim([0.0, 1.6])
+        
+        massbin_str = ''.join([ 
+            r'$\mathtt{log \; M_{*} = [', 
+            str(mass_bins[i_mass][0]), ',\;', 
+            str(mass_bins[i_mass][1]), ']}$'
+            ])
+        subs[i_mass].text(-11.5, 1.4, massbin_str,
+                fontsize=24
+                )
+
+        if i_mass == 0: 
+            subs[i_mass].set_ylabel(r'$\mathtt{P(log \; SSFR)}$', fontsize=20) 
+            subs[i_mass].set_xticklabels([])
+        elif i_mass == 1: 
+            subs[i_mass].set_xticklabels([])
+            subs[i_mass].set_yticklabels([])
+        elif i_mass == 2:
+            #sub.set_yticklabels([])
+            subs[i_mass].set_ylabel(r'$\mathtt{P(log \; SSFR)}$', fontsize=20) 
+            subs[i_mass].set_xlabel(r'$\mathtt{log \; SSFR \;[yr^{-1}]}$', fontsize=20) 
+        else: 
+            subs[i_mass].set_yticklabels([])
+            subs[i_mass].set_xlabel(r'$\mathtt{log \; SSFR \;[yr^{-1}]}$', fontsize=20) 
+        
+    fig_file = ''.join([
+        'figure/test/', 
+        'SSFR_comparison',
+        '.Mr', str(Mrcut), 
+        '.', position, 
+        '.png'])
+    fig.savefig(fig_file, bbox_inches='tight', dpi=150)
+    #plt.show() 
+    return None
+
+def GroupCat_SalimMatch_SFR(Mrcut=18, position='central'):
+    ''' Compare the SSFr distribution
+    '''
+    grpcat = GroupCat(Mrcut=Mrcut, position=position)
+    grpcat.Read()
+    grpcat._Match_OtherSFR(lit='salim2016')
+    grpcat._Match_OtherSFR(lit='uv')
+    print len(np.where(grpcat.uv_match != -999)[0])
+
+    prettyplot()
+    pretty_colors = prettycolors()
+    fig = plt.figure(figsize=(16,16))
+    fig.subplots_adjust(hspace=0., wspace=0.)
+    subs = [fig.add_subplot(2, 2, i_mass+1) for i_mass in xrange(4)]  
+
+    mass_bins = [[9.7, 10.1], [10.1, 10.5], [10.5, 10.9], [10.9, 11.3]]
+    for i_mass, mbin in enumerate(mass_bins): 
+        in_massbin = np.where(
+                (grpcat.mass > mass_bins[i_mass][0]) & 
+                (grpcat.mass <= mass_bins[i_mass][1]) & 
+                (grpcat.salim2016_match != -999) & 
+                (grpcat.uv_match != -999))
+            
+        vagc_dist, bin_edges = np.histogram(grpcat.sfr[in_massbin], range=[-3., 3.], bins=40, normed=True)
+        salim_dist, bin_edges = np.histogram(grpcat.salim2016_sfr[in_massbin], range=[-3., 3.], bins=40, normed=True)
+        uv_dist, bin_edges = np.histogram(grpcat.uv_sfr[in_massbin], range=[-3., 3.], bins=40, normed=True)
+
+        subs[i_mass].plot(0.5*(bin_edges[:-1] + bin_edges[1:]), vagc_dist, color='k', lw=4, ls='-') 
+        subs[i_mass].plot(0.5*(bin_edges[:-1] + bin_edges[1:]), salim_dist, color=pretty_colors[3], lw=4, ls='--') 
+        subs[i_mass].plot(0.5*(bin_edges[:-1] + bin_edges[1:]), uv_dist, color=pretty_colors[5], lw=4, ls=':') 
+        #subs[i_mass].plot(salim_bin[i_mass], salim_ssfr[i_mass], color='r', lw=4, ls='--') 
+        subs[i_mass].set_xlim([-3., 3.])
+        subs[i_mass].set_ylim([0.0, 1.6])
+        
+        massbin_str = ''.join([ 
+            r'$\mathtt{log \; M_{*} = [', 
+            str(mass_bins[i_mass][0]), ',\;', 
+            str(mass_bins[i_mass][1]), ']}$'
+            ])
+        subs[i_mass].text(-1.5, 1.4, massbin_str,
+                fontsize=24
+                )
+
+        if i_mass == 0: 
+            subs[i_mass].set_ylabel(r'$\mathtt{P(log \; SFR)}$', fontsize=20) 
+            subs[i_mass].set_xticklabels([])
+        elif i_mass == 1: 
+            subs[i_mass].set_xticklabels([])
+            subs[i_mass].set_yticklabels([])
+        elif i_mass == 2:
+            #sub.set_yticklabels([])
+            subs[i_mass].set_ylabel(r'$\mathtt{P(log \; SFR)}$', fontsize=20) 
+            subs[i_mass].set_xlabel(r'$\mathtt{log \; SFR \;[yr^{-1}]}$', fontsize=20) 
+        else: 
+            subs[i_mass].set_yticklabels([])
+            subs[i_mass].set_xlabel(r'$\mathtt{log \; SFR \;[yr^{-1}]}$', fontsize=20) 
+        
+    fig_file = ''.join([
+        'figure/test/', 
+        'SFR_comparison',
+        '.Mr', str(Mrcut), 
+        '.', position, 
+        '.png'])
+    fig.savefig(fig_file, bbox_inches='tight', dpi=150)
+    #plt.show() 
     return None
 
 def PlotObservedSFMS(Mfid=10.5, isedfit=False, sfms_prop=None):
@@ -565,7 +959,14 @@ def CenSat_GroupCat():
 
 
 if __name__=="__main__": 
-    CenSat_GroupCat()
+    #GroupCat_SalimMatch_SSFR(Mrcut=18, position='central')
+    #GroupCat_SalimMatch_SFR(Mrcut=18, position='central')
+    #GroupCat_SalimMatch('sfr', lit='uv', Mrcut=18, position='central')
+    #GroupCat_SalimMatch('ssfr', lit='uv', Mrcut=18, position='central')
+    #GroupCat_SalimMatch('mass', lit='salim2016', Mrcut=18, position='central')
+    #GroupCat_SalimMatch('ssfr', lit='salim2016', Mrcut=18, position='central')
+    #GroupCat_SalimMatch(Mrcut=18, position='satellite')
+    #CenSat_GroupCat()
     #Plot_fQcen_SDSS()
     #Plot_fQcen_parameterized()
 
@@ -577,6 +978,7 @@ if __name__=="__main__":
     #PlotLee2015_SFMS_zdep()
     #fgas_comparison()
 
+    [BuildGroupCat(Mrcut=Mr, position='all') for Mr in [18, 19, 20]]
     #[BuildGroupCat(Mrcut=Mr, position='central') for Mr in [18, 19, 20]]
     #[BuildGroupCat(Mrcut=Mr, position='satellite') for Mr in [18, 19, 20]]
     #PlotObservedSSFR('groupcat_cen', isedfit=False, Peak=True)

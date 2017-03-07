@@ -294,6 +294,7 @@ class CGPop(object):
         ''' Given numpy.where condition, apply numpy where condition
         to object data columns. 
         '''
+        print self.data_columns
         for column in self.data_columns:         
             obj_attr = getattr(self, column) 
 
@@ -347,7 +348,7 @@ class CGPop(object):
         '''
         if mass is None and self.mass is None: 
             raise ValueError
-        if self.mass is not None: 
+        if self.mass is not None and mass is None: 
             mass = self.mass
             ssfr = self.ssfr
             if len(mass) != len(ssfr): 

@@ -22,6 +22,7 @@ from ChangTools.plotting import prettyplot
 from ChangTools.plotting import prettycolors
 
 
+
 def DescendantQAplot(nsnap_descendants, nsnap_ancestor=15, gv=None, tau=None, fudge=None): 
     ''' The ultimate QAplot to rule them all. 4 panels showing all the properties.
     '''
@@ -246,9 +247,13 @@ def dutycycle_profile():
 
 
 if __name__=='__main__': 
+
+
     dutycycle_profile()
-    #DescendantQAplot([1], nsnap_ancestor=15, 
+    #DescendantQAplot
     #        gv=[0.3, 0.3], tau=[-0.72827483846612151, 0.57825125514919362], fudge=[-1.25, 1.75])
+    splashback([1], nsnap_ancestor=15, 
+            gv=[0.3, 0.3], tau=[-0.72827483846612151, 0.57825125514919362], fudge=[-1.25, 1.75])
     #DescendantSSFR([1], nsnap_ancestor=15, 
     #        gv=[0.3, 0.3], tau=[-0.72827483846612151, 0.57825125514919362], fudge=[-1.25, 1.75])
     #DescendantQAplot([5], nsnap_ancestor=15, 

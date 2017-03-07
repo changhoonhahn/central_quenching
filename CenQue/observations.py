@@ -112,7 +112,7 @@ class GroupCat(object):
         elif self.position == 'satellite': 
             prob_index = np.where(prob_data.p_sat > 0.5)
         elif self.position == 'all': 
-            prob_index = np.range(len(prob_data.p_sat))
+            prob_index = range(len(prob_data.p_sat))
     
         for column in self.columns: 
             column_data = getattr(gal_data, column)[prob_index]
@@ -195,6 +195,47 @@ class GroupCat(object):
         setattr(self, 'iSEDfit_sfr', iSEDfit_SFR) 
         setattr(self, 'iSEDfit_ssfr', iSEDfit_SSFR) 
         return None
+
+    def _Match_OtherSFR(self, lit='salim2016'): 
+        ''' Match galaxies with UV SSFR and stellar masses from Salim et al. (2007). 
+        Matching is done using PyDL's spherematch 
+        '''
+        # import other data 
+        if lit == 'salim2016': 
+            nsa_file = ''.join(['/mount/sirocco1/hahn/cenque/', 'GSWLC-A1.dat'])
+            nsa_ra, nsa_dec, nsa_z, nsa_mass, nsa_sfr = np.loadtxt(nsa_file, unpack=True, usecols=[5, 6, 7, 9, 11])
+        elif lit == 'uv': 
+            nsa_file = ''.join(['/mount/sirocco1/hahn/cenque/', 'nsaid_ra_dec_z_mass_uvssfr']) 
+            nsa_ra, nsa_dec, nsa_z, nsa_mass, nsa_uvssfr = np.loadtxt(nsa_file, unpack=True, usecols=[1,2,3,4,5])
+            print nsa_uvssfr.min(), nsa_uvssfr.max(), np.mean(nsa_uvssfr) 
+            nsa_mass = np.log10(nsa_mass)
+            nsa_sfr = (nsa_mass + nsa_uvssfr)  # UV SFR
+
+        spherematch_time = time.time()
+        match1, match2, d_match = spherematch(self.ra, self.dec, nsa_ra, nsa_dec, 0.001)
+        print 'spherematch took ', time.time() - spherematch_time
+        print np.float(len(match1))/np.float(len(self.ra))
+        
+        salim_match = np.repeat(-999, len(self.ra))
+        salim_mass = np.repeat(-999., len(self.ra))
+        salim_SFR = np.repeat(-999., len(self.ra))
+        salim_SSFR = np.repeat(-999., len(self.ra))
+        if np.max(self.z[match1] - nsa_z[match2]) > 0.05: 
+            raise ValueError
+        salim_match[match1] = match2
+        if lit == 'uv': 
+            salim_mass[match1] = self.mass[match1]
+        else: 
+            salim_mass[match1] = nsa_mass[match2]
+        salim_SFR[match1] = nsa_sfr[match2]
+        salim_SSFR[match1] = salim_SFR[match1] - salim_mass[match1]
+        
+        setattr(self, lit+'_match', salim_match) 
+        setattr(self, lit+'_mass', salim_mass) 
+        setattr(self, lit+'_sfr', salim_SFR) 
+        setattr(self, lit+'_ssfr', salim_SSFR) 
+        return None
+
 
 class PrimusSDSS(object): 
     def __init__(self, redshift, environment='no', **kwargs):
