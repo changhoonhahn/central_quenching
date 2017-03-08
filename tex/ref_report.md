@@ -29,7 +29,7 @@ This is a highly valuable work that provides strict constraints to the potential
 
 >1) One of the reasons for spectroscopically-derived SFR is to obtain a cleaner separation between SF and quiescent galaxies at z~0 than a simple color cut. However, the quiescent fractions at higher redshift taken from Tinker et al. 2013 were obtained using NUV-R and R-J color-color cut. Would these different classification methods at different redshifts affect the results? The authors could separate the SF and quiescent galaxies at z~0 using a color cut similar to that in Tinker et al. 2013 to check this.
 
-
+Using photometry from GALEX, NASA-Sloan Atlas, and 2MASS catalogs, we have classified galaxies at z~0 into star forming and quiescent based on a (NUV-R) and (R-J) color-color cut similar to the Tinker et al. (2013) cuts. We confirm that the quiescent fraction derived from this color-color classification is *consistent* with the the quiescent fraction derived from the SFR-M* classification throughout the stellar masses probed in this work.
 
 >2) It can be seen from Figure 5 that there is a mild degeneracy between the quenching timescale and quenching probability. The reliability of obtained quenching timescale partly relies on how well the quenching probability is constrained. Therefore, I expect the authors to compare their result of quenching probability with those derived in previous works, such as Moustakas et al. 2013, and the recent work by Lian et al. 2016. 
 
