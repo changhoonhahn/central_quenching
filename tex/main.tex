@@ -1,4 +1,4 @@
-\documentclass[iop,apj,tighten]{emulateapj}
+\documentclass[iop,apj,tighten,twocolappendix,numberedappendix]{emulateapj}
 \usepackage[breaklinks,colorlinks, urlcolor=blue,citecolor=blue,linkcolor=blue]{hyperref}
 %define general packages
 \usepackage{color}
@@ -449,32 +449,33 @@ where
 \beq \label{eq:fqz0}
 f_\mathrm{Q}^\mathrm{cen}(\mathcal{M}_*, z=0.) = A_0 + A_1\; \log\mathcal{M}_*,
 \eeq
-is fit to the SDSS DR7 group catalog central galaxies 
-(\S \ref{sec:sdss}). $\alpha(\mathcal{M}_*)$, which dictates
+is fit to the 
+{\bf \color{dred}
+$\fqcen$ measured from SDSS DR7 group catalog central galaxies (\S \ref{sec:sdss}) 
+using a $\mathrm{SFR}-\mathcal{M}_*$ classification later described in 
+\S~\ref{sec:abc} (Eq.~\ref{eq:sfr_cut}).
+}
+$\alpha(\mathcal{M}_*)$, which dictates
 the redshift dependence of Eq. \ref{eq:fq}, is fit using the 
 redshift dependence of $\fqcen$ measurements from \cite{Tinker:2013aa}, 
 derived from observations of the SMF, galaxy clustering, and galaxy-galaxy
 lensing within the COSMOS survey,
 in bins of width $\Delta \log\mathcal{M}_* = 0.5\;\mathrm{dex}$. 
 In Table \ref{tab:fixed_params}, we list the best fit values for 
-the parameters  in Eq. \ref{eq:fq} and in Figure \ref{fig:fqcen} 
+the parameters in Eq. \ref{eq:fq} and in Figure \ref{fig:fqcen} 
 we compare our parameterization to the \cite{Tinker:2013aa} 
 measurements. 
 
 %%% RefReport Major2.1
 {\bf \color{dred}
-We note that \cite{Tinker:2013aa} classifies galaxies as star-forming or 
-quiescent based on a $(NUV-R) - (R-J)$ color-color cut from \cite{Bundy:2010aa}
-rather than a classification based on SFR and stellar mass. 
-In Appendix~\ref{app:sfq}
-We confirm that $f_{\rm Q}$ calculated using an analogous 
-$(NUV-R) - (R-J)$ color-color star-forming/quiescent classification
-is consistent with $f_{\rm Q}$ calculated using a SFR-$\mathcal{M}_*$
+We note that \cite{Tinker:2013aa} classifies galaxies as star-forming 
+or quiescent based on a $(NUV-R) - (R-J)$ color-color cut from 
+\cite{Bundy:2010aa} rather than a $\mathrm{SFR}-\mathcal{M}_*$ 
+classification such as Eq.~\ref{eq:sfr_cut}. In Appendix~\ref{app:sfq}
+we confirm that for the SDSS DR7 group catalog, $f_{\rm Q}$ calculated 
+using an $(NUV-R) - (R-J)$ color-color classification is consistent 
+with $f_{\rm Q}$ calculated using a $\mathrm{SFR}-\mathcal{M}_*$
 classification. 
-}
-{\bf \color{darkgreen} 
-Note that the quiescent fraction derived from (NUV-R)-(R-J) color-color SF/Q classification is
-consistent with the quiescent fraction derived from SFR-M* SF/Q classifications at $z\sim 0$. 
 }
 %%%
 
@@ -1178,9 +1179,13 @@ is the parameterization of the observed quiescent fraction
 {\bf \color{dred}
 (Eq.~\ref{eq:fq}). 
 }
-For $f^\mathrm{model}_\mathrm{Q}$ rather than using the actual evolutionary 
-stages of the simulation central galaxies, we measure it using the following 
-$\mathrm{SFR} - \mathcal{M}_*$ cut. The $\mathrm{SFR} - \mathcal{M}_*$ cut
+For $f^\mathrm{model}_\mathrm{Q}$ rather than using 
+{\bf \color{dred} the evolutionary stages of the simulation 
+central galaxies in the model, we measure it using the same 
+$\mathrm{SFR} - \mathcal{M}_*$ classification used for deriving 
+$\fqcen$ in Eq.~\ref{eq:fq} and~\ref{eq:fqz0}. 
+The $\mathrm{SFR} - \mathcal{M}_*$ cut in this classification
+}
 is derived from the slope of the SFMS relation (Eq. \ref{eq:sfr_ms}): 
 \beq \label{eq:sfr_cut}
 \log\;\mathrm{SFR}_\mathrm{cut} = \log\;\avgSFR_\mathrm{MS} - 0.9. 
@@ -1709,26 +1714,101 @@ work was completed.
 \appendix
 %\section*{Appendices}
 %\addcontentsline{toc}{section}{Appendices}
-\renewcommand{\thesubsection}{\Alph{subsection}}
+%\renewcommand{\thesubsection}{\Alph{subsection}}
 \subsection{Star-forming/Quiescent Classifications} \label{app:sfq}
-In our parameterization of $\fqcen$ in Eqs.~\ref{eq:fq} and~\ref{eq:fqz0}, 
+In our parameterization of the observed $\fqcen$ in Eqs.~\ref{eq:fq} and~\ref{eq:fqz0}, 
 we derive the best-fit values for the parameters $A_0$ and $A_1$ by fitting 
-the SDSS DR7 group catalog $\fqcen$. The SDSS DR7 group catalog 
+$\fqcen$ measured in the SDSS DR7 group catalog. The SDSS DR7 group catalog 
 $\fqcen$ is derived using a $\mathrm{SFR} - \mathcal{M}_*$ cut 
-specified in Eq.~\ref{eq:sfr_cut}. However, the best-fit value for 
-$\alpha(\mathcal{M}_*)$, which parameterizes the redshift dependence, 
-is derived from fitting to \cite{Tinker:2013aa} $\fqcen$ measurements 
-of the COSMOS survey. These $\fqcen$ measurements use 
-$(NUV - R) - (R - J)$ color-color cuts described in \cite{Bundy:2010aa}
-for the star-forming/quiescent classification. In this section, we 
-demonstrate that the SDSS DR7 group catalog $\fqcen$, using a 
-$\mathrm{SFR} - \mathcal{M}_*$ cut, are consistent with the 
-\cite{Tinker:2013aa} $\fqcen$, using a $(NUV - R) - (R - J)$ 
+specified in Eq.~\ref{eq:sfr_cut}. For $\alpha(\mathcal{M}_*)$, the 
+parameter that dictates the $\fqcen$ redshift dependence, however, 
+the best-fit value is derived from fitting \cite{Tinker:2013aa} 
+$\fqcen$ measurements of the COSMOS survey. These $\fqcen$ measurements 
+use $(NUV - R) - (R - J)$ color-color cuts described in 
+\cite{Bundy:2010aa} for the star-forming/quiescent classification. 
+In this section, we demonstrate the consistency between the SDSS 
+DR7 group catalog $\fqcen$, using a $\mathrm{SFR} - \mathcal{M}_*$ 
+cut, and the \cite{Tinker:2013aa} $\fqcen$, using a $(NUV - R) - (R - J)$ 
 color-color cut.
 
-We construct a catalog with photometry from GALEX, SDSS, and 2MASS. 
-The GALEX and SDSS photometry are obtained from the NASA-Sloan 
-Atlas\footnote{http://www.nsatlas.org/}.
+For the galaxies in our SDSS DR7 group catalog, we construct a catalog
+with UV, optical, and infrared photometry. For UV and optical, 
+we obtain GALEX and SDSS photometry from the NASA-Sloan Atlas\footnote{http://www.nsatlas.org/}.
+For infrared, we use photometry from the 2MASS all-sky map~\citep{Cutri:2000aa}. 
+We then determine the $FUV, NUV$, $u, g, r, i, z$, $J, H, K_s$ 
+band $K$-corrections and absolute magnitudes for the galaxies 
+using $\mathtt{K-correct}$\footnote{http://howdy.physics.nyu.edu/index.php/Kcorrect}~\citep[v4.2][]{Blanton:2007aa}. 
+
+Using these absolute magntidues, in Figure~\ref{fig:NUV_R_J}, we 
+plot $(NUV-R) - (R-J)$ color-color relation for the SDSS DR7 group 
+catalog (black). We highlight the galaxies in the sample that are 
+classified as quiescent using the $\mathrm{SFR} - \mathcal{M}_*$
+cut in orange. Furthermore, we plot the color-color cuts from 
+\cite{Bundy:2010aa} (blue dash-dotted and red dashed lines). 
+Galaxies that lie above both color-color cuts, are classified as 
+quiescent in the $(NUV-R) - (R-J)$ classification. 
+
+The horizontal color-color cut (blue dash-dotted) is evaluated
+using the \cite{Bundy:2010aa} parameterization, at $z \sim 0.05$. The 
+diagonal cut (red dashed) in \cite{Bundy:2010aa} is, however, 
+parameterized using coefficients determined by inspection of 
+redshift bins. Therefore, for the SDSS DR7 group catalog, we 
+extrapolate the coefficients from the COSMOS $z \sim 0.3, 0.7$ 
+bins. We note that using the coefficients from the lowest COSMOS 
+redshift bin ($z \sim 0.3$) instead of extrapolating to $z \sim 0.05$,
+does not significantly impact the comparison in this section. 
+
+Comparison of the quiescent galaxies classified with $\mathrm{SFR} - \mathcal{M}_*$ 
+with the color-color cuts in Figure~\ref{fig:NUV_R_J} find that
+the two classifications are generally consistent. To further 
+test whether the different classifications can impact quiescent
+fraction parameterization, in Figure~\ref{fig:fq_colorcolor}, we 
+compare the the quiescent fractions derived from them for the 
+SDSS DR7 group catalog: $\fq^{SFR-\mathcal{M}_*}$ (black) versus 
+$\fq^{\rm color}$ (orange). Throughout the mass range of the 
+catalog, $\fq^{SFR-\mathcal{M}_*}$ and $\fq^{\rm color}$ are 
+consistent with each other. Therefore, the $\fqcen(\mathcal{M}_*, z)$ 
+parameterization derived from measurements of SDSS DR 7 group catalog 
+and \cite{Tinker:2013aa} (Eq.~\ref{eq:fq}) does {\em not} affect the 
+results of this work.
+
+\begin{figure}
+\begin{center}
+\includegraphics[scale=0.5]{figs/nuv_r_j.pdf}
+\caption{
+The $(NUV - R) - (R - J)$ color-color relation for the
+SDSS DR7 group catalog (black) calculated from photometry 
+compiled from GALEX, SDSS, and 2MASS (\S~\ref{app:sfq}). 
+Galaxies classified as quiescent using the $\mathrm{SFR} - \mathcal{M}_*$ 
+cut are highlighted (orange). Furthermore, we plot the color-color 
+cuts from \cite{Bundy:2010aa} that describe the classification
+of star-forming/quiescent galaxies in \cite{Tinker:2013aa}. 
+We note that the quiescent galaxies classified using the 
+$\mathrm{SFR} - \mathcal{M}_*$ cut are generally consistent with 
+the \cite{Bundy:2010aa} color-color cuts. 
+}
+\label{fig:NUV_R_J}
+\end{center}
+\end{figure}
+
+\begin{figure}
+\begin{center}
+\includegraphics[scale=0.5]{figs/fq_colorcolor.pdf}
+\caption{Comparison of the SDSS DR7 group catalog $\fq(\mathcal{M}_*)$ 
+measured using the $\mathrm{SFR} - \mathcal{M}_*$ versus the 
+$(NUV - R) - (R - J)$ color-color classifications. The $\fq$s 
+measured using the two different classification methods are
+consistent with each other. This consistency illustrates that 
+the $\fqcen(\mathcal{M}_*, z)$ parameterization derived from 
+measurements of SDSS DR 7 group catalog and \cite{Tinker:2013aa} 
+does {\em not} affect the results of this work.}
+\label{fig:fq_colorcolor}
+\end{center}
+\end{figure}
+
+
+
+
 
 \bibliographystyle{yahapj}
 \bibliography{cenque}
