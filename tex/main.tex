@@ -1715,7 +1715,43 @@ work was completed.
 %\section*{Appendices}
 %\addcontentsline{toc}{section}{Appendices}
 %\renewcommand{\thesubsection}{\Alph{subsection}}
-\subsection{Star-forming/Quiescent Classifications} \label{app:sfq}
+\section{Star Formation Indicators} \label{app:sfr}
+For measurements of star formation in galaxies of the SDSS DR7 
+group catalog, we use specific star formation rates (SSFR) derived
+in \cite{Brinchmann:2004aa} (briefly described in \S~\ref{sec:sdss}). 
+These SSFR are measured from H$\alpha$ emission lines, and 
+$D_n4000$ for SSFRs$\gtrsim 10^{-12}\mathrm{yr}^{-1}$. While no 
+SFR indicator provides the panacea for uncertainties in measuring
+star formation in galaxies, a number of caveats must be addressed 
+for the \cite{Brinchmann:2004aa} SSFR. SSFRs derived from H$\alpha$ 
+probe star formation on a $\sim 10\;\mathrm{Myr}$ timescale, which 
+makes them sensitive to short term varations in the galaxies' star 
+formation histories \citep{Kennicutt:2012aa}. Furthermore, the 
+spectroscopically derived \cite{Brinchmann:2004aa} SSFRs also 
+rely on aperture corrections based on broadband photometry. In 
+this section, we demonstrate, by comparing to another SFR 
+indicator, that our specific choice of SFR indicator is robust 
+and does not significant impact the results of this work. 
+
+
+%The authors obtained the SSFR distribution from Brinchmann et al. 2004 who measured SFR using emission lines for galaxies with high SFR and D4000 for quiescent galaxies. However, multiple SFR indicators may introduce considerable systematic error to the SSFR distribution. As shown in Figure 11 in Brinchmann et al. 2004, D4000 does not correlate well with the SSFR for passive galaxies. Moreover, the aperture correction for the spectroscopically-derived SFR, which is based on broad-band photometry, may also introduce considerable uncertainty. Besides, SFR derived from emission lines reflects the SF activity on a 10Myr timescale. This makes the SFR measurements sensitive to short term variations in star formation history (SFH), such as small instantaneous burst.
+
+\begin{figure*}
+\begin{center}
+\includegraphics[scale=0.5]{figs/Pssfr_comparison.pdf}
+\caption{Comparison of the SDSS DR7 group catalog $\fq(\mathcal{M}_*)$ 
+measured using the $\mathrm{SFR} - \mathcal{M}_*$ versus the 
+$(NUV - R) - (R - J)$ color-color classifications. The $\fq$s 
+measured using the two different classification methods are
+consistent with each other. This consistency illustrates that 
+the $\fqcen(\mathcal{M}_*, z)$ parameterization derived from 
+measurements of SDSS DR 7 group catalog and \cite{Tinker:2013aa} 
+does {\em not} affect the results of this work.}
+\label{fig:fq_colorcolor}
+\end{center}
+\end{figure*}
+
+\section{Star-forming/Quiescent Classifications} \label{app:sfq}
 In our parameterization of the observed $\fqcen$ in Eqs.~\ref{eq:fq} and~\ref{eq:fqz0}, 
 we derive the best-fit values for the parameters $A_0$ and $A_1$ by fitting 
 $\fqcen$ measured in the SDSS DR7 group catalog. The SDSS DR7 group catalog 
@@ -1805,10 +1841,6 @@ does {\em not} affect the results of this work.}
 \label{fig:fq_colorcolor}
 \end{center}
 \end{figure}
-
-
-
-
 
 \bibliographystyle{yahapj}
 \bibliography{cenque}
