@@ -1359,6 +1359,73 @@ def fig_tau_SMFevol(standard_run=None, standard_tf=7, noSMF_run=None, noSMF_tf=7
     return None 
 
 
+def fig_tau_DR8photometry(standard_run=None, standard_tf=7, noSMF_run=None, noSMF_tf=7, extraSMF_run=None, extraSMF_tf=7): 
+    ''' tau_Q^cen comparison for different SMF evolution prescription 
+    '''
+    prettyplot() 
+    pretty_colors = prettycolors() 
+    fig = plt.figure(figsize=(7,7))
+    sub = fig.add_subplot(111)
+    m_arr = np.arange(8.5, 12.1, 0.1)   # log M* 
+
+    # Standard model 
+    std = PlotABC(standard_tf, abcrun=standard_run, prior_name='updated')
+    gv_slope, gv_offset, fudge_slope, fudge_offset, tau_slope, tau_offset = std.med_theta
+    std_med_tau_dict = {'name': 'line', 'slope': tau_slope, 'fid_mass': 11.1, 'yint': tau_offset}
+
+    tauq_list = [] 
+    for ii in range(len(std.theta)): 
+        tau_dict_i = {
+                'name': 'line', 
+                'slope': (std.theta[ii])[-2], 
+                'fid_mass': 11.1, 
+                'yint': (std.theta[ii])[-1]
+                }
+        #sub.plot(10**m_arr, sfr_evol.getTauQ(m_arr, tau_prop=tau_dict_i), 
+        #        c=pretty_colors[8], lw=0.4, alpha=0.1)
+        tauq_list.append(sfr_evol.getTauQ(m_arr, tau_prop=tau_dict_i))
+    tauq_list = np.array(tauq_list)
+    #a, b, c, d, e = np.percentile(tauq_list, [2.5, 16, 50, 84, 97.5], axis=0)
+    b, c, d = np.percentile(tauq_list, [16, 50, 84], axis=0)
+    #yerr = np.std(tauq_list, axis=0)
+
+    #sub.errorbar(10**m_arr, sfr_evol.getTauQ(m_arr, tau_prop=std_med_tau_dict), 
+    #        yerr=yerr, c=pretty_colors[3], fmt='o', lw=2, label='Centrals (Hahn+2016)')
+    sub.fill_between(10**m_arr, b, d, color=pretty_colors[3], alpha=0.5, edgecolor='none', label='Centrals') 
+    
+    m_arr_DR8 = 1.2 * m_arr - 1.91
+    sub.plot(10**m_arr_DR8, c, color='k', lw=3, label='DR 8 Photometry') 
+
+    #sub.plot(10**m_arr, sfr_evol.getTauQ(m_arr, tau_prop=std_med_tau_dict), 
+    #        c=pretty_colors[3], lw=2, ls='--')#, label='Centrals (Hahn+2016)')
+
+    m_arr = np.arange(8.5, 12.5, 0.01)
+    sub.fill_between(10**m_arr, 
+            sfr_evol.getTauQ(m_arr, tau_prop={'name': 'satellite_lower'}), 
+            sfr_evol.getTauQ(m_arr, tau_prop={'name': 'satellite_upper'}), 
+            color='none', linewidth=1, edgecolor='k', hatch='X',
+            label='Satellites')
+
+    #sub.plot(10**m_arr, sfr_evol.getTauQ(m_arr, tau_prop={'name': 'satellite'}), 
+    #        c='k', ls='--', lw=3, label='Satellites')
+    sub.set_xlabel(r"$\mathtt{log(M_*\;[M_\odot])}$", fontsize=25)
+    sub.set_xscale('log') 
+    sub.set_xlim([10**9.5, 10**11.5])
+
+    sub.set_ylim([0.0, 1.7])
+    sub.set_yticks([0.0, 0.5, 1.0, 1.5])
+    sub.minorticks_on()
+    sub.set_ylabel(r"$\tau_\mathtt{Q}\;[\mathtt{Gyr}]$", fontsize=25)
+    sub.legend(loc='upper right', scatterpoints=1, prop={'size': 20}, handletextpad=0.5, markerscale=3)
+    
+    fig_file = ''.join(['figure/paper/',
+        'tau.DR8photometry.comparison.png'])
+    fig.savefig(fig_file, bbox_inches='tight', dpi=150)
+    plt.close()
+    Util.png2pdf(fig_file)
+    return None 
+
+
 def fig_gas_depletion():
     ''' Explore the gas depletion time to the quenching time 
     using the gas mass scaling relation of Stewart et al. (2009)
@@ -1915,8 +1982,12 @@ if __name__=='__main__':
     #        standard_run='RHOssfrfq_TinkerFq_Std', standard_tf=7, 
     #        noSMF_run='RHOssfrfq_TinkerFq_NOSMFevol', noSMF_tf=8, 
     #        extraSMF_run='RHOssfrfq_TinkerFq_XtraSMF', extraSMF_tf=9)
+    fig_tau_DR8photometry(
+            standard_run='RHOssfrfq_TinkerFq_Std', standard_tf=7, 
+            noSMF_run='RHOssfrfq_TinkerFq_NOSMFevol', noSMF_tf=8, 
+            extraSMF_run='RHOssfrfq_TinkerFq_XtraSMF', extraSMF_tf=9)
     #splashback(7, abcrun='RHOssfrfq_TinkerFq_Std', prior_name='updated')
-    fig_SSFRevol(7, 'multirho_inh', prior_name='try0', orientation='portrait')
+    #fig_SSFRevol(7, 'multirho_inh', prior_name='try0', orientation='portrait')
     #fig_SSFRevol(6, 'RHOssfrfq_TinkerFq_Std', prior_name='updated')
     #fig_SFRassign(7, 'RHOssfrfq_TinkerFq_Std', prior_name='updated')
     #figSFH_demo(7, 'multirho_inh', prior_name='try0')
