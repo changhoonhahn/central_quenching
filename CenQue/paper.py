@@ -1407,7 +1407,7 @@ def fig_tau_DR8photometry(standard_run=None, standard_tf=7):
     sub.legend(loc='upper right', scatterpoints=1, prop={'size': 20}, handletextpad=0.5, markerscale=3)
     
     fig_file = ''.join(['figure/paper/', 'tau.DR8photometry.comparison.png'])
-    fig.savefig(fig_file, bbox_inches='tight', dpi=150)
+    fig.savefig(fig_file, bbox_inches='tight')#, dpi=150)
     plt.close()
     Util.png2pdf(fig_file)
     return None 
