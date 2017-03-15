@@ -1359,7 +1359,7 @@ def fig_tau_SMFevol(standard_run=None, standard_tf=7, noSMF_run=None, noSMF_tf=7
     return None 
 
 
-def fig_tau_DR8photometry(standard_run=None, standard_tf=7, noSMF_run=None, noSMF_tf=7, extraSMF_run=None, extraSMF_tf=7): 
+def fig_tau_DR8photometry(standard_run=None, standard_tf=7): 
     ''' tau_Q^cen comparison for different SMF evolution prescription 
     '''
     prettyplot() 
@@ -1396,18 +1396,6 @@ def fig_tau_DR8photometry(standard_run=None, standard_tf=7, noSMF_run=None, noSM
     m_arr_DR8 = 1.2 * m_arr - 1.91
     sub.plot(10**m_arr_DR8, c, color='k', lw=3, label='DR 8 Photometry') 
 
-    #sub.plot(10**m_arr, sfr_evol.getTauQ(m_arr, tau_prop=std_med_tau_dict), 
-    #        c=pretty_colors[3], lw=2, ls='--')#, label='Centrals (Hahn+2016)')
-
-    m_arr = np.arange(8.5, 12.5, 0.01)
-    sub.fill_between(10**m_arr, 
-            sfr_evol.getTauQ(m_arr, tau_prop={'name': 'satellite_lower'}), 
-            sfr_evol.getTauQ(m_arr, tau_prop={'name': 'satellite_upper'}), 
-            color='none', linewidth=1, edgecolor='k', hatch='X',
-            label='Satellites')
-
-    #sub.plot(10**m_arr, sfr_evol.getTauQ(m_arr, tau_prop={'name': 'satellite'}), 
-    #        c='k', ls='--', lw=3, label='Satellites')
     sub.set_xlabel(r"$\mathtt{log(M_*\;[M_\odot])}$", fontsize=25)
     sub.set_xscale('log') 
     sub.set_xlim([10**9.5, 10**11.5])
@@ -1418,8 +1406,7 @@ def fig_tau_DR8photometry(standard_run=None, standard_tf=7, noSMF_run=None, noSM
     sub.set_ylabel(r"$\tau_\mathtt{Q}\;[\mathtt{Gyr}]$", fontsize=25)
     sub.legend(loc='upper right', scatterpoints=1, prop={'size': 20}, handletextpad=0.5, markerscale=3)
     
-    fig_file = ''.join(['figure/paper/',
-        'tau.DR8photometry.comparison.png'])
+    fig_file = ''.join(['figure/paper/', 'tau.DR8photometry.comparison.png'])
     fig.savefig(fig_file, bbox_inches='tight', dpi=150)
     plt.close()
     Util.png2pdf(fig_file)
@@ -1982,10 +1969,7 @@ if __name__=='__main__':
     #        standard_run='RHOssfrfq_TinkerFq_Std', standard_tf=7, 
     #        noSMF_run='RHOssfrfq_TinkerFq_NOSMFevol', noSMF_tf=8, 
     #        extraSMF_run='RHOssfrfq_TinkerFq_XtraSMF', extraSMF_tf=9)
-    fig_tau_DR8photometry(
-            standard_run='RHOssfrfq_TinkerFq_Std', standard_tf=7, 
-            noSMF_run='RHOssfrfq_TinkerFq_NOSMFevol', noSMF_tf=8, 
-            extraSMF_run='RHOssfrfq_TinkerFq_XtraSMF', extraSMF_tf=9)
+    fig_tau_DR8photometry(standard_run='RHOssfrfq_TinkerFq_Std', standard_tf=7)
     #splashback(7, abcrun='RHOssfrfq_TinkerFq_Std', prior_name='updated')
     #fig_SSFRevol(7, 'multirho_inh', prior_name='try0', orientation='portrait')
     #fig_SSFRevol(6, 'RHOssfrfq_TinkerFq_Std', prior_name='updated')
