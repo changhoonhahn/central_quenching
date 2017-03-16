@@ -1712,11 +1712,8 @@ their hospitality during his summer visit, where part of this
 work was completed.
 
 \appendix
-%\section*{Appendices}
-%\addcontentsline{toc}{section}{Appendices}
-%\renewcommand{\thesubsection}{\Alph{subsection}}
 \section{Star Formation Indicators} \label{app:sfr}
-For measurements of star formation in galaxies of the SDSS DR7 
+In order to measure star formation in galaxies of the SDSS DR7 
 group catalog, we use specific star formation rates (SSFR) derived
 in \cite{Brinchmann:2004aa} (briefly described in \S~\ref{sec:sdss}). 
 These SSFR are measured from H$\alpha$ emission lines, and 
@@ -1728,26 +1725,58 @@ probe star formation on a $\sim 10\;\mathrm{Myr}$ timescale, which
 makes them sensitive to short term varations in the galaxies' star 
 formation histories \citep{Kennicutt:2012aa}. Furthermore, the 
 spectroscopically derived \cite{Brinchmann:2004aa} SSFRs also 
-rely on aperture corrections based on broadband photometry. In 
-this section, we demonstrate, by comparing to another SFR 
-indicator, that our specific choice of SFR indicator is robust 
-and does not significant impact the results of this work. 
+rely on aperture corrections, which may introduce further 
+uncertainties. In this section, we demonstrate, by comparing to 
+another SFR indicator, that our specific choice of SFR indicator 
+does not significant impact the central galaxy quenching 
+timescale. 
 
+In \cite{Moustakas:2013aa} (hereafter M2013), for their lowest redshift galaxy 
+sample, they construct a catalog derived from the SDSS DR7 VAGC. 
+They supplement the optical photometry from SDSS DR7 with 
+UV photometry from GALEX, integrated $J\;H\;K_s$ magnitudes 
+from 2MASS Extended Source Catalog, and integrated photometry 
+at $3.4$ and $4.6\mu m$ from the WISE All-Sky Data Release\footnote{http://wise2.ipac.caltech.edu/docs/release/allsky}.
+Then to derive galaxy properties such as $\mathcal{M}_*$ and
+SFR, they use $\mathtt{iSEDfit}$, a Bayesian SED modeling code. 
+By including UV photometry from GALEX, the SFRs from the 
+M2013 catalog traces star formation over 
+$\sim 10 - 100\;\mathrm{Myr}$ timescales and is not dominated
+by short term variations. Furthermore, as these SFRs are 
+derived from photometry, they do not require any aperture 
+correction. 
 
-%The authors obtained the SSFR distribution from Brinchmann et al. 2004 who measured SFR using emission lines for galaxies with high SFR and D4000 for quiescent galaxies. However, multiple SFR indicators may introduce considerable systematic error to the SSFR distribution. As shown in Figure 11 in Brinchmann et al. 2004, D4000 does not correlate well with the SSFR for passive galaxies. Moreover, the aperture correction for the spectroscopically-derived SFR, which is based on broad-band photometry, may also introduce considerable uncertainty. Besides, SFR derived from emission lines reflects the SF activity on a 10Myr timescale. This makes the SFR measurements sensitive to short term variations in star formation history (SFH), such as small instantaneous burst.
+Galaxies that are in both the SDSS DR7 group catalog and 
+M2013 catalog, provide a convenient subsample
+of galaxies to compare the distinct SFR indicators. In 
+Figure~\ref{fig:Pssfr_comp}, we compare the SSFR distributions 
+of this subsample, calculated using SFR and $\mathcal{M}_*$ from 
+the SDSS DR7 group catalog (black dashed) versus M2013 
+(orange): $P(SSFR^{\rm group})$ versus $P(SSFR^{M2013})$. 
+We note that the SSFRs from M2013 are not subject to the 
+\cite{Brinchmann:2004aa} SSFR lower bound (see \S~\ref{sec:sdss}). 
+For a meaningful comparison of the $P(SSFR)$s, we impose a
+similar SSFR lower bound that reproduces the $P(SSFR^{\rm group})$
+quiescent peak. We also note that due to the bright 
+magnitude limit in M2013, the M2013 sample does not 
+contain a large number of galaxies within the group catalog 
+redshift distribution with $\mathcal{M}_* > 10.9 \mathrm{M}_\odot$. 
+
+We note that there are some discrepancies 
+between the two distributions. The positions o
+%%% remark on the SFMS discrepancy that's apparent. 
+More importantly, we find that the height of the green valley, 
+the main feature of $P(SSFR)$ critical for constraining the 
+central quenching timescale, is consistent for both distributions.  
+Therefore, we conclude that the \cite{Brinchmann:2004aa} SFRs
+do not significantly impact the quenching timescale.  
+
 
 \begin{figure*}
 \begin{center}
 \includegraphics[scale=0.5]{figs/Pssfr_comparison.pdf}
-\caption{Comparison of the SDSS DR7 group catalog $\fq(\mathcal{M}_*)$ 
-measured using the $\mathrm{SFR} - \mathcal{M}_*$ versus the 
-$(NUV - R) - (R - J)$ color-color classifications. The $\fq$s 
-measured using the two different classification methods are
-consistent with each other. This consistency illustrates that 
-the $\fqcen(\mathcal{M}_*, z)$ parameterization derived from 
-measurements of SDSS DR 7 group catalog and \cite{Tinker:2013aa} 
-does {\em not} affect the results of this work.}
-\label{fig:fq_colorcolor}
+\caption{}
+\label{fig:Pssfr_comp}
 \end{center}
 \end{figure*}
 
