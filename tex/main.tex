@@ -1700,6 +1700,10 @@ however, a better understanding of the detailed relationship among
 stellar mass growth, host halo growth, and the observed stellar mass to halo mass
 relation is required. We will explore this in future work.  
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Acknowledgements
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
 \section*{Acknowledgements}
 CHH was supported by NSF-AST-1109432 and NSF-AST-1211644. 
 ARW was supported by a Moore Prize Fellowship through the 
@@ -1712,6 +1716,9 @@ their hospitality during his summer visit, where part of this
 work was completed.
 
 \appendix
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Appendix A
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Star Formation Indicators} \label{app:sfr}
 In order to measure star formation in galaxies of the SDSS DR7 
 group catalog, we use specific star formation rates (SSFR) derived
@@ -1738,7 +1745,7 @@ UV photometry from GALEX, integrated $J\;H\;K_s$ magnitudes
 from 2MASS Extended Source Catalog, and integrated photometry 
 at $3.4$ and $4.6\mu m$ from the WISE All-Sky Data Release\footnote{http://wise2.ipac.caltech.edu/docs/release/allsky}.
 Then to derive galaxy properties such as $\mathcal{M}_*$ and
-SFR, they use $\mathtt{iSEDfit}$, a Bayesian SED modeling code. 
+SFR, they use $\mathtt{iSEDfit}$ -- a Bayesian SED modeling code. 
 By including UV photometry from GALEX, the SFRs from the 
 M2013 catalog traces star formation over 
 $\sim 10 - 100\;\mathrm{Myr}$ timescales and is not dominated
@@ -1747,25 +1754,38 @@ derived from photometry, they do not require any aperture
 correction. 
 
 Galaxies that are in both the SDSS DR7 group catalog and 
-M2013 catalog, provide a convenient subsample
-of galaxies to compare the distinct SFR indicators. In 
-Figure~\ref{fig:Pssfr_comp}, we compare the SSFR distributions 
-of this subsample, calculated using SFR and $\mathcal{M}_*$ from 
-the SDSS DR7 group catalog (black dashed) versus M2013 
-(orange): $P(SSFR^{\rm group})$ versus $P(SSFR^{M2013})$. 
-We note that the SSFRs from M2013 are not subject to the 
-\cite{Brinchmann:2004aa} SSFR lower bound (see \S~\ref{sec:sdss}). 
-For a meaningful comparison of the $P(SSFR)$s, we impose a
-similar SSFR lower bound that reproduces the $P(SSFR^{\rm group})$
-quiescent peak. We also note that due to the bright 
-magnitude limit in M2013, the M2013 sample does not 
-contain a large number of galaxies within the group catalog 
-redshift distribution with $\mathcal{M}_* > 10.9 \mathrm{M}_\odot$. 
+M2013 catalog, provide a convenient galaxies sample
+to compare the distinct SFR indicators. In Figure~\ref{fig:Pssfr_comp}, 
+we compare the SSFR distributions of this subsample, 
+calculated using SSFRs from the SDSS DR7 group catalog (black dashed) 
+versus M2013 (orange): $P(\mathrm{SSFR}^{\rm group})$ versus 
+$P(\mathrm{SSFR}^{M2013})$. Before comparing the 
+$P(\mathrm{SSFR})$s, we note that the SSFRs from M2013 are 
+not subject to the \cite{Brinchmann:2004aa} SSFR lower bounds
+(see \S~\ref{sec:sdss}). That is, the M2013 SSFRs can extend
+below $10^{-13}\;\mathrm{yr}^{-1}$. For a meaningful comparison, 
+however, we impose a similar SSFR lower bound that reproduces 
+the $P(\mathrm{SSFR}^{\rm group})$ quiescent peak. We also note 
+that due to the M2013 bright magnitude limit, the M2013 sample 
+does not contain a large number of galaxies within the group 
+catalog's $z$ range at higher mass bins. Furthermore, for
+both distributions, the galaxies are binned based on the
+group catalog $\mathcal{M}_*$ so that the same galaxies are
+examined in each bin. This binning does not have a significant
+impact on the comparision because the group catalog $\mathcal{M}_*$ 
+and M2013 $\mathcal{M}_*$ are tightly correlated. 
+% need to mention that we're looking at the same galaxies in 
+% each mass bin.
 
-We note that there are some discrepancies 
-between the two distributions. The positions o
-%%% remark on the SFMS discrepancy that's apparent. 
-More importantly, we find that the height of the green valley, 
+There are some minor discrepancies between the SSFR distributions, 
+such as the position of the star-forming peak in the lowest mass 
+bin. While this is caused by small
+differences in the slopes of the SFMS between the M2013 sample 
+and the group catalog, the star-forming peaks in the higher mass bins are 
+in good agreement. So for the $\mathcal{M}_*$ probed by our analysis, 
+this discrepancy does not have a significant impact. Overall, however, 
+the $P(\mathrm{SSFR})$s are in good agreement with one another. 
+Furthermore, we find that the height of the green valley, 
 the main feature of $P(SSFR)$ critical for constraining the 
 central quenching timescale, is consistent for both distributions.  
 Therefore, we conclude that the \cite{Brinchmann:2004aa} SFRs
@@ -1775,7 +1795,25 @@ do not significantly impact the quenching timescale.
 \begin{figure*}
 \begin{center}
 \includegraphics[scale=0.5]{figs/Pssfr_comparison.pdf}
-\caption{}
+\caption{
+Comparison of the SSFR distribution calculated using 
+SSFRs from the SDSS DR7 group catalog (black dashed) versus
+\cite{Moustakas:2013aa} (orange) for galaxies that are in 
+both the SDSS DR7 group catalog and the \cite{Moustakas:2013aa} 
+sample $z\sim0.1$ bin: $P(\mathrm{SSFR}^{\rm group})$ versus 
+$P(\mathrm{SSFR}^{M2013})$. Galaxies are binned based on the
+group catalog $\mathcal{M}_*$ for both distributions so that 
+the same galaxies are examined in each bin. We impose SSFR 
+lower bounds on $P(\mathrm{SSFR}^{M2013})$ similar to the 
+\cite{Brinchmann:2004aa} bounds (\S~\ref{sec:sdss}). We note 
+that the M2013 sample does not contain a large number of galaxies 
+within the group catalog's $z$ range at higher mass bins due 
+its bright magnitude limit.
+We find good overall agremeent between $P(\mathrm{SSFR}^{\rm group})$ 
+and $P(\mathrm{SSFR}^{M2013})$. Furthermore, they have consistent 
+green valley heights, which is the main feature of $P(SSFR)$ critical 
+for constraining the central quenching timescale.
+}
 \label{fig:Pssfr_comp}
 \end{center}
 \end{figure*}
