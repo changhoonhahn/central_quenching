@@ -1,7 +1,7 @@
 
 Dear Editor,
 
-We thank the referee for the thorough and meticulous review of our work and for the constructive report that substantially improved the quality of the paper.
+We thank the referee for the thorough review of our work and for the constructive report that substantially improved the quality of the paper.
 
 Please find below responses to the referee's comments for the submission.
 
