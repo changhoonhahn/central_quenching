@@ -1197,6 +1197,89 @@ def fig_SSFR_Poster():
     return None
 
 
+def fig_PQ_ABC_post(tf, abcrun=None, prior_name='try0'): 
+    ''' The quenching probability for the median values of the quenching 
+    timescale parameters in the ABC posterior
+    '''
+    # model 
+    ppp = PlotABC(tf, abcrun=abcrun, prior_name=prior_name)
+    gv_slope, gv_offset, fudge_slope, fudge_offset, tau_slope, tau_offset = ppp.med_theta
+
+    #med_tau_dict = {'name': 'line', 'slope': tau_slope, 'fid_mass': 11.1, 'yint': tau_offset}
+
+
+    prettyplot() 
+    pretty_colors = prettycolors() 
+    fig = plt.figure(figsize=(7,7))
+    sub = fig.add_subplot(111)
+
+    m_arr = np.arange(8.5, 12.5, 0.25)
+    tauq_list = [] 
+    for ii in range(len(ppp.theta)): 
+        tau_dict_i = {'name': 'line', 'slope': (ppp.theta[ii])[-2], 'fid_mass': 11.1, 'yint': (ppp.theta[ii])[-1]}
+        sub.plot(10**m_arr, sfr_evol.getTauQ(m_arr, tau_prop=tau_dict_i), 
+                c=pretty_colors[8], lw=0.4, alpha=0.1)
+        tauq_list.append(sfr_evol.getTauQ(m_arr, tau_prop=tau_dict_i))
+    tauq_list = np.array(tauq_list)
+    #a, b, c, d, e = np.percentile(tauq_list, [2.5, 16, 50, 84, 97.5], axis=0)
+    #b, c, d = np.percentile(tauq_list, [16, 50, 84], axis=0)
+    yerr = np.std(tauq_list, axis=0)
+    
+    #for ii in np.random.choice(range(len(ppp.theta)), 100):
+    #    tau_dict_i = {'name': 'line', 'slope': (ppp.theta[ii])[-2], 'fid_mass': 11.1, 'yint': (ppp.theta[ii])[-1]}
+    #    sub.plot(10**m_arr, sfr_evol.getTauQ(m_arr, tau_prop=tau_dict_i), 
+    #            c=pretty_colors[8], lw=0.5, alpha=0.2)
+
+    sub.errorbar(10**m_arr, sfr_evol.getTauQ(m_arr, tau_prop=med_tau_dict), 
+            yerr=yerr, c=pretty_colors[7], fmt='o', lw=2, label='Centrals (Hahn+2016)')
+
+    #sub.errorbar(10**m_arr, sfr_evol.getTauQ(m_arr, tau_prop=med_tau_dict), 
+    #        c='k', lw=3, label='Centrals (Hahn+2016)')
+    m_arr = np.arange(8.5, 12.5, 0.01)
+    #satplot, = sub.plot(10**m_arr, sfr_evol.getTauQ(m_arr, tau_prop={'name': 'satellite'}), 
+    #        c='k', ls='--', lw=3, label='Satellites (Wetzel+2013)')
+    satplot = sub.fill_between(10**m_arr, 
+            sfr_evol.getTauQ(m_arr, tau_prop={'name': 'satellite_lower'}), 
+            sfr_evol.getTauQ(m_arr, tau_prop={'name': 'satellite_upper'}), 
+            color='none', linewidth=1, edgecolor='k', hatch='X',
+            label='Satellites (Wetzel+2013)')
+
+    # data thiefed error bar values 
+    #sat_m_arr = np.array([6.34372e+9, 1.01225e+10, 1.65650e+10, 2.59064e+10, 3.93062e+10, 1.58160e+11])
+    #sat_tau_top = np.array([9.50877e-1, 8.45614e-1, 7.82456e-1, 6.84211e-1, 5.29825e-1, 3.75439e-1])
+    #sat_tau_bot = np.array([6.56140e-1, 5.43860e-1, 4.94737e-1, 3.82456e-1, 1.29825e-1, -2.45614e-2])
+    #satplot = sub.fill_between(sat_m_arr, sat_tau_top, sat_tau_bot, 
+    #        color='none', linewidth=1, edgecolor='k', hatch='X',
+    #        label='Satellites (Wetzel+2013)')
+    sub.set_xlabel(r"$\mathtt{log(M_*\;[M_\odot])}$", fontsize=25)
+    sub.set_xscale('log') 
+    sub.set_xlim([10**9.5, 10**11.5])
+
+    sub.set_ylim([0.0, 1.7])
+    sub.set_yticks([0.0, 0.5, 1.0, 1.5])
+    sub.minorticks_on()
+    sub.set_ylabel(r"$\tau_\mathtt{Q}\;[\mathtt{Gyr}]$", fontsize=25)
+    # get handles
+    handles, labels = sub.get_legend_handles_labels()
+    # remove the errorbars
+    for i_h, h in enumerate(handles): 
+        try:
+            handles[i_h] = h[0]
+        except TypeError: 
+            pass
+    sub.legend(handles, labels, loc='upper right', numpoints=1, prop={'size': 20}, handletextpad=0.5, markerscale=3)
+    
+    fig_file = ''.join(['figure/paper/',
+        'tau.ABC_posterior',
+        '.', abcrun, 
+        '.', prior_name, '_prior', 
+        '.png'])
+    fig.savefig(fig_file, bbox_inches='tight', dpi=150)
+    plt.close()
+    Util.png2pdf(fig_file)
+    return None 
+
+
 def fig_tau_ABC_post(tf, abcrun=None, prior_name='try0'): 
     ''' The tau_Q^cen for the median values of the quenching timescale parameters in the ABC posterior
     '''
@@ -1969,7 +2052,7 @@ if __name__=='__main__':
     #        standard_run='RHOssfrfq_TinkerFq_Std', standard_tf=7, 
     #        noSMF_run='RHOssfrfq_TinkerFq_NOSMFevol', noSMF_tf=8, 
     #        extraSMF_run='RHOssfrfq_TinkerFq_XtraSMF', extraSMF_tf=9)
-    fig_tau_DR8photometry(standard_run='RHOssfrfq_TinkerFq_Std', standard_tf=7)
+    #fig_tau_DR8photometry(standard_run='RHOssfrfq_TinkerFq_Std', standard_tf=7)
     #splashback(7, abcrun='RHOssfrfq_TinkerFq_Std', prior_name='updated')
     #fig_SSFRevol(7, 'multirho_inh', prior_name='try0', orientation='portrait')
     #fig_SSFRevol(6, 'RHOssfrfq_TinkerFq_Std', prior_name='updated')

@@ -38,7 +38,6 @@ The distance metric described in Section 5 does not include the upper limits of 
 
 We have redrafted parts of Section 4.3 in order to clarify how the upper limits of the Brinchmann et al. (2004) SSFRs are incoprorated in the model. We also include the explanation above in Section 5.1.
 
-
 >3) One of the reasons for spectroscopically-derived SFR is to obtain a cleaner separation between SF and quiescent galaxies at z~0 than a simple color cut. However, the quiescent fractions at higher redshift taken from Tinker et al. 2013 were obtained using NUV-R and R-J color-color cut. Would these different classification methods at different redshifts affect the results? The authors could separate the SF and quiescent galaxies at z~0 using a color cut similar to that in Tinker et al. 2013 to check this.
 
 
