@@ -749,7 +749,10 @@ galaxies are selected to start quenching based on their assigned quenching
 probabilities. We note that our quenching probability prescription quenches 
 star-forming galaxies anywhere on the SFMS. 
 
-For quenching galaxies before they start quenching and for 
+For quenching galaxies before 
+{\bf \color{dred}
+they begin the quenching process and for 
+}
 star-forming galaxies that remain star-forming throughout, 
 their star formation histories are dictated by the evolution 
 of the SFMS. Therefore, we model the star formation evolution of star-forming 
@@ -825,26 +828,33 @@ the initial SSFR at $\zinit$. Then,
 \eeq
 where $\mathcal{M}_*$ is stellar mass at the simulation outputs 
 derived from SHAM. 
-For galaxies that become quiescent through 
-quenching during the simulation, based on Eq.~\ref{eq:quenching}
-their SFRs can decrease significantly enough that their SSFRs 
-falls below the lower bound of the SDSS DR7 SSFR measurements.
-Since we later compare the SSFR distribution of our model to the 
-SSFR distribution of the SDSS DR7 central galaxy catalog, 
-the quenching galaxies whose SFRs fall below the SDSS 
-lower bound will bias the comparison. Therefore, we impose a 
-final quenched SSFR assigned based the quiescent peak of 
-the observed SSFR distribution for each galaxy when it 
-begins to quench. The SFR of quenching galaxies only
-decreases until this final quenched SSFR. Afterwards, the
-SFR is evolved to conserve the SSFR (Eq.~\ref{eq:sfr_q}). 
+
+{\bf \color{dred}
+For galaxies that start off as star-forming at $\zinit$ and 
+quench during the simulation, based on Eq.~\ref{eq:quenching} 
+their SFRs can decrease enough so that their SSFRs fall below 
+the SSFR upper bounds of the \cite{Brinchmann:2004aa} SSFR 
+measurements. When we later compare the SSFR distributions of our model to 
+the SDSS DR7 central galaxy catalog, the quenching galaxies with 
+SSFRs below the SSFR bounds will spuriously cause discrepancies 
+in the comparison. To prevent this, we impose a final quenched 
+SSFR, based the quiescent peak of the observed SSFR distribution, 
+for each galaxy when it begins to quench. Therefore, in our model, 
+SFR of quenching galaxies only decreases until an assigned final 
+quenched SSFR. Afterwards, their SFRs are evolved to conserve 
+the SSFR (Eq.~\ref{eq:sfr_q}). 
+}
 
 Figure \ref{fig:SFHdemo} qualitatively illustrates the SFR evolution of 
 star-forming (blue dashed), quenching (green solid), and quiescent (orange) 
 central galaxies as a function of cosmic time throughout the simulation. 
 The SFR of star-forming galaxies reflects the SFR evolution of the SFMS 
-which decreases with time. {\color{red} \bf The quenching galaxy starts to quench
-at $t_\mathrm{Q, start} = 9\;\mathrm{Gyr}$.} Its departure from the SFMS 
+which decreases with time. 
+{
+\color{dred} \bf The quenching galaxy starts to quench
+at $t_\mathrm{Q, start} = 9\;\mathrm{Gyr}$.
+} 
+Its departure from the SFMS 
 is clearly illustrated at $t_\mathrm{cosmic} > 9\;\mathrm{Gyr}$. The slope
 of its SFR decline is dictated by the quenching timescale. Since the 
 lower bound of the SSFR in the SDSS group catalog does not have any 
@@ -1159,8 +1169,11 @@ listed in Table \ref{tab:free_params}.
 %We note that our prior  distributions require all of the $\delta$ parameters to be  positive. As the  parameterizations in Table \ref{tab:params} illustrate,  This is because  they represent the amplitudes of the green valley fraction,  the quenching probability factor,  and the quenching timescale, which by definition cannot be negative. 
 
 The distance metric in ABC parameter estimation is --- in principle --- a
-positive definite function that compares various {\color{red} \bf summary statistics
-between the data and the simulation.} It can be a vector with multiple 
+positive definite function that compares various 
+{
+\color{dred} \bf summary statistics between the data and the simulation.
+} 
+It can be a vector with multiple 
 components where each component is a distance between one particular 
 summary statistic of the data and that of the simulation. For our case, 
 the summary statistics we use for our distance metric are the observables
@@ -1216,6 +1229,20 @@ of the SDSS DR7 central galaxies to that of our model. More specifically,
 As we discuss in \S~\ref{sec:sfms_evol}, the quenching timescale
 parameters leave an imprint on the SSFR distribution. So $\rho_\mathrm{SSFR}$ 
 successfully serves to constrain $A_\tau$ and $\delta_\tau$. 
+
+
+{\bf \color{dred}
+We note that the low SSFR end of $P(\mathrm{SSFR})^\mathrm{SDSS}$ 
+is impacted by the fact that the 
+$\mathrm{SSFR} \lesssim 10^{-12}\;\mathrm{yr}^{-1}$ from 
+\cite{Brinchmann:2004aa} are upper bounds (\S~\ref{sec:sdss}). 
+$\rho_\mathrm{SSFR}$, however, does not account for this effect. 
+Instead, as we describe in \S~\ref{sec:sfms_evol}, 
+we include this effect in our model when dealing with 
+quiescent and quenching galaxies. Therefore, we do not expect
+the low SSFRs in \cite{Brinchmann:2004aa} to significantly impact
+the constraints on $A_\tau$ and $\delta_\tau$. 
+}
 
 Beyond our choice of distance metric, we strictly follow the ABC-PMC 
 implementation of \cite{Hahn:2016aa}. For aficionados, we use a median 
@@ -1721,7 +1748,7 @@ of this work was completed.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Appendix A
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\section{Star Formation Indicators} \label{app:sfr}
+\section{Indicators of Star Formation} \label{app:sfr}
 In order to measure star formation in galaxies of the SDSS DR7 
 group catalog, we use specific star formation rates (SSFR) derived
 in \cite{Brinchmann:2004aa} (briefly described in \S~\ref{sec:sdss}). 
@@ -1763,11 +1790,12 @@ calculated using SSFRs from the SDSS DR7 group catalog (black dashed)
 versus M2013 (orange): $P(\mathrm{SSFR}^{\rm group})$ versus 
 $P(\mathrm{SSFR}^{M2013})$. Before comparing the 
 $P(\mathrm{SSFR})$s, we note that the SSFRs from M2013 are 
-not subject to the \cite{Brinchmann:2004aa} SSFR lower bounds
-(see \S~\ref{sec:sdss}). That is, the M2013 SSFRs can extend
+not subject to the \cite{Brinchmann:2004aa} SSFR upper bounds 
+for low star-forming galaxies (see \S~\ref{sec:sdss}). 
+That is, the M2013 SSFRs can extend
 below $10^{-13}\;\mathrm{yr}^{-1}$. For a meaningful comparison, 
-however, we impose a similar SSFR lower bound that reproduces 
-the $P(\mathrm{SSFR}^{\rm group})$ quiescent peak. We also note 
+however, we impose similar SSFR bounds to reproduce the 
+$P(\mathrm{SSFR}^{\rm group})$ quiescent peak. We also note 
 that due to the M2013 bright magnitude limit, the M2013 sample 
 does not contain a large number of galaxies within the group 
 catalog's $z$ range at higher mass bins. Furthermore, for
@@ -1807,11 +1835,11 @@ sample $z\sim0.1$ bin: $P(\mathrm{SSFR}^{\rm group})$ versus
 $P(\mathrm{SSFR}^{M2013})$. Galaxies are binned based on the
 group catalog $\mathcal{M}_*$ for both distributions so that 
 the same galaxies are examined in each bin. We impose SSFR 
-lower bounds on $P(\mathrm{SSFR}^{M2013})$ similar to the 
-\cite{Brinchmann:2004aa} bounds (\S~\ref{sec:sdss}). We note 
-that the M2013 sample does not contain a large number of galaxies 
-within the group catalog's $z$ range at higher mass bins due 
-its bright magnitude limit.
+bounds on $P(\mathrm{SSFR}^{M2013})$ for low SSFRs to reproduce 
+the $P(\mathrm{SSFR}^{\rm group})$ quiescent peak (\S~\ref{sec:sdss}). 
+We note that the M2013 sample does not contain a large number 
+of galaxies within the group catalog's $z$ range at higher 
+mass bins due its bright magnitude limit.
 We find good overall agremeent between $P(\mathrm{SSFR}^{\rm group})$ 
 and $P(\mathrm{SSFR}^{M2013})$. Furthermore, they have consistent 
 green valley heights, which is the main feature of $P(SSFR)$ critical 
@@ -1855,13 +1883,13 @@ Galaxies that lie above both color-color cuts, are classified as
 quiescent in the $(NUV-R) - (R-J)$ classification. 
 
 The horizontal color-color cut (blue dash-dotted) is evaluated
-using the \cite{Bundy:2010aa} parameterization, at $z \sim 0.05$. The 
+using the \cite{Bundy:2010aa} parameterization, at $z \sim 0.0$. The 
 diagonal cut (red dashed) in \cite{Bundy:2010aa} is, however, 
 parameterized using coefficients determined by inspection of 
 redshift bins. Therefore, for the SDSS DR7 group catalog, we 
 extrapolate the coefficients from the COSMOS $z \sim 0.3, 0.7$ 
 bins. We note that using the coefficients from the lowest COSMOS 
-redshift bin ($z \sim 0.3$) instead of extrapolating to $z \sim 0.05$,
+redshift bin ($z \sim 0.3$) instead of extrapolating to $z \sim 0.0$,
 does not significantly impact the comparison in this section. 
 
 Comparison of the quiescent galaxies classified with $\mathrm{SFR} - \mathcal{M}_*$ 

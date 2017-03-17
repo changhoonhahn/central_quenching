@@ -34,6 +34,10 @@ The comparison finds good overall agreement between the two SSFR distributions. 
 
 >2) The authors mention that the SSFRs less than 10^-12 yr^-1 are upper limits. Does the calculation of distance metric in Section 5 include these upper limits? If true, will the best-fitting quenching timescale change a lot if we ignore these upper limits or quiescent galaxies in SSFR distribution?
 
+The distance metric described in Section 5 does not include the upper limits of the Brinchmann et al. (2004) SSFRs. Instead we incorporate the upper limits in our model. Because we design the model to reproduce the impact of the limits on the observed SSFR distribution, the central quenching timescale will not be impacted. 
+
+We have redrafted parts of Section 4.3 in order to clarify how the upper limits of the Brinchmann et al. (2004) SSFRs are incoprorated in the model. We also include the explanation above in Section 5.1.
+
 
 >3) One of the reasons for spectroscopically-derived SFR is to obtain a cleaner separation between SF and quiescent galaxies at z~0 than a simple color cut. However, the quiescent fractions at higher redshift taken from Tinker et al. 2013 were obtained using NUV-R and R-J color-color cut. Would these different classification methods at different redshifts affect the results? The authors could separate the SF and quiescent galaxies at z~0 using a color cut similar to that in Tinker et al. 2013 to check this.
 
