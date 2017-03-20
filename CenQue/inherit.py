@@ -30,7 +30,7 @@ class Inherit(object):
     '''
     def __init__(self, nsnap_descendants, nsnap_ancestor=20, 
             subhalo_prop=None, sfr_prop=None, evol_prop=None, 
-            gv=None, tau=None, fudge=None, quiet=True):
+            gv=None, tau=None, fudge=None, printPQ=False, quiet=True):
         ''' 
         Parameters
         ----------
@@ -55,6 +55,10 @@ class Inherit(object):
             - evol_prop['mass'] dictates the mass evolution. 
         '''
         self.quiet = quiet 
+
+        # Print out P_Q (later added to address Ref Report) 
+        self.printPQ = printPQ
+        self.PQs = None 
         
         self.nsnap_ancestor = nsnap_ancestor     # snapshot of ancestor
         if not isinstance(nsnap_descendants, list): 
@@ -217,7 +221,21 @@ class Inherit(object):
             fudge_factor = self.fudge_prop['slope'] * (Msham_sf0[sf_within] - self.fudge_prop['fidmass']) + self.fudge_prop['offset']
             fudge_factor[np.where(fudge_factor < 1.)] = 1.
             P_q *= fudge_factor 
-            
+
+            if self.printPQ: # store quenching probabilities  
+
+                Pq_out = {}
+                Pq_out['mass'] = M_mid
+
+                fPQ = self.fudge_prop['slope'] * (M_mid - self.fudge_prop['fidmass']) + \
+                        self.fudge_prop['offset']
+                fPQ[np.where(fPQ < 1.)] = 1.
+                Pq_out['Pq'] = fPQ * (P_q_arr + dPq) 
+
+                if self.PQs is None:  
+                    self.PQs = {} 
+                self.PQs[str(z_of_t(tt))] = Pq_out
+                
             q_ing = np.where(P_sf < P_q)
             if not self.quiet: 
                 print 'Initial guess ', Nqing0, ' final: ', len(q_ing[0]), ' SF gal out of ', Nsf_0, '  start quenching'

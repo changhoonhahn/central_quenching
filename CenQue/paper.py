@@ -940,6 +940,106 @@ def fig_SSFR_ABC_post(tf, abcrun=None, prior_name='try0'):
     return None
 
 
+def fig_PQ_ABC_post(tf, abcrun=None, prior_name='try0'): 
+    ''' The Quenching probability from the median value of the ABC posterior
+    '''
+    figdata_file = ''.join(['/data1/hahn/paper/',  
+        'PQ.ABC_posterior', '.', abcrun, '.', prior_name, '_prior', '.p'])
+
+    if not os.path.isfile(figdata_file):
+        # model 
+        ppp = PlotABC(tf, abcrun=abcrun, prior_name=prior_name)
+        gv_slope, gv_offset, fudge_slope, fudge_offset, tau_slope, tau_offset = ppp.med_theta
+
+        sfinherit_kwargs, abcrun_flag = ReadABCrun(abcrun)
+        sim_kwargs = sfinherit_kwargs.copy()
+        sim_kwargs['sfr_prop']['gv'] = {'slope': gv_slope, 'fidmass': 10.5, 'offset': gv_offset}
+        sim_kwargs['evol_prop']['fudge'] = {'slope': fudge_slope, 'fidmass': 10.5, 'offset': fudge_offset}
+        sim_kwargs['evol_prop']['tau'] = {'name': 'line', 'slope': tau_slope, 'fid_mass': 11.1, 'yint': tau_offset}
+
+        inh = Inherit([1], 
+                nsnap_ancestor=sim_kwargs['nsnap_ancestor'],
+                subhalo_prop=sim_kwargs['subhalo_prop'], 
+                sfr_prop=sim_kwargs['sfr_prop'], 
+                evol_prop=sim_kwargs['evol_prop'], 
+                printPQ=True)   # print PQ
+
+        PQs = inh.PQs
+        pickle.dump(PQs, open(figdata_file, 'wb'))
+    else: 
+        PQs = pickle.load(open(figdata_file, 'rb')) 
+
+    # bin them 
+    m_bins = [(9.5, 10.), (10., 10.5), (10.5, 11.), (11., 11.5)]
+    Pq_m = [[] for i in range(len(m_bins))]
+    for z in sorted(PQs.keys()): 
+        for i_m in range(len(m_bins)): 
+            in_mbin = np.where(
+                    (PQs[z]['mass'] >= m_bins[i_m][0]) & 
+                    (PQs[z]['mass'] < m_bins[i_m][1]) 
+                    )
+            Pq_m[i_m].append(np.mean(PQs[z]['Pq'][in_mbin]))
+
+    #prettyplot() 
+    pretty_colors = prettycolors() 
+    fig = plt.figure(figsize=(7,7))
+    sub = fig.add_subplot(111)
+
+    for i_m in range(len(m_bins)): 
+        sub.plot([float(zz) for zz in sorted(PQs.keys())], Pq_m[i_m], 
+                c=pretty_colors[i_m], 
+                label=str(m_bins[i_m][0])+'< $M_*$ <'+str(m_bins[i_m][1]))
+
+    ppp = PlotABC(tf, abcrun=abcrun, prior_name=prior_name)
+    for ii in range(10): 
+        gv_slope, gv_offset, fudge_slope, fudge_offset, tau_slope, tau_offset = ppp.theta[ii]
+
+        sfinherit_kwargs, abcrun_flag = ReadABCrun(abcrun)
+        sim_kwargs = sfinherit_kwargs.copy()
+        sim_kwargs['sfr_prop']['gv'] = {'slope': gv_slope, 'fidmass': 10.5, 'offset': gv_offset}
+        sim_kwargs['evol_prop']['fudge'] = {'slope': fudge_slope, 'fidmass': 10.5, 'offset': fudge_offset}
+        sim_kwargs['evol_prop']['tau'] = {'name': 'line', 'slope': tau_slope, 'fid_mass': 11.1, 'yint': tau_offset}
+
+        inh = Inherit([1], 
+                nsnap_ancestor=sim_kwargs['nsnap_ancestor'],
+                subhalo_prop=sim_kwargs['subhalo_prop'], 
+                sfr_prop=sim_kwargs['sfr_prop'], 
+                evol_prop=sim_kwargs['evol_prop'], 
+                printPQ=True)   # print PQ
+
+        PQs = inh.PQs
+
+        Pq_m = [[] for i in range(len(m_bins))]
+        for z in sorted(PQs.keys()): 
+            for i_m in range(len(m_bins)): 
+                in_mbin = np.where(
+                        (PQs[z]['mass'] >= m_bins[i_m][0]) & 
+                        (PQs[z]['mass'] < m_bins[i_m][1]) 
+                        )
+                Pq_m[i_m].append(np.mean(PQs[z]['Pq'][in_mbin]))
+
+        for i_m in range(len(m_bins)): 
+            sub.plot([float(zz) for zz in sorted(PQs.keys())], Pq_m[i_m], 
+                    c=pretty_colors[i_m], 
+                    alpha=0.5)
+
+    # x-axis 
+    sub.set_xlim([0., 1.]) 
+    sub.set_xlabel(r"Redshift (z)", fontsize=25)
+    sub.set_ylim([0., 0.25]) 
+    sub.set_ylabel(r"$\mathtt{P_{Q}(\mathcal{M}_*, z)}$", fontsize=25)
+    sub.legend(loc='upper right')
+    
+    fig_file = ''.join(['figure/paper/',
+        'PQ.ABC_posterior',
+        '.', abcrun, 
+        '.', prior_name, '_prior', 
+        '.png'])
+    fig.savefig(fig_file)
+    plt.close() 
+    return None
+
+
 def fig_SSFR_tau_satellite(tf, abcrun='rhofq_tausat', prior_name='satellite'): 
     ''' The SSFR distribution from the median of the ABC posterior when using the 
     satellite quenching timescale model. 
@@ -1195,89 +1295,6 @@ def fig_SSFR_Poster():
     plt.close() 
     Util.png2pdf(fig_file) 
     return None
-
-
-def fig_PQ_ABC_post(tf, abcrun=None, prior_name='try0'): 
-    ''' The quenching probability for the median values of the quenching 
-    timescale parameters in the ABC posterior
-    '''
-    # model 
-    ppp = PlotABC(tf, abcrun=abcrun, prior_name=prior_name)
-    gv_slope, gv_offset, fudge_slope, fudge_offset, tau_slope, tau_offset = ppp.med_theta
-
-    #med_tau_dict = {'name': 'line', 'slope': tau_slope, 'fid_mass': 11.1, 'yint': tau_offset}
-
-
-    prettyplot() 
-    pretty_colors = prettycolors() 
-    fig = plt.figure(figsize=(7,7))
-    sub = fig.add_subplot(111)
-
-    m_arr = np.arange(8.5, 12.5, 0.25)
-    tauq_list = [] 
-    for ii in range(len(ppp.theta)): 
-        tau_dict_i = {'name': 'line', 'slope': (ppp.theta[ii])[-2], 'fid_mass': 11.1, 'yint': (ppp.theta[ii])[-1]}
-        sub.plot(10**m_arr, sfr_evol.getTauQ(m_arr, tau_prop=tau_dict_i), 
-                c=pretty_colors[8], lw=0.4, alpha=0.1)
-        tauq_list.append(sfr_evol.getTauQ(m_arr, tau_prop=tau_dict_i))
-    tauq_list = np.array(tauq_list)
-    #a, b, c, d, e = np.percentile(tauq_list, [2.5, 16, 50, 84, 97.5], axis=0)
-    #b, c, d = np.percentile(tauq_list, [16, 50, 84], axis=0)
-    yerr = np.std(tauq_list, axis=0)
-    
-    #for ii in np.random.choice(range(len(ppp.theta)), 100):
-    #    tau_dict_i = {'name': 'line', 'slope': (ppp.theta[ii])[-2], 'fid_mass': 11.1, 'yint': (ppp.theta[ii])[-1]}
-    #    sub.plot(10**m_arr, sfr_evol.getTauQ(m_arr, tau_prop=tau_dict_i), 
-    #            c=pretty_colors[8], lw=0.5, alpha=0.2)
-
-    sub.errorbar(10**m_arr, sfr_evol.getTauQ(m_arr, tau_prop=med_tau_dict), 
-            yerr=yerr, c=pretty_colors[7], fmt='o', lw=2, label='Centrals (Hahn+2016)')
-
-    #sub.errorbar(10**m_arr, sfr_evol.getTauQ(m_arr, tau_prop=med_tau_dict), 
-    #        c='k', lw=3, label='Centrals (Hahn+2016)')
-    m_arr = np.arange(8.5, 12.5, 0.01)
-    #satplot, = sub.plot(10**m_arr, sfr_evol.getTauQ(m_arr, tau_prop={'name': 'satellite'}), 
-    #        c='k', ls='--', lw=3, label='Satellites (Wetzel+2013)')
-    satplot = sub.fill_between(10**m_arr, 
-            sfr_evol.getTauQ(m_arr, tau_prop={'name': 'satellite_lower'}), 
-            sfr_evol.getTauQ(m_arr, tau_prop={'name': 'satellite_upper'}), 
-            color='none', linewidth=1, edgecolor='k', hatch='X',
-            label='Satellites (Wetzel+2013)')
-
-    # data thiefed error bar values 
-    #sat_m_arr = np.array([6.34372e+9, 1.01225e+10, 1.65650e+10, 2.59064e+10, 3.93062e+10, 1.58160e+11])
-    #sat_tau_top = np.array([9.50877e-1, 8.45614e-1, 7.82456e-1, 6.84211e-1, 5.29825e-1, 3.75439e-1])
-    #sat_tau_bot = np.array([6.56140e-1, 5.43860e-1, 4.94737e-1, 3.82456e-1, 1.29825e-1, -2.45614e-2])
-    #satplot = sub.fill_between(sat_m_arr, sat_tau_top, sat_tau_bot, 
-    #        color='none', linewidth=1, edgecolor='k', hatch='X',
-    #        label='Satellites (Wetzel+2013)')
-    sub.set_xlabel(r"$\mathtt{log(M_*\;[M_\odot])}$", fontsize=25)
-    sub.set_xscale('log') 
-    sub.set_xlim([10**9.5, 10**11.5])
-
-    sub.set_ylim([0.0, 1.7])
-    sub.set_yticks([0.0, 0.5, 1.0, 1.5])
-    sub.minorticks_on()
-    sub.set_ylabel(r"$\tau_\mathtt{Q}\;[\mathtt{Gyr}]$", fontsize=25)
-    # get handles
-    handles, labels = sub.get_legend_handles_labels()
-    # remove the errorbars
-    for i_h, h in enumerate(handles): 
-        try:
-            handles[i_h] = h[0]
-        except TypeError: 
-            pass
-    sub.legend(handles, labels, loc='upper right', numpoints=1, prop={'size': 20}, handletextpad=0.5, markerscale=3)
-    
-    fig_file = ''.join(['figure/paper/',
-        'tau.ABC_posterior',
-        '.', abcrun, 
-        '.', prior_name, '_prior', 
-        '.png'])
-    fig.savefig(fig_file, bbox_inches='tight', dpi=150)
-    plt.close()
-    Util.png2pdf(fig_file)
-    return None 
 
 
 def fig_tau_ABC_post(tf, abcrun=None, prior_name='try0'): 
@@ -2055,6 +2072,7 @@ if __name__=='__main__':
     #fig_tau_DR8photometry(standard_run='RHOssfrfq_TinkerFq_Std', standard_tf=7)
     #splashback(7, abcrun='RHOssfrfq_TinkerFq_Std', prior_name='updated')
     #fig_SSFRevol(7, 'multirho_inh', prior_name='try0', orientation='portrait')
+    fig_PQ_ABC_post(7, abcrun='RHOssfrfq_TinkerFq_Std', prior_name='updated')
     #fig_SSFRevol(6, 'RHOssfrfq_TinkerFq_Std', prior_name='updated')
     #fig_SFRassign(7, 'RHOssfrfq_TinkerFq_Std', prior_name='updated')
     #figSFH_demo(7, 'multirho_inh', prior_name='try0')

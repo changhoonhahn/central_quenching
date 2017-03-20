@@ -60,7 +60,7 @@ def PlotModelSMF(source='li-march'):
 def PlotFq_t(lit='wetzelsmooth'): 
     ''' Plot the quiescent fraction evolution as a function of M* and t
     '''
-    prettyplot()
+    #prettyplot()
     pretty_colors = prettycolors()
     
     M_arr = np.arange(9.0, 12.5, 0.5)
@@ -77,6 +77,7 @@ def PlotFq_t(lit='wetzelsmooth'):
         sub.plot(t_arr, fq_M_t, label=r"$M_* = "+str(round(Mstar,2))+"$") 
     sub.set_xlim([t_arr.min(), t_arr.max()])
     sub.set_ylim([0., 1.])
+    #plt.show()
     fig_file = ''.join(['figure/test/', 'fq_t.', lit, '.png'])
     fig.savefig(fig_file, bbox_inches='tight') 
 
@@ -85,7 +86,7 @@ def PlotFq_t(lit='wetzelsmooth'):
 def PlotFq_comp(lit=['wetzel', 'wetzel_alternate']): 
     ''' Compare the quiescent function evolution for different analytic prescriptions 
     '''
-    prettyplot()
+    #prettyplot()
     pretty_colors = prettycolors()
     
     M_arr = np.arange(9.0, 12.2, 0.2)
@@ -359,11 +360,12 @@ def Plot_rhoSFR(source='li-march', sfms_prop=None, fq_lit='wetzel', zslope=None)
 
 if __name__=='__main__': 
     #Plot_rhoSFR(source='li-march', sfms_prop=None, fq_lit='cosmos_tinker', zslope=1.5)
-    Plot_rhoSFR(source='li-march', sfms_prop=None, fq_lit='cosmos_tinker', zslope=1.14)
+    #Plot_rhoSFR(source='li-march', sfms_prop=None, fq_lit='cosmos_tinker', zslope=1.14)
     #PlotFq_t(lit='wetzelsmooth')
     #PlotFq_t(lit='wetzel')
     #Plot_dFqdt()#lit='wetzelsmooth')
     #PlotFq_comp(lit=['wetzel', 'wetzel_alternate', 'cosmos_tinker'])
+    PlotFq_comp(lit=['cosmos_tinker'])
     #PlotFq_WetzelComp()
     #PlotModelSMF(source=['li-march']) 
     #PlotModelSMF(source=['li-march-extreme']) 
