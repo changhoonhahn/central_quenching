@@ -86,7 +86,7 @@ def PlotFq_t(lit='wetzelsmooth'):
 def PlotFq_comp(lit=['wetzel', 'wetzel_alternate']): 
     ''' Compare the quiescent function evolution for different analytic prescriptions 
     '''
-    #prettyplot()
+    prettyplot()
     pretty_colors = prettycolors()
     
     M_arr = np.arange(9.0, 12.2, 0.2)
@@ -94,7 +94,7 @@ def PlotFq_comp(lit=['wetzel', 'wetzel_alternate']):
     
     prettyplot() 
     pretty_colors = prettycolors() 
-    fig = plt.figure(figsize=(15,5))
+    fig = plt.figure(figsize=(5*len(lit),5))
     
     qf = gp.Fq()
     for il, l in enumerate(lit): 
