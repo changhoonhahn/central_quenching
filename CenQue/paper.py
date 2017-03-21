@@ -971,57 +971,78 @@ def fig_PQ_ABC_post(tf, abcrun=None, prior_name='try0'):
 
     # bin them 
     m_bins = [(9.5, 10.), (10., 10.5), (10.5, 11.), (11., 11.5)]
-    Pq_m = [[] for i in range(len(m_bins))]
+
+    Pq_median = [[] for i in range(len(m_bins))]
     for z in sorted(PQs.keys()): 
         for i_m in range(len(m_bins)): 
             in_mbin = np.where(
                     (PQs[z]['mass'] >= m_bins[i_m][0]) & 
                     (PQs[z]['mass'] < m_bins[i_m][1]) 
                     )
-            Pq_m[i_m].append(np.mean(PQs[z]['Pq'][in_mbin]))
+            Pq_median[i_m].append(np.mean(PQs[z]['Pq'][in_mbin]))
 
     #prettyplot() 
     pretty_colors = prettycolors() 
     fig = plt.figure(figsize=(7,7))
     sub = fig.add_subplot(111)
 
+    figdata_file2 = ''.join(['/data1/hahn/paper/',  
+        'PQ_list.ABC_posterior', '.', abcrun, '.', prior_name, '_prior', '.p'])
+    
+    if not os.path.isfile(figdata_file2):
+        ppp = PlotABC(tf, abcrun=abcrun, prior_name=prior_name)
+        
+        Pq_list = [[] for i in range(len(m_bins))]
+        for ii in range(len(ppp.theta)): 
+            gv_slope, gv_offset, fudge_slope, fudge_offset, tau_slope, tau_offset = ppp.theta[ii]
+
+            sfinherit_kwargs, abcrun_flag = ReadABCrun(abcrun)
+            sim_kwargs = sfinherit_kwargs.copy()
+            sim_kwargs['sfr_prop']['gv'] = {'slope': gv_slope, 'fidmass': 10.5, 'offset': gv_offset}
+            sim_kwargs['evol_prop']['fudge'] = {'slope': fudge_slope, 'fidmass': 10.5, 'offset': fudge_offset}
+            sim_kwargs['evol_prop']['tau'] = {'name': 'line', 'slope': tau_slope, 'fid_mass': 11.1, 'yint': tau_offset}
+
+            inh = Inherit([1], 
+                    nsnap_ancestor=sim_kwargs['nsnap_ancestor'],
+                    subhalo_prop=sim_kwargs['subhalo_prop'], 
+                    sfr_prop=sim_kwargs['sfr_prop'], 
+                    evol_prop=sim_kwargs['evol_prop'], 
+                    printPQ=True)   # print PQ
+
+            PQs = inh.PQs
+
+            Pq_m = [[] for i in range(len(m_bins))]
+            for z in sorted(PQs.keys()): 
+                for i_m in range(len(m_bins)): 
+                    in_mbin = np.where(
+                            (PQs[z]['mass'] >= m_bins[i_m][0]) & 
+                            (PQs[z]['mass'] < m_bins[i_m][1]) 
+                            )
+                    Pq_m[i_m].append(np.mean(PQs[z]['Pq'][in_mbin]))
+
+            for i_m in range(len(m_bins)): 
+                Pq_list[i_m].append(np.array(Pq_m[i_m]))
+        pickle.dump(Pq_list, open(figdata_file2, 'wb'))
+    else: 
+        Pq_list = pickle.load(open(figdata_file2, 'rb')) 
+
+        #for i_m in range(len(m_bins)): 
+        #    sub.plot([float(zz) for zz in sorted(PQs.keys())], Pq_m[i_m], 
+        #            c=pretty_colors[i_m], 
+        #            alpha=0.2)
     for i_m in range(len(m_bins)): 
-        sub.plot([float(zz) for zz in sorted(PQs.keys())], Pq_m[i_m], 
+        a, b, c, d, e = np.percentile(Pq_list[i_m], [2.5, 16, 50, 84, 97.5], axis=0)
+        sub.fill_between([float(zz) for zz in sorted(PQs.keys())], a, e, 
+                color=pretty_colors[i_m], alpha=0.3, edcolor="none")
+        
+        sub.fill_between([float(zz) for zz in sorted(PQs.keys())], b, d, 
+                color=pretty_colors[i_m], alpha=0.5, edgecolor="none")
+
+    for i_m in range(len(m_bins)): 
+        sub.plot([float(zz) for zz in sorted(PQs.keys())], Pq_median[i_m], 
                 c=pretty_colors[i_m], 
                 label=str(m_bins[i_m][0])+'< $M_*$ <'+str(m_bins[i_m][1]))
 
-    ppp = PlotABC(tf, abcrun=abcrun, prior_name=prior_name)
-    for ii in range(10): 
-        gv_slope, gv_offset, fudge_slope, fudge_offset, tau_slope, tau_offset = ppp.theta[ii]
-
-        sfinherit_kwargs, abcrun_flag = ReadABCrun(abcrun)
-        sim_kwargs = sfinherit_kwargs.copy()
-        sim_kwargs['sfr_prop']['gv'] = {'slope': gv_slope, 'fidmass': 10.5, 'offset': gv_offset}
-        sim_kwargs['evol_prop']['fudge'] = {'slope': fudge_slope, 'fidmass': 10.5, 'offset': fudge_offset}
-        sim_kwargs['evol_prop']['tau'] = {'name': 'line', 'slope': tau_slope, 'fid_mass': 11.1, 'yint': tau_offset}
-
-        inh = Inherit([1], 
-                nsnap_ancestor=sim_kwargs['nsnap_ancestor'],
-                subhalo_prop=sim_kwargs['subhalo_prop'], 
-                sfr_prop=sim_kwargs['sfr_prop'], 
-                evol_prop=sim_kwargs['evol_prop'], 
-                printPQ=True)   # print PQ
-
-        PQs = inh.PQs
-
-        Pq_m = [[] for i in range(len(m_bins))]
-        for z in sorted(PQs.keys()): 
-            for i_m in range(len(m_bins)): 
-                in_mbin = np.where(
-                        (PQs[z]['mass'] >= m_bins[i_m][0]) & 
-                        (PQs[z]['mass'] < m_bins[i_m][1]) 
-                        )
-                Pq_m[i_m].append(np.mean(PQs[z]['Pq'][in_mbin]))
-
-        for i_m in range(len(m_bins)): 
-            sub.plot([float(zz) for zz in sorted(PQs.keys())], Pq_m[i_m], 
-                    c=pretty_colors[i_m], 
-                    alpha=0.5)
 
     # x-axis 
     sub.set_xlim([0., 1.]) 
