@@ -45,7 +45,9 @@ We have added a section in the Appendix (section B) to address this comment. We 
 
 >4) It can be seen from Figure 5 that there is a mild degeneracy between the quenching timescale and quenching probability. The reliability of obtained quenching timescale partly relies on how well the quenching probability is constrained. Therefore, I expect the authors to compare their result of quenching probability with those derived in previous works, such as Moustakas et al. 2013, and the recent work by Lian et al. 2016. 
 
+We agree with the referee that this comparison is worthwhile and have added paragraphs in Section 5.2 that discuss the quenching probability derived from the posterior distributions of our model parameters. We compare the quenching probability to the quenching rates of Moustakas et al. (2013) and Lian et al. (2016). We find that the quenching probabilities are generally in good agreement with the quenching rates. However, as now described in the text, we refrain a more detailed comparison because our quenching probabillity is for central galaxies. Furthermore, there are discrepancies between the definition of quenching proability and quenching rate and between the SMF  and quiescent fraction evolutions. 
 
+We also clarify the definition of quenching probability in Section 4.3, which previously was misleading.
 
 
 > Most of these are typographical errors. The authors may revise them in a different way.

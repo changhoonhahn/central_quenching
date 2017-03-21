@@ -702,14 +702,19 @@ that quenches throughout the simulation. We use a Monte Carlo
 prescription that utilizes a ``quenching probability" ($P_Q$) 
 to determine which star-forming centrals to quench and when to 
 quench them. 
-We define $P_Q$, for a stellar mass $\mathcal{M}_*$ at simulation snapshot $i$ as  
-\beq \label{eq:pq}
-P_Q(\mathcal{M}_*, t_i) = 
-\frac{N_Q(\mathcal{M}_*, t_{i+1}) - N_Q(\mathcal{M}_*, t_i)}{N_{SF}(\mathcal{M}_*, t_i)}
-\eeq
-where $N_Q(\mathcal{M}_*, t)$ and $N_{SF}(\mathcal{M}_*, t)$ 
-represent the number of quiescent and star-forming galaxies of 
-stellar mass $\mathcal{M}_*$ in the population at $t$. 
+{\bf \color{dred}
+We define $P_Q(\mathcal{M}_*, t_i)$ to be the probability that 
+a star-forming central of stellar mass $\mathcal{M}_*$ begins 
+to quench some time between $t_i$ and $t_{i+1}$. 
+}
+%We define $P_Q$, for a stellar mass $\mathcal{M}_*$ at simulation snapshot $i$ as  
+%\beq \label{eq:pq}
+%P_Q(\mathcal{M}_*, t_i) = 
+%\frac{N_Q(\mathcal{M}_*, t_{i+1}) - N_Q(\mathcal{M}_*, t_i)}{N_{SF}(\mathcal{M}_*, t_i)}
+%\eeq
+%where $N_Q(\mathcal{M}_*, t)$ and $N_{SF}(\mathcal{M}_*, t)$ 
+%represent the number of quiescent and star-forming galaxies of 
+%stellar mass $\mathcal{M}_*$ in the population at $t$. 
 
 In the fiducial case where quenching happens instantaneously and 
 the time evolution of the stellar mass function is negligible, the 
@@ -1328,12 +1333,26 @@ Recent works such as \cite{Moustakas:2013aa} and \cite{Lian:2016aa}
 have published measurements of a comparable quantity: {\em the 
 quenching rate}. At $0.02 < z < 0.05$ and in three mass bins between 
 $10^{10}$ and $10^{10.6}\; M_\odot$, \cite{Lian:2016aa} measures 
-quenching rates of $19, 25$, and $33\%/\mathrm{Gyr}$. These quenching
-rates are in good agreement with the quenching probability we derive
-from our constraint. 
-However a more detailed comparison with \cite{Moustakas:2013aa} is 
-made difficult by the fact that ther quenching rate is for the entire
-galaxy population rather than centrals 
+quenching rates of $19, 25$, and $33\%/\mathrm{Gyr}$. Similarly, 
+\cite{Moustakas:2013aa} measures the quenching rate for 
+four stellar mass between $10^{9.5}$ and $10^{11.5}\; M_\odot$ out 
+to $z\sim0.8$. At $z > 0.2$, the \cite{Moustakas:2013aa} quenching 
+rates range between $1 - 12\%/\mathrm{Gyr}$. These quenching
+rates are generally in good agreement with the $P_{Q}$ from our 
+constraints.
+}
+
+{\bf \color{dred}
+We refrain from a more detailed comparison due to 
+a number of underlying differences between the quenching rates in 
+the literature and our $P_Q$. For instance, these quenching rates 
+are derived for the entire galaxy population and not the 
+central galaxy population. Furthermore, our $P_Q$ describes the 
+probability that a star-forming central galaxy begins to quench, 
+not the rate at which star-forming galaxies become quiescent. 
+We also note that $P_{Q}$ is dictated by the SMF and quiescent
+fraction evolution, so a detailed comparison would require a detailed
+comparison of the different SMF and quiescent fraction evolutions. 
 }
 
 In our model, we obtain stellar masses of central galaxies 
