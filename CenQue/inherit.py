@@ -231,6 +231,7 @@ class Inherit(object):
                         self.fudge_prop['offset']
                 fPQ[np.where(fPQ < 1.)] = 1.
                 Pq_out['Pq'] = fPQ * (P_q_arr + dPq) 
+                Pq_out['Pq_fid'] = P_q_arr + dPq
 
                 if self.PQs is None:  
                     self.PQs = {} 

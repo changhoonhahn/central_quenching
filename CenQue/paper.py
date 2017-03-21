@@ -940,6 +940,162 @@ def fig_SSFR_ABC_post(tf, abcrun=None, prior_name='try0'):
     return None
 
 
+def fig_fQ_ABC_post(tf, abcrun=None, prior_name='try0'): 
+    ''' The fiducial Quenching probability from the median value of the ABC posterior
+    '''
+    # model 
+    ppp = PlotABC(tf, abcrun=abcrun, prior_name=prior_name)
+    gv_slope, gv_offset, fudge_slope_med, fudge_offset_med, tau_slope, tau_offset = ppp.med_theta
+    print fudge_slope_med, fudge_offset_med
+
+    #prettyplot() 
+    pretty_colors = prettycolors() 
+    fig = plt.figure(figsize=(7,7))
+    sub = fig.add_subplot(111)
+    
+    m_arr = np.arange(9.5, 11.6, 0.1)
+
+    fQs = [] 
+    for i in range(len(ppp.theta)): 
+        gv_slope, gv_offset, fudge_slope, fudge_offset, tau_slope, tau_offset = ppp.theta[i]
+        fQ = fudge_slope * (m_arr - 10.5) + fudge_offset
+        fQ[np.where(fQ < 1.)] = 1.
+        fQs.append(fQ)
+    
+    a, b, c, d, e = np.percentile(fQs, [2.5, 16, 50, 84, 97.5], axis=0)
+    sub.fill_between(m_arr, a, e, color=pretty_colors[3], alpha=0.3, edgecolor="none")
+    sub.fill_between(m_arr, b, d, color=pretty_colors[3], alpha=0.5, edgecolor="none")
+
+    fQ = fudge_slope_med * (m_arr - 10.5) + fudge_offset_med
+    fQ[np.where(fQ < 1.)] = 1.
+    sub.plot(m_arr, fQ, c='k', lw=3)
+
+    # x-axis 
+    sub.set_xlim([9.0, 12.]) 
+    sub.set_xlabel(r"$\mathcal{M}_*$", fontsize=25)
+    sub.set_ylim([1., 5.]) 
+    sub.set_ylabel(r"$\mathtt{f_{Q}(\mathcal{M}_*)}$", fontsize=25)
+    sub.legend(loc='upper right')
+    
+    fig_file = ''.join(['figure/paper/',
+        'fQ.ABC_posterior',
+        '.', abcrun, 
+        '.', prior_name, '_prior', 
+        '.png'])
+    fig.savefig(fig_file)
+    plt.close() 
+    return None
+
+
+def fig_PQfid_ABC_post(tf, abcrun=None, prior_name='try0'): 
+    ''' The fiducial Quenching probability from the median value of the ABC posterior
+    '''
+    figdata_file = ''.join(['/data1/hahn/paper/',  
+        'PQfid.ABC_posterior', '.', abcrun, '.', prior_name, '_prior', '.p'])
+
+    if not os.path.isfile(figdata_file):
+        # model 
+        ppp = PlotABC(tf, abcrun=abcrun, prior_name=prior_name)
+        gv_slope, gv_offset, fudge_slope, fudge_offset, tau_slope, tau_offset = ppp.med_theta
+
+        sfinherit_kwargs, abcrun_flag = ReadABCrun(abcrun)
+        sim_kwargs = sfinherit_kwargs.copy()
+        sim_kwargs['sfr_prop']['gv'] = {'slope': gv_slope, 'fidmass': 10.5, 'offset': gv_offset}
+        sim_kwargs['evol_prop']['fudge'] = {'slope': fudge_slope, 'fidmass': 10.5, 'offset': fudge_offset}
+        sim_kwargs['evol_prop']['tau'] = {'name': 'line', 'slope': tau_slope, 'fid_mass': 11.1, 'yint': tau_offset}
+
+        inh = Inherit([1], 
+                nsnap_ancestor=sim_kwargs['nsnap_ancestor'],
+                subhalo_prop=sim_kwargs['subhalo_prop'], 
+                sfr_prop=sim_kwargs['sfr_prop'], 
+                evol_prop=sim_kwargs['evol_prop'], 
+                printPQ=True)   # print PQ
+
+        PQs = inh.PQs
+        pickle.dump(PQs, open(figdata_file, 'wb'))
+    else: 
+        PQs = pickle.load(open(figdata_file, 'rb')) 
+
+    # bin them 
+    m_bins = [(9.5, 10.), (10., 10.5), (10.5, 11.), (11., 11.5)]
+
+    Pq_median = [[] for i in range(len(m_bins))]
+    for z in sorted(PQs.keys()): 
+        for i_m in range(len(m_bins)): 
+            in_mbin = np.where(
+                    (PQs[z]['mass'] >= m_bins[i_m][0]) & 
+                    (PQs[z]['mass'] < m_bins[i_m][1]) 
+                    )
+            Pq_median[i_m].append(np.mean(PQs[z]['Pq_fid'][in_mbin]))
+
+    #prettyplot() 
+    pretty_colors = prettycolors() 
+    fig = plt.figure(figsize=(7,7))
+    sub = fig.add_subplot(111)
+        
+    ppp = PlotABC(tf, abcrun=abcrun, prior_name=prior_name)
+    
+    Pq_list = [[] for i in range(len(m_bins))]
+    for ii in range(20): 
+        gv_slope, gv_offset, fudge_slope, fudge_offset, tau_slope, tau_offset = ppp.theta[ii]
+
+        sfinherit_kwargs, abcrun_flag = ReadABCrun(abcrun)
+        sim_kwargs = sfinherit_kwargs.copy()
+        sim_kwargs['sfr_prop']['gv'] = {'slope': gv_slope, 'fidmass': 10.5, 'offset': gv_offset}
+        sim_kwargs['evol_prop']['fudge'] = {'slope': fudge_slope, 'fidmass': 10.5, 'offset': fudge_offset}
+        sim_kwargs['evol_prop']['tau'] = {'name': 'line', 'slope': tau_slope, 'fid_mass': 11.1, 'yint': tau_offset}
+
+        inh = Inherit([1], 
+                nsnap_ancestor=sim_kwargs['nsnap_ancestor'],
+                subhalo_prop=sim_kwargs['subhalo_prop'], 
+                sfr_prop=sim_kwargs['sfr_prop'], 
+                evol_prop=sim_kwargs['evol_prop'], 
+                printPQ=True)   # print PQ
+
+        PQs = inh.PQs
+
+        Pq_m = [[] for i in range(len(m_bins))]
+        for z in sorted(PQs.keys()): 
+            for i_m in range(len(m_bins)): 
+                in_mbin = np.where(
+                        (PQs[z]['mass'] >= m_bins[i_m][0]) & 
+                        (PQs[z]['mass'] < m_bins[i_m][1]) 
+                        )
+                Pq_m[i_m].append(np.mean(PQs[z]['Pq_fid'][in_mbin]))
+
+        for i_m in range(len(m_bins)): 
+            Pq_list[i_m].append(np.array(Pq_m[i_m]))
+
+    for i_m in range(len(m_bins)): 
+        a, b, c, d, e = np.percentile(Pq_list[i_m], [2.5, 16, 50, 84, 97.5], axis=0)
+        sub.fill_between([float(zz) for zz in sorted(PQs.keys())], a, e, 
+                color=pretty_colors[i_m], alpha=0.3, edgecolor="none")
+        
+        sub.fill_between([float(zz) for zz in sorted(PQs.keys())], b, d, 
+                color=pretty_colors[i_m], alpha=0.5, edgecolor="none")
+
+    for i_m in range(len(m_bins)): 
+        sub.plot([float(zz) for zz in sorted(PQs.keys())], Pq_median[i_m], 
+                c=pretty_colors[i_m], 
+                label=str(m_bins[i_m][0])+'< $M_*$ <'+str(m_bins[i_m][1]))
+
+    # x-axis 
+    sub.set_xlim([0., 1.]) 
+    sub.set_xlabel(r"Redshift (z)", fontsize=25)
+    sub.set_ylim([0., 0.25]) 
+    sub.set_ylabel(r"$\mathtt{P_{Q}(\mathcal{M}_*, z)}$", fontsize=25)
+    sub.legend(loc='upper right')
+    
+    fig_file = ''.join(['figure/paper/',
+        'PQfid.ABC_posterior',
+        '.', abcrun, 
+        '.', prior_name, '_prior', 
+        '.png'])
+    fig.savefig(fig_file)
+    plt.close() 
+    return None
+
+
 def fig_PQ_ABC_post(tf, abcrun=None, prior_name='try0'): 
     ''' The Quenching probability from the median value of the ABC posterior
     '''
@@ -1033,7 +1189,7 @@ def fig_PQ_ABC_post(tf, abcrun=None, prior_name='try0'):
     for i_m in range(len(m_bins)): 
         a, b, c, d, e = np.percentile(Pq_list[i_m], [2.5, 16, 50, 84, 97.5], axis=0)
         sub.fill_between([float(zz) for zz in sorted(PQs.keys())], a, e, 
-                color=pretty_colors[i_m], alpha=0.3, edcolor="none")
+                color=pretty_colors[i_m], alpha=0.3, edgecolor="none")
         
         sub.fill_between([float(zz) for zz in sorted(PQs.keys())], b, d, 
                 color=pretty_colors[i_m], alpha=0.5, edgecolor="none")
@@ -2093,7 +2249,10 @@ if __name__=='__main__':
     #fig_tau_DR8photometry(standard_run='RHOssfrfq_TinkerFq_Std', standard_tf=7)
     #splashback(7, abcrun='RHOssfrfq_TinkerFq_Std', prior_name='updated')
     #fig_SSFRevol(7, 'multirho_inh', prior_name='try0', orientation='portrait')
-    fig_PQ_ABC_post(7, abcrun='RHOssfrfq_TinkerFq_Std', prior_name='updated')
+    #fig_PQ_ABC_post(7, abcrun='RHOssfrfq_TinkerFq_Std', prior_name='updated')
+    fig_PQfid_ABC_post(7, abcrun='RHOssfrfq_TinkerFq_Std', prior_name='updated')
+    #fig_fQ_ABC_post(7, abcrun='RHOssfrfq_TinkerFq_Std', prior_name='updated')
+
     #fig_SSFRevol(6, 'RHOssfrfq_TinkerFq_Std', prior_name='updated')
     #fig_SFRassign(7, 'RHOssfrfq_TinkerFq_Std', prior_name='updated')
     #figSFH_demo(7, 'multirho_inh', prior_name='try0')
