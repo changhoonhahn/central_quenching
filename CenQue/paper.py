@@ -1123,6 +1123,7 @@ def fig_PQ_ABC_post(tf, abcrun=None, prior_name='try0'):
         PQs = inh.PQs
         pickle.dump(PQs, open(figdata_file, 'wb'))
     else: 
+        print 'Reading ... ', figdata_file
         PQs = pickle.load(open(figdata_file, 'rb')) 
 
     # bin them 
@@ -1180,6 +1181,7 @@ def fig_PQ_ABC_post(tf, abcrun=None, prior_name='try0'):
                 Pq_list[i_m].append(np.array(Pq_m[i_m]))
         pickle.dump(Pq_list, open(figdata_file2, 'wb'))
     else: 
+        print 'Reading ... ', figdata_file2
         Pq_list = pickle.load(open(figdata_file2, 'rb')) 
 
         #for i_m in range(len(m_bins)): 
@@ -2249,8 +2251,8 @@ if __name__=='__main__':
     #fig_tau_DR8photometry(standard_run='RHOssfrfq_TinkerFq_Std', standard_tf=7)
     #splashback(7, abcrun='RHOssfrfq_TinkerFq_Std', prior_name='updated')
     #fig_SSFRevol(7, 'multirho_inh', prior_name='try0', orientation='portrait')
-    #fig_PQ_ABC_post(7, abcrun='RHOssfrfq_TinkerFq_Std', prior_name='updated')
-    fig_PQfid_ABC_post(7, abcrun='RHOssfrfq_TinkerFq_Std', prior_name='updated')
+    fig_PQ_ABC_post(7, abcrun='RHOssfrfq_TinkerFq_Std', prior_name='updated')
+    #fig_PQfid_ABC_post(7, abcrun='RHOssfrfq_TinkerFq_Std', prior_name='updated')
     #fig_fQ_ABC_post(7, abcrun='RHOssfrfq_TinkerFq_Std', prior_name='updated')
 
     #fig_SSFRevol(6, 'RHOssfrfq_TinkerFq_Std', prior_name='updated')
