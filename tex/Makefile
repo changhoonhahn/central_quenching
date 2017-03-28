@@ -17,3 +17,15 @@ main.pdf: *.tex *.bib
 
 clean:
 	${RM} $(foreach suff, ${TMP_SUFFS}, main.${suff})
+
+
+apj: 
+	mkdir apj/
+	cp main.tex apj/
+	cp cenque.bib apj/
+	cp cover_letter.md apj/
+	cp yahapj.bst apj/
+	cp figs/* apj/
+	sed -i '' "s:figs/::g" apj/main.tex
+	tar -cvzf apj_subission.tar.gz apj/
+	rm -rf apj/
