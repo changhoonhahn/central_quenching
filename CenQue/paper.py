@@ -2102,6 +2102,35 @@ def fig_quenching_comp_proposal(z = 0.5):
     return None 
 
 
+def Save_ABC_post_descendant(tf, abcrun=None, prior_name='try0'): 
+    ''' The SSFR distribution from the median value of the ABC posterior
+    '''
+    # model 
+    ppp = PlotABC(tf, abcrun=abcrun, prior_name=prior_name)
+    gv_slope, gv_offset, fudge_slope, fudge_offset, tau_slope, tau_offset = ppp.med_theta
+
+    sfinherit_kwargs, abcrun_flag = ReadABCrun(abcrun)
+    sim_kwargs = sfinherit_kwargs.copy()
+    sim_kwargs['sfr_prop']['gv'] = {'slope': gv_slope, 'fidmass': 10.5, 'offset': gv_offset}
+    sim_kwargs['evol_prop']['fudge'] = {'slope': fudge_slope, 'fidmass': 10.5, 'offset': fudge_offset}
+    sim_kwargs['evol_prop']['tau'] = {'name': 'line', 'slope': tau_slope, 'fid_mass': 11.1, 'yint': tau_offset}
+    inh = Inherit([1], 
+            nsnap_ancestor=sim_kwargs['nsnap_ancestor'],
+            subhalo_prop=sim_kwargs['subhalo_prop'], 
+            sfr_prop=sim_kwargs['sfr_prop'], 
+            evol_prop=sim_kwargs['evol_prop'])
+    des_dict = inh() 
+    descendant = des_dict['1'] 
+    print descendant.__dict__.keys() 
+    output = {} 
+    for key in ['mass', 'sfr', 'ssfr', 'gal_type', 'sfr_class', 'halo_mass', 'sham_mass', 't_quench', 'quenched']: 
+        output[key] = getattr(descendant, key)
+
+    output_file = ''.join([Util.code_dir(), 'dat/'
+        'Descendant.ABC_posterior', '.', abcrun, '.', prior_name, '_prior', '.p'])
+    pickle.dump(output, open(output_file, 'wb'))
+    return None
+
 
 def splashback(tf, abcrun=None, prior_name=None): 
     ppp = PlotABC(tf, abcrun=abcrun, prior_name=prior_name)
@@ -2251,7 +2280,8 @@ if __name__=='__main__':
     #fig_tau_DR8photometry(standard_run='RHOssfrfq_TinkerFq_Std', standard_tf=7)
     #splashback(7, abcrun='RHOssfrfq_TinkerFq_Std', prior_name='updated')
     #fig_SSFRevol(7, 'multirho_inh', prior_name='try0', orientation='portrait')
-    fig_PQ_ABC_post(7, abcrun='RHOssfrfq_TinkerFq_Std', prior_name='updated')
+    Save_ABC_post_descendant(7, abcrun='RHOssfrfq_TinkerFq_Std', prior_name='updated')
+    #fig_PQ_ABC_post(7, abcrun='RHOssfrfq_TinkerFq_Std', prior_name='updated')
     #fig_PQfid_ABC_post(7, abcrun='RHOssfrfq_TinkerFq_Std', prior_name='updated')
     #fig_fQ_ABC_post(7, abcrun='RHOssfrfq_TinkerFq_Std', prior_name='updated')
 
